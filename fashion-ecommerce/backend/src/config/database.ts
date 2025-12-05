@@ -1,0 +1,185 @@
+import mongoose from 'mongoose';
+import env from './env';
+
+const connectDB = async (): Promise<void> => {
+  try {
+    const mongoURI = env.mongodbUri;
+    
+    // Detect if using MongoDB Atlas (cloud) or local
+    const isAtlas = mongoURI.includes('mongodb+srv://') || mongoURI.includes('mongodb.net');
+    
+    // Connection options optimized for both local and Atlas
+    const options: mongoose.ConnectOptions = {
+      // Connection pool settings
+      maxPoolSize: isAtlas ? 50 : 10, // Atlas can handle more connections
+      minPoolSize: isAtlas ? 5 : 5,
+      
+      // Timeout settings (longer for Atlas due to network latency)
+      serverSelectionTimeoutMS: isAtlas ? 30000 : 5000,
+      socketTimeoutMS: isAtlas ? 45000 : 45000,
+      connectTimeoutMS: isAtlas ? 30000 : 10000,
+      
+      // Retry settings (important for Atlas)
+      retryWrites: true,
+      retryReads: true,
+    };
+
+    console.log('');
+    console.log('🔄 ========================================');
+    console.log(isAtlas ? '🔄 Attempting to connect to MongoDB Atlas...' : '🔄 Attempting to connect to local MongoDB...');
+    console.log('🔄 ========================================');
+    console.log(`📍 Connection String: ${mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`); // Hide credentials
+    console.log('⏳ Connecting...');
+    console.log('');
+    
+    // Connect to MongoDB
+    await mongoose.connect(mongoURI, options);
+    
+    // Verify connection
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Connection established but readyState is not 1 (Connected)');
+    }
+    
+    // Test connection with a simple operation
+    try {
+      if (mongoose.connection.db) {
+        await mongoose.connection.db.admin().ping();
+        console.log('✅ Database ping successful');
+      }
+    } catch (pingError) {
+      console.warn('⚠️  Database ping failed, but connection seems active');
+    }
+    
+    // Success message
+    console.log('');
+    console.log('✅ ========================================');
+    console.log('✅ MongoDB Connected Successfully!');
+    console.log('✅ ========================================');
+    console.log(`📊 Database Name: ${mongoose.connection.name}`);
+    console.log(`🔌 Connection State: ${mongoose.connection.readyState === 1 ? 'Connected ✅' : 'Not Connected ❌'}`);
+    
+    if (isAtlas) {
+      console.log(`☁️  Cloud: MongoDB Atlas`);
+      console.log(`🌍 Region/Host: ${mongoose.connection.host}`);
+    } else {
+      console.log(`🖥️  Host: ${mongoose.connection.host}:${mongoose.connection.port || 'N/A'}`);
+    }
+    
+    console.log(`👥 Connection Pool: ${mongoose.connection.readyState === 1 ? 'Ready ✅' : 'Not Ready ❌'}`);
+    console.log(`📈 Max Pool Size: ${options.maxPoolSize}`);
+    console.log(`📉 Min Pool Size: ${options.minPoolSize}`);
+    console.log('✅ ========================================');
+    console.log('');
+    
+  } catch (error: any) {
+    console.error('');
+    console.error('❌ ========================================');
+    console.error('❌ Database Connection Failed');
+    console.error('❌ ========================================');
+    console.error('');
+    console.error('❌ Connection was NOT successful');
+    console.error('');
+    console.error(`❌ Error Type: ${error.name}`);
+    console.error(`❌ Error Message: ${error.message}`);
+    console.error('');
+    if (error.stack) {
+      console.error('📋 Technical Details:');
+      console.error(error.stack.split('\n').slice(0, 5).join('\n'));
+      console.error('');
+    }
+    
+    // Provide helpful error messages
+    if (error.message.includes('authentication failed') || error.message.includes('Authentication failed')) {
+      console.error('💡 Tip: Check your username and password in MONGODB_URI');
+      console.error('   Make sure the credentials in your connection string are correct');
+    } else if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
+      console.error('💡 Tip: Check your cluster URL in MONGODB_URI');
+      console.error('   Verify the hostname in your connection string is correct');
+    } else if (error.message.includes('IP not whitelisted') || 
+               error.message.includes('whitelist') || 
+               error.message.includes('not on your Atlas cluster') ||
+               error.message.includes('access the database from an IP')) {
+      console.error('');
+      console.error('🔒 ========================================');
+      console.error('🔒 Network Access Issue');
+      console.error('🔒 ========================================');
+      console.error('');
+      console.error('❌ Problem: Your IP address is not whitelisted in MongoDB Atlas');
+      console.error('');
+      console.error('💡 Solution - السماح لجميع IPs:');
+      console.error('');
+      console.error('   1️⃣  اذهب إلى MongoDB Atlas Dashboard: https://cloud.mongodb.com/');
+      console.error('');
+      console.error('   2️⃣  اضغط على "Network Access" من القائمة الجانبية');
+      console.error('');
+      console.error('   3️⃣  اضغط على "Add IP Address"');
+      console.error('');
+      console.error('   4️⃣  اختر "Allow Access from Anywhere"');
+      console.error('         أو اكتب يدوياً: 0.0.0.0/0');
+      console.error('');
+      console.error('   5️⃣  اضغط "Confirm"');
+      console.error('');
+      console.error('   6️⃣  انتظر دقيقة أو دقيقتين ثم أعد تشغيل الخادم');
+      console.error('');
+      console.error('   ℹ️  ملاحظة: تأكد من أن قاعدة البيانات محمية بكلمة مرور قوية.');
+      console.error('');
+      console.error('🔒 ========================================');
+      console.error('');
+    } else if (error.message.includes('timeout') || error.message.includes('timed out')) {
+      console.error('💡 Tip: Check your internet connection and MongoDB Atlas status');
+      console.error('   - Verify your internet connection is working');
+      console.error('   - Check if MongoDB Atlas is accessible');
+      console.error('   - Try increasing timeout values in database.ts');
+    } else if (error.message.includes('bad auth') || error.message.includes('badAuth')) {
+      console.error('💡 Tip: Authentication credentials are incorrect');
+      console.error('   Check your username and password in MONGODB_URI');
+    } else {
+      console.error('💡 General Tips:');
+      console.error('   1. Verify MONGODB_URI is set correctly in your .env file');
+      console.error('   2. Check if MongoDB Atlas cluster is running');
+      console.error('   3. Verify network access settings in MongoDB Atlas');
+      console.error('   4. Check your internet connection');
+    }
+    console.error('');
+    console.error('❌ ========================================');
+    console.error('');
+    
+    // Re-throw error so caller can handle it
+    throw error;
+  }
+};
+
+// Handle connection events
+mongoose.connection.on('connected', () => {
+  console.log(' Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('disconnected', () => {
+  // Check if disconnect was intentional (set by server.ts)
+  const isIntentional = (mongoose.connection as any)._intentionalDisconnect;
+  if (!isIntentional) {
+    console.log('  MongoDB Disconnected');
+    console.log(' Attempting to reconnect...');
+  } else {
+    // Reset flag
+    (mongoose.connection as any)._intentionalDisconnect = false;
+  }
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error(' MongoDB Error:', err);
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log(' MongoDB Reconnected');
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  console.log(' MongoDB connection closed through app termination');
+  process.exit(0);
+});
+
+export default connectDB;
+
