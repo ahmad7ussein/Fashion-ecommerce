@@ -15,7 +15,7 @@ export default function AboutPage() {
     {
       icon: <Users className="h-8 w-8" />,
       title: "Expert Team",
-      description: "Our team of designers and craftsmen bring years of experience to every product."
+      description: "Our team of designers and fashion experts bring years of experience to every product."
     },
     {
       icon: <Award className="h-8 w-8" />,
@@ -47,7 +47,7 @@ export default function AboutPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black pt-24">
+    <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
       <div className="container mx-auto px-6 md:px-12 lg:px-24 py-12">
         {/* Hero Section */}
         <motion.div
@@ -55,11 +55,11 @@ export default function AboutPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-20"
         >
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-            About StyleCraft
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 bg-clip-text text-transparent">
+            About FashionHub
           </h1>
-          <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto">
-            Transforming your creative vision into wearable art since 2020
+          <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
+            Your destination for premium fashion and quality clothing since 2020
           </p>
         </motion.div>
 
@@ -78,10 +78,10 @@ export default function AboutPage() {
               transition={{ delay: 0.3 + index * 0.1 }}
               className="text-center"
             >
-              <div className="text-5xl md:text-6xl font-bold text-white mb-2">
+              <div className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 bg-clip-text text-transparent mb-2">
                 {stat.value}
               </div>
-              <div className="text-gray-400 text-lg">{stat.label}</div>
+              <div className="text-gray-600 text-lg">{stat.label}</div>
             </motion.div>
           ))}
         </motion.div>
@@ -93,21 +93,20 @@ export default function AboutPage() {
           transition={{ delay: 0.4 }}
           className="max-w-4xl mx-auto mb-24"
         >
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-12">
-            <h2 className="text-4xl font-bold text-white mb-6">Our Story</h2>
-            <div className="space-y-4 text-gray-300 text-lg leading-relaxed">
+          <div className="bg-white/90 backdrop-blur-sm border-2 border-rose-100 rounded-2xl p-12 shadow-xl">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">Our Story</h2>
+            <div className="space-y-4 text-gray-600 text-lg leading-relaxed">
               <p>
-                StyleCraft was born from a simple idea: everyone deserves to wear something that truly represents who they are. 
-                In 2020, we set out to revolutionize the fashion industry by putting the power of design directly into your hands.
+                FashionHub was born from a simple idea: everyone deserves access to premium fashion that truly represents their style. 
+                In 2020, we set out to revolutionize online fashion shopping by offering quality clothing for everyone.
               </p>
               <p>
-                What started as a small studio with a handful of products has grown into a global platform serving thousands 
-                of customers across 50+ countries. Our AI-powered design studio makes it easy for anyone to create professional, 
-                unique designs without any design experience.
+                What started as a small boutique with a curated selection has grown into a global fashion platform serving thousands 
+                of customers across 50+ countries. We carefully select each piece to ensure quality, style, and value.
               </p>
               <p>
-                Today, we're proud to be at the forefront of the custom fashion movement, combining cutting-edge technology 
-                with traditional craftsmanship to deliver products that exceed expectations.
+                Today, we're proud to be your trusted fashion destination, combining the latest trends 
+                with timeless style to deliver clothing that makes you look and feel amazing.
               </p>
             </div>
           </div>
@@ -120,8 +119,8 @@ export default function AboutPage() {
           transition={{ delay: 0.6 }}
           className="mb-24"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white text-center mb-16">
-            Why Choose StyleCraft
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 text-center mb-16">
+            Why Choose <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 bg-clip-text text-transparent">FashionHub</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
@@ -130,15 +129,15 @@ export default function AboutPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 + index * 0.1 }}
-                className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-white/20 transition-all group"
+                className="bg-white/90 backdrop-blur-sm border-2 border-rose-100 rounded-2xl p-8 hover:bg-white hover:border-rose-300 hover:shadow-xl transition-all group"
               >
-                <div className="text-white mb-4 group-hover:scale-110 transition-transform">
+                <div className="text-rose-500 mb-4 group-hover:scale-110 group-hover:text-rose-600 transition-all">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-3">
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">
                   {feature.title}
                 </h3>
-                <p className="text-gray-400">
+                <p className="text-gray-600">
                   {feature.description}
                 </p>
               </motion.div>
@@ -153,21 +152,21 @@ export default function AboutPage() {
           transition={{ delay: 1 }}
           className="text-center"
         >
-          <div className="bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-3xl p-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <div className="bg-gradient-to-br from-white to-rose-50/50 backdrop-blur-sm border-2 border-rose-100 rounded-3xl p-16 shadow-xl">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               Ready to Create Something Amazing?
             </h2>
-            <p className="text-xl text-gray-300 mb-10 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
               Join thousands of satisfied customers and start designing your unique style today.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/studio">
-                <Button className="h-14 px-10 bg-white text-black hover:bg-gray-200 rounded-full text-lg font-medium">
+                <Button className="h-14 px-10 bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 rounded-full text-lg font-medium shadow-lg">
                   Start Designing
                 </Button>
               </Link>
               <Link href="/products">
-                <Button variant="outline" className="h-14 px-10 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 rounded-full text-lg font-medium">
+                <Button variant="outline" className="h-14 px-10 border-2 border-rose-300 text-rose-600 hover:bg-rose-50 hover:border-rose-400 rounded-full text-lg font-medium">
                   Browse Products
                 </Button>
               </Link>

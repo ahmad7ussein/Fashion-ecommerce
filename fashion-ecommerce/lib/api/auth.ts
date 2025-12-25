@@ -197,5 +197,46 @@ export const authApi = {
   }): Promise<UserResponse["data"]> {
     return await apiClient.put<UserResponse["data"]>("/auth/profile", profileData)
   },
+
+  async googleAuth(idToken: string): Promise<LoginResponse["data"]> {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+    
+    try {
+      logger.log("🔍 Attempting Google auth to:", `${API_BASE_URL}/auth/google`)
+      
+      const response = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: 'include',
+        mode: 'cors',
+        body: JSON.stringify({ idToken }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || "Google authentication failed")
+      }
+      
+      const data = await response.json()
+      logger.log("✅ Google auth successful")
+      
+      if (data.success && data.data && data.data.user && data.data.token) {
+        return {
+          user: data.data.user,
+          token: data.data.token,
+        } as LoginResponse["data"]
+      }
+      
+      throw new Error("Invalid response structure from Google auth API")
+    } catch (error: any) {
+      logger.error("❌ Google auth error:", error)
+      if (error instanceof TypeError && error.message === "Failed to fetch") {
+        throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`)
+      }
+      throw error instanceof Error ? error : new Error(error?.message || "An unexpected error occurred during Google authentication")
+    }
+  },
 }
 

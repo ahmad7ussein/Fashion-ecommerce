@@ -79,11 +79,15 @@ export const getApprovedReviews = async (req: any, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
+    // Optimize review query - use lean() and select() for better performance
     const reviews = await Review.find({ status: 'approved' })
-      .populate('user', 'firstName lastName email')
+      .select('user rating title comment createdAt')
+      .populate('user', 'firstName lastName email') // Keep populate for user info
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limitNum);
+      .limit(limitNum)
+      .lean() // Use lean() for better performance
+      .maxTimeMS(10000);
 
     const total = await Review.countDocuments({ status: 'approved' });
 
@@ -109,8 +113,12 @@ export const getApprovedReviews = async (req: any, res: Response) => {
 // @access  Private
 export const getMyReviews = async (req: AuthRequest, res: Response) => {
   try {
+    // Optimize user reviews query
     const reviews = await Review.find({ user: req.user?._id })
-      .sort({ createdAt: -1 });
+      .select('rating title comment status createdAt')
+      .sort({ createdAt: -1 })
+      .lean()
+      .maxTimeMS(10000);
 
     res.status(200).json({
       success: true,
@@ -142,12 +150,16 @@ export const getAllReviews = async (req: AuthRequest, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
+    // Optimize admin reviews query
     const reviews = await Review.find(query)
+      .select('user order rating title comment status createdAt')
       .populate('user', 'firstName lastName email')
       .populate('order', 'orderNumber')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limitNum);
+      .limit(limitNum)
+      .lean()
+      .maxTimeMS(10000);
 
     const total = await Review.countDocuments(query);
 

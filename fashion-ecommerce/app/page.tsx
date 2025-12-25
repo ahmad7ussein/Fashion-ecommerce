@@ -6,7 +6,8 @@ import Image from "next/image"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ShoppingBag, Sparkles, Palette, TrendingUp, Camera, Video, ArrowRight, ChevronDown, Star } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ShoppingBag, Sparkles, Palette, TrendingUp, Camera, Video, ArrowRight, ChevronDown, Star, ChevronLeft, ChevronRight } from "lucide-react"
 import { Logo } from "@/components/logo"
 import {
   AnimatedFeatureCard,
@@ -17,10 +18,13 @@ import {
   StaggerItem,
   AnimatedButton
 } from "@/components/animated-card"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { ProfessionalNavbar } from "@/components/professional-navbar"
 import { CustomerReviewsSection } from "@/components/customer-reviews-section"
 import { useRegion } from "@/lib/region"
+import { useLanguage } from "@/lib/language"
+import { listProducts, type Product } from "@/lib/api/products"
+import { FeaturedProductsSkeleton } from "@/components/skeletons"
 
 // Lazy load 3D background for better performance
 const Background3DSimple = dynamic(
@@ -28,203 +32,453 @@ const Background3DSimple = dynamic(
   { ssr: false }
 )
 
-const featuredProducts = [
-  {
-    id: 1,
-    name: "Classic White Tee",
-    price: 29.99,
-    image: "/white-t-shirt-model.png",
-    category: "T-Shirts",
-  },
-  {
-    id: 2,
-    name: "Urban Hoodie",
-    price: 59.99,
-    image: "/black-hoodie-streetwear.png",
-    category: "Hoodies",
-  },
-  {
-    id: 3,
-    name: "Comfort Sweatshirt",
-    price: 49.99,
-    image: "/gray-sweatshirt-casual.jpg",
-    category: "Sweatshirts",
-  },
-  {
-    id: 4,
-    name: "Designer Tee",
-    price: 34.99,
-    image: "/graphic-t-shirt-fashion.jpg",
-    category: "T-Shirts",
-  },
-]
 
 const sliderImages = [
   {
     id: 1,
     image: "/white-t-shirt-model.png",
-    title: "Design Your Style",
-    subtitle: "Create unique designs that reflect your personality",
+    title: "New Collection 2025",
+    subtitle: "Discover the latest fashion trends",
+    description: "Premium quality clothing that defines your style",
+    buttonText: "Shop Now",
+    buttonLink: "/products",
+    bgGradient: "linear-gradient(135deg, #fff1f2 0%, #fdf2f8 50%, #ffe4e6 100%)",
+    bgImage: "/white-t-shirt-model.png", // Background image for subtle blend
   },
   {
     id: 2,
     image: "/black-hoodie-streetwear.png",
-    title: "Premium Quality",
-    subtitle: "High-quality materials for lasting comfort",
+    title: "Streetwear Essentials",
+    subtitle: "Urban style meets comfort",
+    description: "Express yourself with our premium streetwear collection",
+    buttonText: "Explore Collection",
+    buttonLink: "/products?category=Hoodies",
+    bgGradient: "linear-gradient(135deg, #fffbeb 0%, #fff7ed 50%, #fef3c7 100%)",
+    bgImage: "/black-hoodie-streetwear.png", // Background image for subtle blend
   },
   {
     id: 3,
     image: "/gray-sweatshirt-casual.jpg",
-    title: "Express Yourself",
-    subtitle: "Turn your ideas into wearable art",
+    title: "Casual Comfort",
+    subtitle: "Everyday elegance",
+    description: "Perfect blend of style and comfort for your daily wear",
+    buttonText: "Shop Casual",
+    buttonLink: "/products?category=Sweatshirts",
+    bgGradient: "linear-gradient(135deg, #eff6ff 0%, #eef2ff 50%, #dbeafe 100%)",
+    bgImage: "/gray-sweatshirt-casual.jpg", // Background image for subtle blend
   },
   {
     id: 4,
     image: "/graphic-t-shirt-fashion.jpg",
-    title: "Fashion Forward",
-    subtitle: "Stay ahead with cutting-edge designs",
+    title: "Designer Collection",
+    subtitle: "Unique designs for unique you",
+    description: "Stand out with our exclusive designer pieces",
+    buttonText: "View Collection",
+    buttonLink: "/products?category=T-Shirts",
+    bgGradient: "linear-gradient(135deg, #faf5ff 0%, #fdf2f8 50%, #f3e8ff 100%)",
+    bgImage: "/graphic-t-shirt-fashion.jpg", // Background image for subtle blend
+  },
+]
+
+const virtualTryOnSlidesData = [
+  {
+    gradient: "from-rose-100 via-pink-100 to-amber-50",
+    title: "معاينة مباشرة",
+    description: "بث حي بدون انتظار مع محاذاة دقيقة للقطعة على صورتك قبل أي خطوة شراء.",
+    chip: "بث مباشر",
+    stats: [
+      { label: "زمن الاستجابة", value: "0.9s" },
+      { label: "دقة المحاذاة", value: "98%" },
+    ],
+  },
+  {
+    gradient: "from-amber-100 via-orange-100 to-rose-50",
+    title: "تخصيص ذكي",
+    description: "ذكاء اصطناعي يضبط الإضاءة والمقاس لتطابق مقاساتك الفعلية فوراً.",
+    chip: "AI Fit",
+    stats: [
+      { label: "معاينات ناجحة", value: "4.2k+" },
+      { label: "إعادة ضبط تلقائي", value: "كل 2.5s" },
+    ],
+  },
+  {
+    gradient: "from-pink-100 via-rose-50 to-white",
+    title: "جاهزة للطلب",
+    description: "تحقق من الألوان والمقاس بثقة قبل إضافة للسلة وإتمام الدفع.",
+    chip: "جاهز للشراء",
+    stats: [
+      { label: "توافق المقاس", value: "99%" },
+      { label: "وقت التهيئة", value: "5s" },
+    ],
   },
 ]
 
 export default function HomePage() {
   const { formatPrice } = useRegion()
+  const { language } = useLanguage()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [virtualTryOnSlide, setVirtualTryOnSlide] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [menProducts, setMenProducts] = useState<Product[]>([])
+  const [womenProducts, setWomenProducts] = useState<Product[]>([])
+  const [kidsProducts, setKidsProducts] = useState<Product[]>([])
+  const [newCollectionProducts, setNewCollectionProducts] = useState<Product[]>([])
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
+  const [isLoadingFeatured, setIsLoadingFeatured] = useState(true)
+  const [menSlideIndex, setMenSlideIndex] = useState(0)
+  const [womenSlideIndex, setWomenSlideIndex] = useState(0)
+  const [kidsSlideIndex, setKidsSlideIndex] = useState(0)
+  const [newCollectionSlideIndex, setNewCollectionSlideIndex] = useState(0)
+  const activeVirtualTryOnSlide = virtualTryOnSlidesData[virtualTryOnSlide] || virtualTryOnSlidesData[0]
 
   // Auto-slide effect for hero section
   useEffect(() => {
+    if (isPaused) return
+    
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % sliderImages.length)
     }, 5000) // Change slide every 5 seconds
 
     return () => clearInterval(interval)
-  }, [])
+  }, [isPaused, sliderImages.length])
 
   // Auto-slide effect for Virtual Try-On section
   useEffect(() => {
     const interval = setInterval(() => {
-      setVirtualTryOnSlide((prev) => (prev + 1) % 3)
+      setVirtualTryOnSlide((prev) => (prev + 1) % virtualTryOnSlidesData.length)
     }, 6000) // Change slide every 6 seconds
 
     return () => clearInterval(interval)
   }, [])
 
+  // Load products for sliders
+  useEffect(() => {
+    const loadProducts = async () => {
+      setIsLoadingProducts(true)
+      try {
+        // Load products sequentially with smaller limits to avoid timeout
+        const men = await listProducts({ gender: "Men", limit: 8 }).catch(() => [])
+        setMenProducts(men.slice(0, 8))
+        
+        const women = await listProducts({ gender: "Women", limit: 8 }).catch(() => [])
+        setWomenProducts(women.slice(0, 8))
+        
+        const kids = await listProducts({ gender: "Kids", limit: 8 }).catch(() => [])
+        setKidsProducts(kids.slice(0, 8))
+        
+        const newCollection = await listProducts({ featured: true, sortBy: "newest", limit: 12 }).catch(() => [])
+        setNewCollectionProducts(newCollection.slice(0, 12))
+      } catch (error) {
+        console.error("Error loading products:", error)
+        // Set empty arrays on error to prevent UI issues
+        setMenProducts([])
+        setWomenProducts([])
+        setKidsProducts([])
+        setNewCollectionProducts([])
+      } finally {
+        setIsLoadingProducts(false)
+      }
+    }
+    loadProducts()
+  }, [])
+
+  // Load featured products separately
+  useEffect(() => {
+    const loadFeaturedProducts = async () => {
+      setIsLoadingFeatured(true)
+      try {
+        const featured = await listProducts({ featured: true, limit: 4 }).catch(() => [])
+        setFeaturedProducts(featured.slice(0, 4))
+      } catch (error) {
+        console.error("Error loading featured products:", error)
+        setFeaturedProducts([])
+      } finally {
+        setIsLoadingFeatured(false)
+      }
+    }
+    loadFeaturedProducts()
+  }, [])
+
+  // Auto-slide for product sliders
+  useEffect(() => {
+    if (menProducts.length === 0 && womenProducts.length === 0 && kidsProducts.length === 0 && newCollectionProducts.length === 0) return
+    
+    const interval = setInterval(() => {
+      if (menProducts.length > 4) {
+        setMenSlideIndex((prev) => (prev + 1) % Math.max(1, menProducts.length - 3))
+      }
+      if (womenProducts.length > 4) {
+        setWomenSlideIndex((prev) => (prev + 1) % Math.max(1, womenProducts.length - 3))
+      }
+      if (kidsProducts.length > 4) {
+        setKidsSlideIndex((prev) => (prev + 1) % Math.max(1, kidsProducts.length - 3))
+      }
+      if (newCollectionProducts.length > 4) {
+        setNewCollectionSlideIndex((prev) => (prev + 1) % Math.max(1, newCollectionProducts.length - 3))
+      }
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [menProducts.length, womenProducts.length, kidsProducts.length, newCollectionProducts.length])
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white">
       {/* Professional Navbar */}
       <ProfessionalNavbar />
 
-      {/* 3D Background */}
-      <Suspense fallback={null}>
-        <Background3DSimple />
-      </Suspense>
-
-      {/* Hero Section - Minimalist & Professional with 3D Background */}
-      <section className="relative overflow-hidden min-h-screen flex items-center bg-gradient-to-br from-black via-gray-900 to-black">
-        {/* Subtle Grid Background */}
-        <div className="absolute inset-0 opacity-[0.03]">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
-              backgroundSize: "50px 50px",
-            }}
-          />
-        </div>
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/50" />
-
-        {/* Content */}
-        <div className="relative z-20 container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-16 sm:py-24 md:py-32">
-          <div className="max-w-5xl mx-auto text-center">
-            {/* Badge */}
+      {/* Hero Slider Section */}
+      <section className="relative overflow-hidden min-h-screen flex items-center pt-20">
+        {/* Slider Container */}
+        <div 
+          className="relative w-full h-screen"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setIsPaused(false)}
+        >
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="mb-6 sm:mb-8"
-            >
-              <span className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white/5 backdrop-blur-md rounded-full text-xs sm:text-sm text-white/70 border border-white/10 hover:bg-white/10 transition-all duration-300">
-                <Sparkles className="h-3 w-3 sm:h-4 sm:w-4" />
-                Welcome to StyleCraft
-              </span>
-            </motion.div>
-
-            {/* Main Heading */}
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl xl:text-9xl font-bold mb-6 sm:mb-8 leading-[0.95] tracking-tighter text-white px-2"
-            >
-              Design. Create.
-              <br />
-              <span className="bg-gradient-to-r from-white via-gray-300 to-gray-500 bg-clip-text text-transparent">
-                Wear Your Vision
-              </span>
-            </motion.h1>
-
-            {/* Description */}
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl mb-8 sm:mb-12 md:mb-14 text-gray-400 max-w-4xl mx-auto leading-relaxed font-light px-4"
-            >
-              Transform your ideas into wearable art with our interactive design studio.
-              <br className="hidden sm:block" />
-              <span className="hidden sm:inline">Create custom apparel that reflects your unique style.</span>
-              <span className="sm:hidden">Create custom apparel that reflects your style.</span>
-            </motion.p>
-
-            {/* CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col sm:flex-row gap-4 sm:gap-5 justify-center items-center px-4"
-            >
-              <Link href="/studio" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-white text-black hover:bg-gray-100 px-6 sm:px-8 md:px-10 py-6 sm:py-7 text-base sm:text-lg rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl group"
-                >
-                  <Palette className="mr-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:rotate-12 transition-transform" />
-                  Start Designing
-                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link href="/products" className="w-full sm:w-auto">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto border-2 border-white/20 text-white hover:bg-white/10 hover:border-white/40 px-6 sm:px-8 md:px-10 py-6 sm:py-7 text-base sm:text-lg rounded-full font-semibold transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-                >
-                  <ShoppingBag className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Explore Collection
-                </Button>
-              </Link>
-            </motion.div>
-
-            {/* Stats */}
-            <motion.div
+              key={currentSlide}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 1.2 }}
-              className="mt-12 sm:mt-16 md:mt-20 grid grid-cols-3 gap-4 sm:gap-6 md:gap-8 max-w-3xl mx-auto px-4"
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 flex items-center overflow-hidden"
+              style={{ backgroundImage: sliderImages[currentSlide].bgGradient }}
             >
-              {[
-                { label: "Designs Created", value: "10K+" },
-                { label: "Happy Customers", value: "5K+" },
-                { label: "Products", value: "500+" },
-              ].map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2 text-white">{stat.value}</div>
-                  <div className="text-xs sm:text-sm text-gray-500">{stat.label}</div>
+              {/* Subtle Background Clothing Images */}
+              <div className="absolute inset-0 opacity-[0.45]">
+                <div
+                  className="absolute inset-0 bg-center bg-no-repeat"
+                  style={{
+                    backgroundImage: `url(${sliderImages[currentSlide].bgImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'blur(15px) brightness(1.05)',
+                    transform: 'scale(1.1)',
+                  }}
+                />
+              </div>
+              
+              {/* Additional subtle clothing images for depth */}
+              <div className="absolute inset-0 opacity-[0.3]">
+                <div
+                  className="absolute top-1/4 right-1/4 w-96 h-96 bg-center rounded-full"
+                  style={{
+                    backgroundImage: `url(${sliderImages[currentSlide].bgImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'blur(24px)',
+                  }}
+                />
+                <div
+                  className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-center rounded-full"
+                  style={{
+                    backgroundImage: `url(${sliderImages[currentSlide].bgImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    filter: 'blur(24px)',
+                  }}
+                />
+              </div>
+
+              {/* Animated Background Elements */}
+              <div className="absolute inset-0">
+                {/* Floating Orbs */}
+                <motion.div
+                  className="absolute top-20 right-20 w-96 h-96 bg-rose-200/20 rounded-full"
+                  animate={{
+                    scale: [1, 1.2, 1],
+                    x: [0, 30, 0],
+                    y: [0, 20, 0],
+                  }}
+                  transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  style={{ filter: "blur(64px)" }}
+                />
+                <motion.div
+                  className="absolute bottom-20 left-20 w-80 h-80 bg-pink-200/20 rounded-full"
+                  animate={{
+                    scale: [1, 1.3, 1],
+                    x: [0, -30, 0],
+                    y: [0, -20, 0],
+                  }}
+                  transition={{
+                    duration: 10,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  style={{ filter: "blur(64px)" }}
+                />
+                
+                {/* Subtle Pattern */}
+                <div className="absolute inset-0 opacity-[0.02]">
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: "radial-gradient(circle at 2px 2px, black 1px, transparent 0)",
+                      backgroundSize: "60px 60px",
+                    }}
+                  />
                 </div>
-              ))}
+              </div>
+
+              {/* Content Container */}
+              <div className="relative z-20 container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 w-full">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+                  {/* Text Content - Enhanced */}
+                  <motion.div
+                    key={`content-${currentSlide}`}
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 50 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className="text-center lg:text-left space-y-6 lg:space-y-8"
+                  >
+                    {/* Badge - Logo */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: 0.3 }}
+                    >
+                      <div className="inline-flex items-center px-6 py-3 bg-white/85 backdrop-blur-md rounded-full border border-white/70 shadow-lg hover:shadow-xl transition-all">
+                        <Logo className="h-12 md:h-16 mix-blend-multiply" />
+                      </div>
+                    </motion.div>
+
+                    {/* Title - Enhanced */}
+                    <motion.h1
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.4 }}
+                      className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold leading-[1.1] tracking-tight"
+                    >
+                      <span className="text-gray-900 block mb-2">{sliderImages[currentSlide].title}</span>
+                    </motion.h1>
+
+                    {/* Description - Enhanced */}
+                    <motion.p
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.5 }}
+                      className="text-xl md:text-2xl text-gray-700 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light"
+                    >
+                      {sliderImages[currentSlide].description}
+                    </motion.p>
+
+                    {/* CTA Button - Enhanced */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.6 }}
+                      className="flex justify-center lg:justify-start pt-2"
+                    >
+                      <Link href={sliderImages[currentSlide].buttonLink}>
+                        <Button
+                          size="lg"
+                          className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white hover:from-rose-600 hover:via-pink-600 hover:to-rose-700 px-10 py-7 text-lg rounded-full font-bold transition-all duration-300 hover:scale-110 hover:shadow-2xl group shadow-xl"
+                        >
+                          <span className="flex items-center gap-2">
+                            {sliderImages[currentSlide].buttonText}
+                            <ArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform" />
+                          </span>
+                        </Button>
+                      </Link>
+                    </motion.div>
+                  </motion.div>
+
+                  {/* Image Content - Enhanced */}
+                  <motion.div
+                    key={`image-${currentSlide}`}
+                    initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, rotate: 5 }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                    className="relative h-[450px] lg:h-[650px] flex items-center justify-center"
+                  >
+                    {/* Multiple Glow Layers */}
+                    <div className="absolute inset-0">
+                      <div className="absolute inset-0 bg-gradient-to-br from-rose-300/30 to-pink-300/30 rounded-[3rem] blur-3xl transform rotate-6" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-pink-200/20 to-rose-200/20 rounded-[3rem] blur-2xl transform -rotate-6" />
+                    </div>
+                    
+                    {/* Main Image Container */}
+                    <div className="relative w-full h-full max-w-lg mx-auto">
+                      <motion.div
+                        animate={{ 
+                          y: [0, -10, 0],
+                        }}
+                        transition={{
+                          duration: 4,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        className="relative bg-white/90 backdrop-blur-md rounded-[2.5rem] p-10 shadow-2xl border-2 border-white/80 overflow-hidden"
+                      >
+                        {/* Decorative Elements */}
+                        <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-rose-200/30 to-pink-200/30 rounded-full blur-2xl" />
+                        <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200/30 to-rose-200/30 rounded-full blur-xl" />
+                        
+                        <div className="relative w-full h-full min-h-[350px] lg:min-h-[550px]">
+                          <Image
+                            src={sliderImages[currentSlide].image}
+                            alt={sliderImages[currentSlide].title}
+                            fill
+                            className="object-contain rounded-2xl"
+                            priority={currentSlide === 0}
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                          />
+                        </div>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
             </motion.div>
+          </AnimatePresence>
+
+          {/* Navigation Arrows */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentSlide((prev) => (prev - 1 + sliderImages.length) % sliderImages.length)
+            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-gray-200 transition-all duration-300 hover:scale-110 group"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentSlide((prev) => (prev + 1) % sliderImages.length)
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-gray-200 transition-all duration-300 hover:scale-110 group"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors" />
+          </button>
+
+          {/* Dots Indicator */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex gap-2 items-center">
+            {sliderImages.map((_, index) => (
+              <button
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCurrentSlide(index)
+                }}
+                className={`rounded-full transition-all duration-300 ${
+                  currentSlide === index
+                    ? "bg-rose-500 w-8 h-2"
+                    : "bg-gray-300 hover:bg-gray-400 w-2 h-2"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
           </div>
         </div>
 
@@ -233,380 +487,637 @@ export default function HomePage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1.5 }}
-          className="absolute bottom-12 left-1/2 transform -translate-x-1/2"
+          className="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-30"
         >
-          <div className="flex flex-col items-center gap-3 text-white/40">
-            <span className="text-xs uppercase tracking-wider">Scroll to explore</span>
+          <div className="flex flex-col items-center gap-3 text-gray-600">
+            <span className="text-xs uppercase tracking-wider font-medium">Scroll to explore</span>
             <motion.div
               animate={{ y: [0, 10, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             >
-              <ChevronDown className="h-6 w-6" />
+              <ChevronDown className="h-6 w-6 text-rose-500" />
             </motion.div>
           </div>
         </motion.div>
       </section>
 
-      {/* Virtual Camera Feature Section - Main Feature */}
-      <section className="py-24 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-violet-950/30 dark:via-purple-950/30 dark:to-fuchsia-950/30 relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div
-            className="absolute top-20 left-10 w-72 h-72 bg-purple-400/20 rounded-full blur-3xl"
-            animate={{
-              scale: [1, 1.2, 1],
-              x: [0, 50, 0],
-              y: [0, 30, 0],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-          <motion.div
-            className="absolute bottom-20 right-10 w-96 h-96 bg-pink-400/20 rounded-full blur-3xl"
-            animate={{
-              scale: [1, 1.3, 1],
-              x: [0, -50, 0],
-              y: [0, -30, 0],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
+      {/* New Collection Slider */}
+      {isLoadingProducts ? (
+        <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-16">
+          <FeaturedProductsSkeleton />
         </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <SlideInFromLeft>
-                <div className="space-y-8">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-semibold shadow-lg shadow-purple-500/50"
-                  >
-                    <Camera className="h-5 w-5" />
-                    <span>✨ Try Before You Buy</span>
-                  </motion.div>
-                  <h2 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 bg-clip-text text-transparent">
-                    Virtual Camera Experience
+      ) : newCollectionProducts.length > 0 && (
+        <section className="py-16 bg-gradient-to-b from-white via-rose-50/20 to-white relative overflow-hidden">
+          <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="mb-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+                    New Collection
                   </h2>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  تجربة فريدة من نوعها! استخدم الكاميرا الافتراضية لتجربة أي قطعة قبل شرائها. 
-                  فقط قم بتشغيل الكاميرا ووقف أمامها، وسنقوم بإلباسك القطعة التي تريدها مباشرة 
-                  على صورتك لترى كيف ستبدو عليك قبل أن تقرر الشراء.
-                </p>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  Experience like never before! Use our virtual camera to try on any piece before buying. 
-                  Simply turn on the camera and stand in front of it, and we'll dress you in the item you want 
-                  directly on your image so you can see how it looks on you before deciding to purchase.
-                </p>
-                <ul className="space-y-3">
-                  <li className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <Video className="h-3 w-3 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-1">Real-time Preview</h4>
-                      <p className="text-sm text-muted-foreground">
-                        See yourself wearing the product instantly
-                      </p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <Camera className="h-3 w-3 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-1">Try Multiple Items</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Test different sizes, colors, and designs
-                      </p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-1">AR Technology</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Advanced augmented reality for accurate fit
-                      </p>
-                    </div>
-                  </li>
-                </ul>
+                  <p className="text-gray-600 text-lg">
+                    {language === "ar" ? "اكتشف أحدث مجموعاتنا" : "Discover our latest arrivals"}
+                  </p>
+                </div>
+                <Link href="/products?featured=true&sortBy=newest">
+                  <Button variant="outline" className="border-rose-300 text-rose-600 hover:bg-rose-50 rounded-full px-6">
+                    {language === "ar" ? "عرض الكل" : "View All"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="relative overflow-hidden rounded-2xl">
+                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${newCollectionSlideIndex * (100 / 4)}%)` }}>
+                  {newCollectionProducts.map((product, idx) => (
+                    <Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
+                      <motion.div
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all"
+                      >
+                        <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
+                          {product.image ? (
+                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                            </div>
+                          )}
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-rose-500 text-white border-0 rounded-full px-3 py-1 text-xs">
+                              {language === "ar" ? "جديد" : "New"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                        </div>
+                      </motion.div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Virtual Camera Feature Section - Redesigned */}
+      <section className="py-24 bg-gradient-to-b from-white to-rose-50/30 relative overflow-hidden">
+        <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 relative z-10">
+          <div className="max-w-7xl mx-auto">
+            {/* Main Content - Left Aligned Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
+              {/* Left Side - Content (3 columns) */}
+              <div className="lg:col-span-3 space-y-8">
+                {/* Badge */}
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/90 backdrop-blur-md text-sm font-semibold text-rose-700 border border-rose-200 shadow-lg shadow-rose-100/80 ring-1 ring-rose-100"
+                >
+                  <Camera className="h-4 w-4" />
+                  <span>Try it before you buy</span>
+                </motion.div>
+
+                {/* Main Heading */}
+                <motion.h2
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight"
+                >
+                  <span className="bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">Seamless Virtual Try-On</span>
+                </motion.h2>
+
+                {/* Description */}
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="space-y-5 max-w-3xl"
+                >
+                  <p className="text-lg text-gray-700 leading-relaxed">
+                    Experience a new level of confidence—use the virtual camera to preview any item live on you before purchasing, so you can confirm fit and style instantly.
+                  </p>
+                  <p className="text-lg text-gray-700 leading-relaxed">
+                    Experience like never before! Use our virtual camera to try on any piece before buying. 
+                    Simply turn on the camera and stand in front of it, and we'll dress you in the item you want 
+                    directly on your image so you can see how it looks on you before deciding to purchase.
+                  </p>
+                </motion.div>
+
+                {/* Features Grid */}
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2"
+                >
+                  {[
+                    { icon: Video, title: "Instant Preview", desc: "See the item on you instantly before you place the order." },
+                    { icon: Camera, title: "Try Multiple Items", desc: "Swap colors and sizes quickly to find the perfect match." },
+                    { icon: Sparkles, title: "Precise AR Tech", desc: "Realistic AI-assisted fitting with accurate detail." },
+                  ].map((feature, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: 0.4 + index * 0.08 }}
+                      className="p-5 rounded-2xl bg-white/80 backdrop-blur-md border border-rose-100 hover:border-rose-300 hover:shadow-xl transition-all group"
+                    >
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-rose-100 to-pink-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border border-rose-200">
+                        <feature.icon className="h-6 w-6 text-rose-600" />
+                      </div>
+                      <h4 className="font-bold text-gray-900 mb-1">{feature.title}</h4>
+                      <p className="text-sm text-gray-600">{feature.desc}</p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+
+                {/* CTA Button */}
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: 0.6 }}
+                >
                   <Link href="/virtual-try-on">
-                    <Button size="lg" className="mt-4">
+                    <Button size="lg" className="bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 text-white hover:from-rose-700 hover:via-pink-700 hover:to-amber-600 px-8 py-6 text-lg rounded-full font-semibold shadow-lg hover:shadow-2xl transition-all hover:scale-105 border border-white/50">
                       <Camera className="mr-2 h-5 w-5" />
-                      Try Virtual Camera
+                      ابدأ التجربة الآن
                     </Button>
                   </Link>
-                </div>
-              </SlideInFromLeft>
-              <SlideInFromRight>
-                <div className="relative">
-                  {/* Virtual Try-On Card with Auto Slider Background - Eye-catching Design */}
-                  <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl relative border-4 border-white/50 backdrop-blur-sm">
-                    {/* Glowing Border Effect */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-pink-600 to-cyan-600 rounded-3xl blur-xl opacity-75 animate-pulse" />
-                    
-                    {/* Auto Slider Background with Vibrant Gradients */}
+                </motion.div>
+              </div>
+
+              {/* Right Side - Interactive Card (2 columns) */}
+              <div className="lg:col-span-2 relative">
+                <motion.div
+                  initial={{ opacity: 0, x: 30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8 }}
+                  className="relative"
+                >
+                  {/* Main Card */}
+                  <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200/60">
                     <div className="absolute inset-0">
-                      {[
-                        {
-                          gradient: "from-purple-500 via-pink-500 to-rose-500",
-                          pattern: "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.2) 0%, transparent 50%)",
-                        },
-                        {
-                          gradient: "from-cyan-500 via-blue-500 to-purple-500",
-                          pattern: "radial-gradient(circle at 50% 20%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 30% 70%, rgba(255,255,255,0.2) 0%, transparent 50%)",
-                        },
-                        {
-                          gradient: "from-pink-500 via-rose-500 to-orange-500",
-                          pattern: "radial-gradient(circle at 70% 30%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 40% 60%, rgba(255,255,255,0.2) 0%, transparent 50%)",
-                        },
-                      ].map((bg, index) => (
-                        <motion.div
-                          key={index}
-                          className={`absolute inset-0 bg-gradient-to-br ${bg.gradient}`}
-                          initial={{ opacity: 0, scale: 1.1 }}
-                          animate={{
-                            opacity: virtualTryOnSlide === index ? 1 : 0,
-                            scale: virtualTryOnSlide === index ? 1 : 1.05,
-                          }}
-                          transition={{ duration: 1.5, ease: "easeInOut" }}
-                        >
-                          {/* Animated Pattern Overlay */}
-                          <div 
-                            className="absolute inset-0 opacity-40"
-                            style={{
-                              backgroundImage: bg.pattern,
-                            }}
-                          />
-                          {/* Enhanced Shimmer Effect */}
-                          <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                            animate={{
-                              x: ["-100%", "200%"],
-                            }}
-                            transition={{
-                              duration: 3,
-                              repeat: Infinity,
-                              repeatDelay: 2,
-                              ease: "linear",
-                            }}
-                            style={{
-                              width: "50%",
-                              height: "100%",
-                              transform: "skewX(-20deg)",
-                            }}
-                          />
-                          {/* Floating Particles Effect */}
-                          {[...Array(6)].map((_, i) => (
+                      <AnimatePresence mode="wait">
+                        {virtualTryOnSlidesData.map((slide, index) => (
+                          virtualTryOnSlide === index && (
                             <motion.div
-                              key={i}
-                              className="absolute w-2 h-2 bg-white/40 rounded-full"
-                              style={{
-                                left: `${20 + i * 15}%`,
-                                top: `${30 + (i % 3) * 20}%`,
-                              }}
-                              animate={{
-                                y: [0, -20, 0],
-                                opacity: [0.4, 0.8, 0.4],
-                                scale: [1, 1.5, 1],
-                              }}
-                              transition={{
-                                duration: 3 + i * 0.5,
-                                repeat: Infinity,
-                                delay: i * 0.3,
-                                ease: "easeInOut",
-                              }}
+                              key={slide.title}
+                              initial={{ opacity: 0, scale: 1.05 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.98 }}
+                              transition={{ duration: 0.8 }}
+                              className={`absolute inset-0 bg-gradient-to-br ${slide.gradient}`}
                             />
-                          ))}
-                        </motion.div>
-                      ))}
+                          )
+                        ))}
+                      </AnimatePresence>
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.9),transparent_38%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.6),transparent_40%),radial-gradient(circle_at_50%_80%,rgba(255,255,255,0.55),transparent_42%)] opacity-70" />
+                      <div className="absolute inset-0 backdrop-blur-[1.5px]" />
                     </div>
 
-                    {/* Content - Enhanced Design */}
-                    <div className="relative z-10 w-full h-full flex items-center justify-center p-8">
-                      <div className="text-center space-y-6">
-                        {/* Animated Camera Icon */}
-                        <motion.div
-                          className="h-32 w-32 mx-auto rounded-full bg-gradient-to-br from-white/40 to-white/20 backdrop-blur-xl flex items-center justify-center border-4 border-white/50 shadow-2xl"
-                          animate={{
-                            scale: [1, 1.1, 1],
-                            rotate: [0, 5, -5, 0],
-                          }}
-                          transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                          }}
-                        >
-                          <Camera className="h-16 w-16 text-white drop-shadow-2xl" />
-                        </motion.div>
-                        <div className="space-y-3">
-                          <h3 className="text-3xl md:text-4xl font-extrabold text-white drop-shadow-2xl">
-                            Virtual Try-On
-                          </h3>
-                          <p className="text-white/95 drop-shadow-lg text-lg font-medium">
-                            Experience products in real-time using your camera
-                          </p>
+                    {/* Card Content */}
+                    <div className="relative z-10 p-8 md:p-10 space-y-6">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-2xl bg-white/80 border border-white/70 shadow flex items-center justify-center">
+                            <Camera className="h-7 w-7 text-rose-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-rose-600">Live Try-On</p>
+                            <p className="text-sm text-gray-700">Auto alignment & secure feed</p>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-10">
+                        <span className="px-3 py-1 rounded-full bg-white/80 text-rose-700 text-xs font-semibold border border-white/70 shadow-sm">
+                          {activeVirtualTryOnSlide.chip}
+                        </span>
+                      </div>
+
+                      <div className="text-center space-y-3">
+                        <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900">{activeVirtualTryOnSlide.title}</h3>
+                        <p className="text-gray-700 text-sm md:text-base leading-relaxed">{activeVirtualTryOnSlide.description}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {activeVirtualTryOnSlide.stats.map((stat, index) => (
                           <motion.div
-                            className="p-5 rounded-xl bg-white/30 backdrop-blur-xl border-2 border-white/40 shadow-2xl hover:bg-white/40 transition-all cursor-pointer"
-                            whileHover={{ scale: 1.05, y: -5 }}
-                            whileTap={{ scale: 0.95 }}
+                            key={stat.label}
+                            whileHover={{ scale: 1.02, y: -3 }}
+                            className="p-4 rounded-xl bg-white/80 backdrop-blur border border-white/70 shadow-md"
                           >
-                            <div className="text-3xl font-extrabold text-white drop-shadow-2xl mb-1">AR</div>
-                            <div className="text-sm text-white/95 font-semibold">Augmented Reality</div>
+                            <div className="text-xs text-gray-500">{stat.label}</div>
+                            <div className="text-xl font-bold text-gray-900">{stat.value}</div>
                           </motion.div>
-                          <motion.div
-                            className="p-5 rounded-xl bg-white/30 backdrop-blur-xl border-2 border-white/40 shadow-2xl hover:bg-white/40 transition-all cursor-pointer"
-                            whileHover={{ scale: 1.05, y: -5 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <div className="text-3xl font-extrabold text-white drop-shadow-2xl mb-1">AI</div>
-                            <div className="text-sm text-white/95 font-semibold">AI-Powered</div>
-                          </motion.div>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-white/75 backdrop-blur border border-white/70 rounded-xl px-4 py-3 shadow">
+                        <Sparkles className="h-4 w-4 text-rose-600" />
+                        <div className="flex-1 h-2 bg-rose-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-400 rounded-full"
+                            style={{ width: `${70 + virtualTryOnSlide * 10}%` }}
+                          />
                         </div>
+                        <span className="text-xs font-semibold text-gray-700">{virtualTryOnSlide + 1}/{virtualTryOnSlidesData.length}</span>
+                      </div>
+
+                      <div className="flex justify-center gap-2 pt-2">
+                        {virtualTryOnSlidesData.map((slide, index) => (
+                          <button
+                            key={slide.title}
+                            onClick={() => setVirtualTryOnSlide(index)}
+                            className={`rounded-full transition-all duration-300 ${
+                              virtualTryOnSlide === index
+                                ? "bg-rose-600 w-8 h-2"
+                                : "bg-rose-200 w-2 h-2 hover:bg-rose-300"
+                            }`}
+                            aria-label={`Go to slide ${index + 1}`}
+                          />
+                        ))}
                       </div>
                     </div>
-
-                    {/* Slider Indicators */}
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
-                      {[0, 1, 2].map((index) => (
-                        <button
-                          key={index}
-                          onClick={() => setVirtualTryOnSlide(index)}
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            virtualTryOnSlide === index
-                              ? "w-8 bg-white"
-                              : "w-2 bg-white/40 hover:bg-white/60"
-                          }`}
-                          aria-label={`Go to slide ${index + 1}`}
-                        />
-                      ))}
-                    </div>
                   </div>
-                </div>
-              </SlideInFromRight>
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section - Professional Grid */}
-      <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-black to-gray-950">
-        <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
-          {/* Section Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-12 sm:mb-16 md:mb-20"
-          >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 tracking-tight text-white px-4">
-              Why Choose
-              <span className="bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent"> StyleCraft</span>
-            </h2>
-            <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-2xl mx-auto px-4">
-              Experience the future of fashion design with our cutting-edge platform
-            </p>
-          </motion.div>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {[
-              {
-                icon: <Palette className="h-8 w-8" />,
-                title: "Interactive Design Studio",
-                description: "Create stunning designs with our intuitive drag-and-drop interface and real-time preview.",
-              },
-              {
-                icon: <TrendingUp className="h-8 w-8" />,
-                title: "Premium Quality",
-                description: "We use only the finest materials and printing techniques for exceptional results.",
-              },
-              {
-                icon: <ShoppingBag className="h-8 w-8" />,
-                title: "Fast Delivery",
-                description: "Your designs go from screen to reality in days. Quick turnaround guaranteed.",
-              },
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                whileHover={{ y: -8, transition: { duration: 0.3 } }}
-                className="group p-6 sm:p-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer"
-              >
-                <div className="mb-4 sm:mb-5 text-white/80 group-hover:text-white group-hover:scale-110 transition-all duration-300">
-                  {feature.icon}
+      {/* Product Sliders Section - After Virtual Camera */}
+      <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-white to-rose-50/30 space-y-16">
+        {/* Men's Collection Slider */}
+        {isLoadingProducts ? (
+          <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 mb-8">
+            <FeaturedProductsSkeleton />
+          </div>
+        ) : menProducts.length > 0 && (
+          <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="mb-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+                    Men's Collection
+                  </h2>
+                  <p className="text-gray-600">Premium fashion for men</p>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-white">{feature.title}</h3>
-                <p className="text-sm sm:text-base text-gray-400 leading-relaxed">{feature.description}</p>
-              </motion.div>
-            ))}
+                <Link href="/products?gender=Men">
+                  <Button variant="outline" className="border-rose-300 text-rose-600 hover:bg-rose-50">
+                    View All
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="relative overflow-hidden rounded-2xl">
+                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${menSlideIndex * (100 / 4)}%)` }}>
+                  {menProducts.map((product, idx) => (
+                    <Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
+                      <motion.div
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all"
+                      >
+                        <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
+                          {product.image ? (
+                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                        </div>
+                      </motion.div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Women's Collection Slider - Reversed Direction */}
+        {womenProducts.length > 0 && (
+          <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="mb-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+                    Women's Collection
+                  </h2>
+                  <p className="text-gray-600">Elegant fashion for women</p>
+                </div>
+                <Link href="/products?gender=Women">
+                  <Button variant="outline" className="border-rose-300 text-rose-600 hover:bg-rose-50">
+                    View All
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="relative overflow-hidden rounded-2xl">
+                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${Math.max(0, (womenProducts.length - 4 - womenSlideIndex)) * (100 / 4)}%)` }}>
+                  {womenProducts.slice().reverse().map((product, idx) => (
+                    <Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
+                      <motion.div
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all"
+                      >
+                        <div className="aspect-square bg-gradient-to-br from-pink-50 to-rose-50 relative">
+                          {product.image ? (
+                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                        </div>
+                      </motion.div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Kids Collection Slider */}
+        {kidsProducts.length > 0 && (
+          <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="mb-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+                    Kids Collection
+                  </h2>
+                  <p className="text-gray-600">Fun and comfortable for kids</p>
+                </div>
+                <Link href="/products?gender=Kids">
+                  <Button variant="outline" className="border-rose-300 text-rose-600 hover:bg-rose-50">
+                    View All
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="relative overflow-hidden rounded-2xl">
+                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${kidsSlideIndex * (100 / 4)}%)` }}>
+                  {kidsProducts.map((product, idx) => (
+                    <Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
+                      <motion.div
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all"
+                      >
+                        <div className="aspect-square bg-gradient-to-br from-amber-50 to-orange-50 relative">
+                          {product.image ? (
+                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                        </div>
+                      </motion.div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </section>
+
+      {/* Features Section - Left Aligned */}
+      <section className="relative overflow-hidden py-16 sm:py-24 md:py-32 bg-gradient-to-br from-white via-rose-50/40 to-amber-50/30">
+        <div className="absolute inset-0">
+          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
+          <div className="absolute right-0 top-1/4 h-64 w-64 rounded-full bg-amber-200/25 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.7),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.6),transparent_35%)]" />
+        </div>
+        <div className="container relative mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
+          <div className="max-w-7xl mx-auto">
+            {/* Section Header - Left Aligned */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-12 sm:mb-16 md:mb-20"
+            >
+              <div className="max-w-3xl space-y-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 border border-rose-100 text-sm font-semibold text-rose-600 shadow-sm">
+                  <Sparkles className="h-4 w-4" />
+                  Why choose us?
+                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900">
+                  Reasons that make <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 bg-clip-text text-transparent">FashionHub</span> your first choice
+                </h2>
+                <p className="text-base sm:text-lg md:text-xl text-gray-600">
+                  Smooth experience, premium quality, and fast delivery—everything crafted to keep you confident with every order.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { label: "Customer Satisfaction", value: "4.9/5" },
+                  { label: "Avg. Delivery", value: "48h" },
+                  { label: "Certified Materials", value: "100%" },
+                ].map((stat) => (
+                  <div key={stat.label} className="px-4 py-3 rounded-2xl bg-white/85 border border-rose-100 shadow-sm">
+                    <p className="text-xs text-gray-500">{stat.label}</p>
+                    <p className="text-lg font-bold text-gray-900">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Features Grid - Left Aligned */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl">
+              {[
+                {
+                  icon: <Palette className="h-8 w-8" />,
+                  title: "Live & Interactive Design",
+                  description: "Drag-and-drop studio with instant previews before printing.",
+                  accent: "from-rose-500/15 to-pink-500/10",
+                },
+                {
+                  icon: <TrendingUp className="h-8 w-8" />,
+                  title: "Refined Quality",
+                  description: "Certified materials and precise printing for lasting looks.",
+                  accent: "from-amber-500/15 to-orange-500/10",
+                },
+                {
+                  icon: <ShoppingBag className="h-8 w-8" />,
+                  title: "Fast & Secure Delivery",
+                  description: "Smart shipping with live tracking and confirmed delivery.",
+                  accent: "from-blue-500/12 to-indigo-500/10",
+                },
+              ].map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  whileHover={{ y: -8, transition: { duration: 0.25 } }}
+                  className="group relative p-6 sm:p-8 rounded-3xl bg-white/90 backdrop-blur-md border border-white/60 shadow-lg shadow-rose-100/30 overflow-hidden"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                  <div className="relative flex items-center justify-between mb-4">
+                    <div className="h-12 w-12 rounded-2xl bg-white border border-rose-100 flex items-center justify-center text-rose-600 group-hover:scale-105 transition-transform">
+                      {feature.icon}
+                    </div>
+                    <span className="text-xs font-semibold text-rose-500 bg-rose-50 border border-rose-100 px-3 py-1 rounded-full">
+                      Trusted
+                    </span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2 text-gray-900">{feature.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{feature.description}</p>
+                  <div className="mt-4 h-px bg-gradient-to-r from-transparent via-rose-200/70 to-transparent" />
+                  <div className="mt-3 flex items-center gap-2 text-sm font-semibold text-rose-600">
+                    Discover more
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Featured Products - Professional Grid */}
-      <section className="py-32 bg-gradient-to-b from-gray-950 to-black">
-        <div className="container mx-auto px-6 md:px-12 lg:px-24">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight text-white">
-              Featured Collection
-            </h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              Explore our curated selection of premium apparel
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredProducts.map((product, index) => (
-              <Link key={product.id} href={`/products/${product.id}`}>
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  whileHover={{ y: -8, transition: { duration: 0.3 } }}
-                  className="group rounded-2xl overflow-hidden bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
-                >
-                  <div className="aspect-square bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
-                    <div className="w-full h-full flex items-center justify-center p-8">
-                      <div className="text-6xl font-bold text-white/10">{product.name.charAt(0)}</div>
-                    </div>
+      {isLoadingFeatured ? (
+        <section className="py-32 bg-gradient-to-b from-white to-rose-50/50">
+          <div className="container mx-auto px-6 md:px-12 lg:px-24">
+            <div className="text-center mb-20">
+              <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight text-gray-900">
+                {language === "ar" ? "المجموعة المميزة" : "Featured Collection"}
+              </h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                {language === "ar" ? "استكشف مجموعتنا المختارة من الملابس المميزة" : "Explore our curated selection of premium apparel"}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="rounded-2xl overflow-hidden bg-white/90 backdrop-blur-sm border border-gray-200 animate-pulse">
+                  <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50" />
+                  <div className="p-4 sm:p-6 space-y-3">
+                    <div className="h-4 bg-gray-200 rounded w-1/3" />
+                    <div className="h-6 bg-gray-200 rounded w-2/3" />
+                    <div className="h-5 bg-gray-200 rounded w-1/2" />
                   </div>
-                  <div className="p-4 sm:p-6">
-                    <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">{product.category}</div>
-                    <h3 className="text-lg sm:text-xl font-bold mb-2 text-white group-hover:text-gray-200 transition-colors line-clamp-2">
-                      {product.name}
-                    </h3>
-                    <div className="text-xl sm:text-2xl font-bold text-white">{formatPrice(product.price)}</div>
-                  </div>
-                </motion.div>
-              </Link>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
+        </section>
+      ) : featuredProducts.length > 0 && (
+        <section className="py-32 bg-gradient-to-b from-white to-rose-50/50">
+          <div className="container mx-auto px-6 md:px-12 lg:px-24">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="text-center mb-20"
+            >
+              <h2 className="text-5xl md:text-6xl font-bold mb-6 tracking-tight text-gray-900">
+                {language === "ar" ? "المجموعة المميزة" : "Featured Collection"}
+              </h2>
+              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                {language === "ar" ? "استكشف مجموعتنا المختارة من الملابس المميزة" : "Explore our curated selection of premium apparel"}
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featuredProducts.map((product, index) => (
+                <Link key={product._id || product.id || index} href={`/products/${product._id || product.id}`}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: index * 0.1 }}
+                    whileHover={{ y: -8, transition: { duration: 0.3 } }}
+                    className="group rounded-2xl overflow-hidden bg-white/90 backdrop-blur-sm border border-gray-200 hover:bg-white hover:border-rose-300 hover:shadow-xl transition-all duration-300"
+                  >
+                    <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative overflow-hidden">
+                      {product.image ? (
+                        <Image 
+                          src={product.image} 
+                          alt={product.name || "Product"} 
+                          fill 
+                          className="object-cover group-hover:scale-110 transition-transform duration-300"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-6xl font-bold text-gray-200">{(product.name || "P").charAt(0)}</div>
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3">
+                        <Badge className="bg-rose-500 text-white border-0 rounded-full px-3 py-1 text-xs">
+                          {language === "ar" ? "مميز" : "Featured"}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="p-4 sm:p-6">
+                      <div className="text-xs sm:text-sm text-rose-500 mb-1 sm:mb-2 font-medium">{product.category}</div>
+                      <h3 className="text-lg sm:text-xl font-bold mb-2 text-gray-900 group-hover:text-rose-600 transition-colors line-clamp-2">
+                        {language === "ar" && (product as any).nameAr ? (product as any).nameAr : product.name}
+                      </h3>
+                      <div className="text-xl sm:text-2xl font-bold text-rose-600">{formatPrice(product.price)}</div>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
 
           <motion.div
             initial={{ opacity: 0 }}
@@ -619,7 +1130,7 @@ export default function HomePage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-2 border-white/20 text-white hover:bg-white/10 hover:border-white/40 px-10 py-7 text-lg rounded-full font-semibold transition-all duration-300 hover:scale-105 backdrop-blur-sm group"
+                className="border-2 border-rose-300 text-rose-600 hover:bg-rose-50 hover:border-rose-400 px-10 py-7 text-lg rounded-full font-semibold transition-all duration-300 hover:scale-105 group"
               >
                 View All Products
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -628,12 +1139,10 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>
-
-      {/* Customer Reviews Section */}
-      <CustomerReviewsSection />
+      )}
 
       {/* CTA Section - Professional */}
-      <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-black to-gray-950">
+      <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-white via-rose-50/50 to-white">
         <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -642,11 +1151,11 @@ export default function HomePage() {
             transition={{ duration: 0.8 }}
             className="max-w-4xl mx-auto text-center p-8 sm:p-12 md:p-16 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20"
           >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 tracking-tight text-white px-4">
-              Ready to Create Something Amazing?
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 tracking-tight text-gray-900 px-4">
+              Ready to Shop Something Amazing?
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto px-4">
-              Join thousands of creators who are already designing their dream apparel with StyleCraft.
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto px-4">
+              Join thousands of fashion lovers who are already shopping premium clothing at FashionHub.
             </p>
             <Link href="/studio" className="inline-block">
               <Button
@@ -662,8 +1171,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Customer Reviews Section - At the End of Content */}
+      <CustomerReviewsSection />
+
       {/* Footer */}
-      <footer className="border-t border-border py-8 sm:py-12">
+      <footer className="border-t border-border py-8 sm:py-12 bg-white">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <div>
@@ -733,7 +1245,7 @@ export default function HomePage() {
           </div>
 
           <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2025 StyleCraft. All rights reserved.</p>
+            <p>&copy; 2025 FashionHub. All rights reserved.</p>
           </div>
         </div>
       </footer>

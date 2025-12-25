@@ -24,7 +24,7 @@ const seedUsers = async () => {
       {
         firstName: 'Admin',
         lastName: 'User',
-        email: 'admin@stylecraft.com',
+        email: 'admin@fashionhub.com',
         password: 'Admin@123',
         role: 'admin',
       },
@@ -54,36 +54,114 @@ const seedUsers = async () => {
 const seedProducts = async () => {
   try {
     await Product.deleteMany({});
-
+    // NOTE: For production, replace local image paths with Cloudinary URLs
+    // Example: image: 'https://res.cloudinary.com/your-cloud/image/upload/v1234567890/stylecraft/products/summer-shirt-main.png'
     const products = [
-      { name: 'Classic White Tee', price: 29.99, image: '/white-t-shirt.png', category: 'T-Shirts', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Casual', stock: 100 },
-      { name: 'Premium Black Tee', price: 32.99, image: '/black-t-shirt-premium.jpg', category: 'T-Shirts', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Casual', stock: 100 },
-      { name: 'V-Neck White Tee', price: 28.99, image: '/white-t-shirt.png', category: 'T-Shirts', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Casual', stock: 100 },
-      { name: 'Graphic T-Shirt', price: 34.99, image: '/graphic-t-shirt.png', category: 'T-Shirts', gender: 'Men', season: 'Summer', style: 'Graphic', occasion: 'Casual', stock: 100 },
-      { name: 'Navy Pocket T-Shirt', price: 31.99, image: '/navy-pocket-t-shirt.jpg', category: 'T-Shirts', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Casual', stock: 100 },
-      { name: 'Gray Pullover Hoodie', price: 59.99, image: '/gray-pullover-hoodie.png', category: 'Hoodies', gender: 'Men', season: 'Winter', style: 'Plain', occasion: 'Casual', stock: 80 },
-      { name: 'Black Hoodie', price: 64.99, image: '/black-hoodie.png', category: 'Hoodies', gender: 'Men', season: 'Winter', style: 'Plain', occasion: 'Streetwear', stock: 80 },
-      { name: 'Oversized Hoodie', price: 69.99, image: '/oversized-hoodie.png', category: 'Hoodies', gender: 'Unisex', season: 'Winter', style: 'Plain', occasion: 'Casual', stock: 70 },
-      { name: 'Cropped Hoodie', price: 54.99, image: '/cropped-hoodie.png', category: 'Hoodies', gender: 'Women', season: 'Fall', style: 'Plain', occasion: 'Casual', stock: 60 },
-      { name: 'Gray Sweatshirt', price: 49.99, image: '/gray-sweatshirt.png', category: 'Sweatshirts', gender: 'Men', season: 'Winter', style: 'Plain', occasion: 'Casual', stock: 90 },
-      { name: 'Crewneck Sweatshirt', price: 52.99, image: '/crewneck-sweatshirt.jpg', category: 'Sweatshirts', gender: 'Unisex', season: 'Fall', style: 'Plain', occasion: 'Casual', stock: 85 },
-      { name: 'Embroidered Sweatshirt', price: 57.99, image: '/embroidered-sweatshirt.jpg', category: 'Sweatshirts', gender: 'Women', season: 'Winter', style: 'Embroidered', occasion: 'Casual', stock: 75 },
-      { name: 'Oversized Sweatshirt', price: 54.99, image: '/oversized-sweatshirt.jpg', category: 'Sweatshirts', gender: 'Unisex', season: 'Fall', style: 'Plain', occasion: 'Casual', stock: 80 },
-      { name: 'Cargo Pants', price: 69.99, image: '/cargo-pants.png', category: 'Pants', gender: 'Men', season: 'All Season', style: 'Plain', occasion: 'Casual', stock: 70 },
-      { name: 'Chino Pants', price: 64.99, image: '/chino-pants.png', category: 'Pants', gender: 'Men', season: 'All Season', style: 'Plain', occasion: 'Formal', stock: 75 },
-      { name: 'Jogger Pants', price: 54.99, image: '/jogger-pants.png', category: 'Pants', gender: 'Unisex', season: 'All Season', style: 'Plain', occasion: 'Sport', stock: 80 },
-      { name: 'Athletic Shorts', price: 34.99, image: '/athletic-shorts.png', category: 'Shorts', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Sport', stock: 90 },
-      { name: 'Cargo Shorts', price: 44.99, image: '/cargo-shorts.png', category: 'Shorts', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Casual', stock: 85 },
-      { name: 'Denim Shorts', price: 39.99, image: '/denim-shorts.png', category: 'Shorts', gender: 'Unisex', season: 'Summer', style: 'Plain', occasion: 'Casual', stock: 80 },
-      { name: 'Classic Leather Jacket', price: 199.99, image: '/classic-leather-jacket.png', category: 'Jackets', gender: 'Men', season: 'Winter', style: 'Plain', occasion: 'Classic', stock: 40 },
-      { name: 'Denim Jacket', price: 89.99, image: '/classic-denim-jacket.png', category: 'Jackets', gender: 'Unisex', season: 'Fall', style: 'Plain', occasion: 'Casual', stock: 50 },
-      { name: 'Bomber Jacket', price: 129.99, image: '/bomber-jacket.png', category: 'Jackets', gender: 'Men', season: 'Fall', style: 'Plain', occasion: 'Casual', stock: 45 },
-      { name: 'Tank Top', price: 24.99, image: '/tank-top.png', category: 'Tank Tops', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Sport', stock: 100 },
-      { name: 'Racerback Tank', price: 26.99, image: '/racerback-tank.jpg', category: 'Tank Tops', gender: 'Women', season: 'Summer', style: 'Plain', occasion: 'Sport', stock: 95 },
-      { name: 'Muscle Tank', price: 27.99, image: '/muscle-tank-top.jpg', category: 'Tank Tops', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Sport', stock: 90 },
-      { name: 'Performance Polo', price: 44.99, image: '/performance-polo.jpg', category: 'Polo Shirts', gender: 'Men', season: 'Summer', style: 'Plain', occasion: 'Sport', stock: 70 },
-      { name: 'Raglan Baseball Tee', price: 32.99, image: '/raglan-baseball-tee.jpg', category: 'T-Shirts', gender: 'Unisex', season: 'Spring', style: 'Plain', occasion: 'Casual', stock: 85 },
-      { name: 'Henley Shirt', price: 36.99, image: '/henley-shirt.png', category: 'T-Shirts', gender: 'Men', season: 'Fall', style: 'Plain', occasion: 'Casual', stock: 80 },
+      { 
+        name: 'Tropical Leaf Summer Shirt', 
+        nameAr: 'قميص صيفي بأوراق استوائية',
+        description: 'Casual short-sleeved shirt with tropical leaf pattern in blue tones. Perfect for summer days.',
+        descriptionAr: 'قميص كاجوال بأكمام قصيرة مع طبع أوراق استوائية بألوان زرقاء. مثالي لأيام الصيف.',
+        price: 45.99, 
+        // Local path - replace with Cloudinary URL for production
+        image: '/MenSummer/summer-shirt-main.png', 
+        images: ['/MenSummer/summer-shirt-2.png', '/MenSummer/summer-shirt-3.png', '/MenSummer/summer-shirt-4.png'],
+        category: 'Tops', 
+        categoryAr: 'ترنك',
+        gender: 'Men', 
+        genderAr: 'رجال',
+        season: 'Summer', 
+        seasonAr: 'صيف',
+        style: 'Printed', 
+        styleAr: 'مطبوع',
+        occasion: 'Casual', 
+        occasionAr: 'كاجوال',
+        sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+        colors: ['White', 'Light Blue'],
+        stock: 100,
+        featured: true,
+        active: true,
+        onSale: false,
+        salePercentage: 0
+      },
+      { 
+        name: 'Ribbed Texture T-Shirt', 
+        nameAr: 'تي شيرت بنسيج مضلع',
+        description: 'Dark grey short-sleeved t-shirt with distinctive vertical ribbed texture. Comfortable and stylish for summer casual wear.',
+        descriptionAr: 'تي شيرت رمادي داكن بأكمام قصيرة مع نسيج مضلع عمودي مميز. مريح وأنيق للاستخدام الكاجوال في الصيف.',
+        price: 38.99, 
+        image: '/MenSummer/ribbed-tshirt-main.png', 
+        images: ['/MenSummer/ribbed-tshirt-2.png', '/MenSummer/ribbed-tshirt-3.png', '/MenSummer/ribbed-tshirt-4.png'],
+        category: 'T-Shirts', 
+        categoryAr: 'تي شيرت',
+        gender: 'Men', 
+        genderAr: 'رجال',
+        season: 'Summer', 
+        seasonAr: 'صيف',
+        style: 'Plain', 
+        styleAr: 'عادي',
+        occasion: 'Casual', 
+        occasionAr: 'كاجوال',
+        sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+        colors: ['Dark Grey', 'Grey'],
+        stock: 100,
+        featured: true,
+        active: true,
+        onSale: false,
+        salePercentage: 0
+      },
+      { 
+        name: 'Quarter-Zip Polo Shirt', 
+        nameAr: 'قميص بولو بسحاب ربع',
+        description: 'Light beige polo shirt with quarter-zip placket, white collar and cuffs. Features waffle knit texture for comfort and breathability. Perfect for smart-casual summer wear.',
+        descriptionAr: 'قميص بولو بيج فاتح مع سحاب ربع، ياقة بيضاء وأكمام بيضاء. يتميز بنسيج waffle مريح ومسامي. مثالي للاستخدام الكاجوال الذكي في الصيف.',
+        price: 49.99, 
+        image: '/MenSummer/polo-shirt-main.png', 
+        images: ['/MenSummer/polo-shirt-2.png', '/MenSummer/polo-shirt-3.png', '/MenSummer/polo-shirt-4.png'],
+        category: 'Polo Shirts', 
+        categoryAr: 'بولو',
+        gender: 'Men', 
+        genderAr: 'رجال',
+        season: 'Summer', 
+        seasonAr: 'صيف',
+        style: 'Plain', 
+        styleAr: 'عادي',
+        occasion: 'Casual', 
+        occasionAr: 'كاجوال',
+        sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+        colors: ['Beige', 'Tan', 'Light Beige'],
+        stock: 100,
+        featured: true,
+        active: true,
+        onSale: false,
+        salePercentage: 0
+      },
+      { 
+        name: 'V-Neck Ribbed T-Shirt', 
+        nameAr: 'تي شيرت V-neck بنسيج مضلع',
+        description: 'Terracotta/brick red V-neck t-shirt with vertical ribbed texture. Slim fit design with notched V-neck detail. Comfortable and stylish for summer casual wear.',
+        descriptionAr: 'تي شيرت V-neck بلون terracotta/بني محمر مع نسيج مضلع عمودي. تصميم slim fit مع تفصيل V-neck منحوت. مريح وأنيق للاستخدام الكاجوال في الصيف.',
+        price: 35.99, 
+        image: '/MenSummer/vneck-ribbed-main.png', 
+        images: ['/MenSummer/vneck-ribbed-2.png', '/MenSummer/vneck-ribbed-3.png', '/MenSummer/vneck-ribbed-4.png'],
+        category: 'T-Shirts', 
+        categoryAr: 'تي شيرت',
+        gender: 'Men', 
+        genderAr: 'رجال',
+        season: 'Summer', 
+        seasonAr: 'صيف',
+        style: 'Plain', 
+        styleAr: 'عادي',
+        occasion: 'Casual', 
+        occasionAr: 'كاجوال',
+        sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+        colors: ['Terracotta', 'Brick Red', 'Burnt Orange'],
+        stock: 100,
+        featured: true,
+        active: true,
+        onSale: false,
+        salePercentage: 0
+      },
     ];
 
     await Product.create(products);
@@ -95,7 +173,6 @@ const seedProducts = async () => {
 
 const seedReviews = async () => {
   try {
-    // Get some customers from database
     const customers = await User.find({ role: 'customer' }).limit(10);
     
     if (customers.length === 0) {
@@ -104,8 +181,6 @@ const seedReviews = async () => {
     }
 
     console.log(`📝 Found ${customers.length} customers. Creating reviews...`);
-
-    // Sample reviews in Arabic and English
     const reviewsData = [
       {
         user: customers[0]._id,
@@ -173,7 +248,6 @@ const seedReviews = async () => {
       },
     ];
 
-    // Create reviews (alternate between Arabic and English)
     const reviewsToCreate = reviewsData.map((reviewData, index) => {
       const useArabic = index % 2 === 0;
       

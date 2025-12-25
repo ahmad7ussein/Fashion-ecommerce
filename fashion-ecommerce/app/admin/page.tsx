@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -20,6 +21,7 @@ import {
   UserCog,
   Shield,
   Database,
+  Palette as PaletteIcon,
   Bell,
   Download,
   Plus,
@@ -37,22 +39,33 @@ import {
   Menu,
   ChevronLeft,
   Activity,
+  MessageSquare,
+  Mail,
+  Send,
+  Upload,
+  Truck,
+  Clock,
+  Check,
+  Search,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Logo } from "@/components/logo"
 import { productsAdminApi } from "@/lib/api/productsAdmin"
+import { studioProductsApi, type StudioProduct } from "@/lib/api/studioProducts"
 import type { Product } from "@/lib/api/products"
 import { useAuth } from "@/lib/auth"
 import { adminApi, type DashboardStats, type User } from "@/lib/api/admin"
 import { ordersApi, type Order } from "@/lib/api/orders"
 import { userPreferencesApi, type UserPreferences } from "@/lib/api/userPreferences"
 import { reviewsApi, type Review } from "@/lib/api/reviews"
+import { getContactMessages, updateContactMessage, deleteContactMessage, type ContactMessage } from "@/lib/api/contact"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/lib/language"
@@ -73,70 +86,12 @@ import {
   ResponsiveContainer,
 } from "recharts"
 
+// Icon alias to avoid runtime reference issues when name changes
+const Palette = PaletteIcon
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
 
-// FIXED: Helper functions for report generation
-const generateSalesPDF = (report: any, language: string): string => {
-  const title = language === "ar" ? "تقرير المبيعات" : "Sales Report"
-  const date = new Date().toLocaleDateString()
-  let content = `${title}\n${date}\n\n`
-  
-  if (report.salesByDay && Array.isArray(report.salesByDay)) {
-    content += (language === "ar" ? "المبيعات حسب اليوم:\n" : "Sales by Day:\n")
-    report.salesByDay.forEach((day: any) => {
-      content += `${day._id}: $${day.totalSales?.toFixed(2) || 0} (${day.orderCount || 0} orders)\n`
-    })
-  }
-  
-  if (report.summary) {
-    content += `\n${language === "ar" ? "الإجمالي" : "Total"}: $${report.summary.total?.toFixed(2) || 0}\n`
-    content += `${language === "ar" ? "عدد الطلبات" : "Total Orders"}: ${report.summary.count || 0}\n`
-  }
-  
-  return content
-}
-
-const generateInventoryPDF = (data: any[], language: string): string => {
-  const title = language === "ar" ? "تقرير المخزون" : "Inventory Report"
-  const date = new Date().toLocaleDateString()
-  let content = `${title}\n${date}\n\n`
-  
-  data.forEach((item: any) => {
-    content += `${item.name}: ${item.stock} ${language === "ar" ? "وحدة" : "units"} (${item.category})\n`
-  })
-  
-  return content
-}
-
-const generateCustomerPDF = (data: any[], language: string): string => {
-  const title = language === "ar" ? "تقرير العملاء" : "Customer Report"
-  const date = new Date().toLocaleDateString()
-  let content = `${title}\n${date}\n\n`
-  
-  data.forEach((customer: any) => {
-    content += `${customer.name} (${customer.email}) - ${customer.phone}\n`
-  })
-  
-  return content
-}
-
-// FIXED: Proper PDF download with correct MIME type
-const downloadPDF = (content: string, filename: string) => {
-  // Use text/plain for now (simple text-based PDF)
-  // For proper PDF generation, would need a library like jsPDF or pdfkit
-  const blob = new Blob([content], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  // FIXED: Ensure proper download attribute
-  link.setAttribute('download', filename)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}
-
+// Helper function for Excel export
 const exportToExcel = (data: any[], reportType: string, language: string) => {
   if (!data || data.length === 0) {
     return
@@ -167,8 +122,16 @@ export default function AdminDashboard() {
   const [reviews, setReviews] = useState<Review[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>("pending")
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([])
+  const [messagesLoading, setMessagesLoading] = useState(false)
+  const [messageStatusFilter, setMessageStatusFilter] = useState<string>("all")
+  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null)
+  const [showMessageDetails, setShowMessageDetails] = useState(false)
+  const [replyText, setReplyText] = useState("")
   const [loading, setLoading] = useState(true)
   const [products, setProducts] = useState<Product[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [productSearchQuery, setProductSearchQuery] = useState("")
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showProductModal, setShowProductModal] = useState(false)
   const [isEditingProduct, setIsEditingProduct] = useState(false)
@@ -190,10 +153,32 @@ export default function AdminDashboard() {
     stock: "100",
     featured: false,
     active: true,
+    onSale: false,
+    salePercentage: "0",
+    inCollection: false,
   })
   const [newImageUrl, setNewImageUrl] = useState("")
   const [newSize, setNewSize] = useState("")
   const [newColor, setNewColor] = useState("")
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null)
+  const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
+  // Studio products state
+  const [studioProducts, setStudioProducts] = useState<StudioProduct[]>([])
+  const [studioLoading, setStudioLoading] = useState(false)
+  const [showStudioModal, setShowStudioModal] = useState(false)
+  const [editingStudio, setEditingStudio] = useState<StudioProduct | null>(null)
+  const [studioForm, setStudioForm] = useState({
+    name: "",
+    type: "",
+    description: "",
+    baseMockupUrl: "",
+    price: "",
+    colors: "",
+    sizes: "",
+    active: true,
+    aiEnhanceEnabled: false,
+    safeArea: { x: 60, y: 80, width: 280, height: 300 },
+  })
   const [isViewingAsGuest, setIsViewingAsGuest] = useState(false)
   const [showEmployeeModal, setShowEmployeeModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -217,15 +202,143 @@ export default function AdminDashboard() {
   const [showEditOrder, setShowEditOrder] = useState(false)
   const [editOrderStatus, setEditOrderStatus] = useState<Order["status"]>("pending")
   const [editTrackingNumber, setEditTrackingNumber] = useState("")
-  // FIXED: Employee tracking state variables
-  const [employeeActivities, setEmployeeActivities] = useState<any[]>([])
-  const [employeeStats, setEmployeeStats] = useState<any[]>([])
-  const [trackingLoading, setTrackingLoading] = useState(false)
+  const [editCarrier, setEditCarrier] = useState("")
+  const [editEstimatedDelivery, setEditEstimatedDelivery] = useState("")
+  const [editLocation, setEditLocation] = useState("")
+  const [editNote, setEditNote] = useState("")
+  // Order tracking state variables
+  const [orderTrackingLoading, setOrderTrackingLoading] = useState(false)
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all")
   const { user, logout, isLoading: authLoading } = useAuth()
   const { theme, setTheme } = useTheme()
   const { language, setLanguage } = useLanguage()
   const { toast } = useToast()
   const router = useRouter()
+
+  // Convert file to base64 string
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = (error) => reject(error)
+    })
+  }
+
+  // Handle main image upload
+  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: language === "ar" ? "الملف يجب أن يكون صورة" : "File must be an image",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: language === "ar" ? "حجم الصورة يجب أن يكون أقل من 5 ميجابايت" : "Image size must be less than 5MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setMainImageFile(file)
+      const base64 = await fileToBase64(file)
+      setProductForm({ ...productForm, image: base64 })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: language === "ar" ? "فشل تحميل الصورة" : "Failed to load image",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle additional images upload (exactly 3 images required)
+  const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    // Limit to 3 additional images
+    const maxImages = 3
+    const currentImagesCount = productForm.images.length
+    const remainingSlots = maxImages - currentImagesCount
+
+    if (remainingSlots <= 0) {
+      toast({
+        title: language === "ar" ? "حد أقصى" : "Maximum reached",
+        description: language === "ar" ? "يمكنك إضافة 3 صور إضافية فقط" : "You can only add 3 additional images",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const filesToProcess = files.slice(0, remainingSlots)
+    if (files.length > remainingSlots) {
+      toast({
+        title: language === "ar" ? "تنبيه" : "Notice",
+        description: language === "ar" ? `تم اختيار أول ${remainingSlots} صورة فقط` : `Only the first ${remainingSlots} image(s) were selected`,
+        variant: "default",
+      })
+    }
+
+    try {
+      const newFiles: File[] = []
+      const newBase64Images: string[] = []
+
+      for (const file of filesToProcess) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: "Error",
+            description: language === "ar" ? "الملف يجب أن يكون صورة" : "File must be an image",
+            variant: "destructive",
+          })
+          continue
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast({
+            title: "Error",
+            description: language === "ar" ? "حجم الصورة يجب أن يكون أقل من 5 ميجابايت" : "Image size must be less than 5MB",
+            variant: "destructive",
+          })
+          continue
+        }
+
+        newFiles.push(file)
+        const base64 = await fileToBase64(file)
+        newBase64Images.push(base64)
+      }
+
+      setAdditionalImageFiles([...additionalImageFiles, ...newFiles])
+      setProductForm({ ...productForm, images: [...productForm.images, ...newBase64Images] })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: language === "ar" ? "فشل تحميل الصور" : "Failed to load images",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Remove additional image
+  const removeAdditionalImage = (index: number) => {
+    const newImages = productForm.images.filter((_, i) => i !== index)
+    const newFiles = additionalImageFiles.filter((_, i) => i !== index)
+    setProductForm({ ...productForm, images: newImages })
+    setAdditionalImageFiles(newFiles)
+  }
 
   // Redirect if not admin (only check once)
   const hasCheckedAuth = useRef(false)
@@ -269,6 +382,7 @@ export default function AdminDashboard() {
       loadUserPreferences()
       // FIXED: Load staff immediately on page load
       loadStaff()
+      loadStudioProducts()
     }
   }, [user])
 
@@ -331,49 +445,6 @@ export default function AdminDashboard() {
   }, [activeTab, user])
 
   // FIXED: Load employee tracking when tracking tab is opened
-  useEffect(() => {
-    if (activeTab === "tracking" && user) {
-      loadEmployeeTracking()
-    }
-  }, [activeTab, user])
-
-  // FIXED: Function to load employee tracking data from database
-  const loadEmployeeTracking = async () => {
-    try {
-      setTrackingLoading(true)
-      console.log("🔄 Loading employee tracking data from database...")
-      
-      // FIXED: Fetch data from backend API
-      const trackingData = await adminApi.getEmployeeActivities({ limit: 100 })
-      
-      console.log("✅ Employee tracking loaded from database:", {
-        activities: Array.isArray(trackingData.data) ? trackingData.data.length : 0,
-        statistics: Array.isArray(trackingData.statistics) ? trackingData.statistics.length : 0,
-        fullResponse: trackingData,
-      })
-      
-      // FIXED: Ensure we have arrays
-      setEmployeeActivities(Array.isArray(trackingData.data) ? trackingData.data : [])
-      setEmployeeStats(Array.isArray(trackingData.statistics) ? trackingData.statistics : [])
-      
-      // Show success message if data loaded
-      if (trackingData.data && trackingData.data.length > 0) {
-        console.log("✅ Tracking data loaded successfully from database")
-      }
-    } catch (error: any) {
-      console.error("❌ Error loading employee tracking from database:", error)
-      toast({
-        title: language === "ar" ? "خطأ" : "Error",
-        description: error.message || (language === "ar" ? "فشل تحميل بيانات التتبع" : "Failed to load employee tracking"),
-        variant: "destructive",
-      })
-      // Set empty arrays on error
-      setEmployeeActivities([])
-      setEmployeeStats([])
-    } finally {
-      setTrackingLoading(false)
-    }
-  }
 
   // FIXED: Function to load staff (admins and employees) from database
   const loadStaff = async () => {
@@ -415,6 +486,47 @@ export default function AdminDashboard() {
       loadReviews()
     }
   }, [activeTab, reviewStatusFilter, user])
+
+  // Load contact messages function
+  const loadContactMessages = async () => {
+    try {
+      setMessagesLoading(true)
+      const response = await getContactMessages({
+        status: messageStatusFilter === "all" ? undefined : messageStatusFilter,
+        limit: 50,
+      })
+      setContactMessages(response.data || [])
+    } catch (error: any) {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: error.message || (language === "ar" ? "فشل تحميل الرسائل" : "Failed to load messages"),
+        variant: "destructive",
+      })
+    } finally {
+      setMessagesLoading(false)
+    }
+  }
+
+  // Load messages when messages tab is opened
+  useEffect(() => {
+    if (activeTab === "messages" && user) {
+      loadContactMessages()
+    }
+  }, [activeTab, messageStatusFilter, user])
+
+  // Load orders when tracking tab is opened
+  useEffect(() => {
+    if (activeTab === "tracking" && user) {
+      loadOrderTracking()
+    }
+  }, [activeTab, orderStatusFilter, user])
+
+  // Redirect if not admin - use router for faster navigation (must be before any returns)
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== "admin")) {
+      router.replace("/")
+    }
+  }, [user, authLoading, router])
 
   // FIXED: Save preferences to database when they change with proper validation
   useEffect(() => {
@@ -528,26 +640,263 @@ export default function AdminDashboard() {
     }
   }
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
+      setProductsLoading(true)
       console.log("🔄 Loading products...")
-      const response = await productsAdminApi.getAllProducts({ limit: 100 })
+      // Start with very small limit to ensure fast loading
+      const response = await productsAdminApi.getAllProducts({ 
+        limit: 10, // Very small limit to avoid timeout - start with 10
+        page: 1 
+      })
       const productsList = Array.isArray(response.data) ? response.data : []
       console.log("✅ Products loaded:", productsList.length)
       setProducts(productsList)
+      setProductsLoading(false)
+      
+      // Only try to load more if we successfully got the first batch
+      if (productsList.length > 0 && response.total && response.total > 10) {
+        console.log(`📦 Will load remaining ${response.total - 10} products in background...`)
+        // Load in very small chunks with delays
+        const chunks = Math.ceil((response.total - 10) / 10)
+        for (let i = 0; i < Math.min(chunks, 5); i++) { // Limit to 5 chunks max
+          const page = i + 2
+          const chunkLimit = 10
+          
+          setTimeout(() => {
+            productsAdminApi.getAllProducts({ 
+              limit: chunkLimit,
+              page: page 
+            }).then((chunkResponse) => {
+              const chunkProducts = Array.isArray(chunkResponse.data) ? chunkResponse.data : []
+              if (chunkProducts.length > 0) {
+                setProducts((prev) => {
+                  // Remove duplicates by creating a Map with unique IDs
+                  const productMap = new Map<string, Product>()
+                  
+                  // Add existing products
+                  prev.forEach(product => {
+                    const id = product._id?.toString() || product.id?.toString()
+                    if (id) productMap.set(id, product)
+                  })
+                  
+                  // Add new products (will overwrite if duplicate)
+                  chunkProducts.forEach(product => {
+                    const id = product._id?.toString() || product.id?.toString()
+                    if (id) productMap.set(id, product)
+                  })
+                  
+                  return Array.from(productMap.values())
+                })
+                console.log(`✅ Loaded chunk ${page}: ${chunkProducts.length} products`)
+              }
+            }).catch((err) => {
+              console.warn(`⚠️ Failed to load chunk ${page}:`, err)
+              // Stop loading more chunks if we hit timeout
+            })
+          }, (i + 1) * 1000) // 1 second delay between each chunk
+        }
+      }
     } catch (error: any) {
       console.error("❌ Error loading products:", error)
+      // Check if it's a database timeout error
+      const isDatabaseTimeout = error.message?.includes("Database connection timeout") || 
+                                error.message?.includes("timeout") || 
+                                error.status === 503 ||
+                                error.status === 504
+      
+      if (isDatabaseTimeout) {
+        toast({
+          title: language === "ar" ? "انتهت مهلة الاتصال" : "Connection Timeout",
+          description: language === "ar" 
+            ? "قاعدة البيانات تستغرق وقتاً طويلاً. جاري المحاولة مع عدد أقل من المنتجات..."
+            : "Database is taking too long. Retrying with fewer products...",
+          variant: "destructive",
+        })
+        // Retry with smaller limit after a short delay
+        setTimeout(async () => {
+          try {
+            const retryResponse = await productsAdminApi.getAllProducts({ limit: 25, page: 1 })
+            const retryProducts = Array.isArray(retryResponse.data) ? retryResponse.data : []
+            setProducts(retryProducts)
+            setProductsLoading(false)
+            toast({
+              title: language === "ar" ? "تم التحميل" : "Loaded",
+              description: language === "ar" 
+                ? `تم تحميل ${retryProducts.length} منتج (من أصل ${retryResponse.total || '?'})`
+                : `Loaded ${retryProducts.length} products (of ${retryResponse.total || '?'})`,
+            })
+          } catch (retryError) {
+            console.error("❌ Retry also failed:", retryError)
+            toast({
+              title: language === "ar" ? "فشل التحميل" : "Load Failed",
+              description: language === "ar" 
+                ? "فشل تحميل المنتجات. يرجى التحقق من اتصال قاعدة البيانات."
+                : "Failed to load products. Please check database connection.",
+              variant: "destructive",
+            })
+          }
+        }, 2000)
+      } else {
+        setProductsLoading(false)
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load products",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      setProductsLoading(false)
+    }
+  }, [language, toast])
+
+  // Studio products helpers
+  const resetStudioForm = () => {
+    setStudioForm({
+      name: "",
+      type: "",
+      description: "",
+      baseMockupUrl: "",
+      price: "",
+      colors: "",
+      sizes: "",
+      active: true,
+      aiEnhanceEnabled: false,
+      safeArea: { x: 60, y: 80, width: 280, height: 300 },
+    })
+    setEditingStudio(null)
+  }
+
+  const loadStudioProducts = useCallback(async () => {
+    try {
+      setStudioLoading(true)
+      const data = await studioProductsApi.getAll()
+      setStudioProducts(data || [])
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to load products",
+        description: error?.message || "Failed to load studio products",
+        variant: "destructive",
+      })
+      setStudioProducts([])
+    } finally {
+      setStudioLoading(false)
+    }
+  }, [toast])
+
+  const handleEditStudioProduct = (product: StudioProduct) => {
+    setEditingStudio(product)
+    setStudioForm({
+      name: product.name,
+      type: product.type,
+      description: product.description || "",
+      baseMockupUrl: product.baseMockupUrl || "",
+      price: product.price.toString(),
+      colors: (product.colors || []).join(", "),
+      sizes: (product.sizes || []).join(", "),
+      active: product.active,
+      aiEnhanceEnabled: product.aiEnhanceEnabled || false,
+      safeArea: product.safeArea || { x: 60, y: 80, width: 280, height: 300 },
+    })
+    setShowStudioModal(true)
+  }
+
+  const handleDeleteStudioProduct = async (id: string) => {
+    if (!confirm("Delete this studio product?")) return
+    try {
+      await studioProductsApi.remove(id)
+      toast({ title: "Deleted", description: "Studio product removed" })
+      loadStudioProducts()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to delete studio product",
         variant: "destructive",
       })
     }
   }
 
+  const handleSaveStudioProduct = async () => {
+    try {
+      const payload = {
+        name: studioForm.name.trim(),
+        type: studioForm.type.trim(),
+        description: studioForm.description.trim(),
+        baseMockupUrl: studioForm.baseMockupUrl.trim(),
+        price: Number(studioForm.price) || 0,
+        colors: studioForm.colors.split(",").map((c) => c.trim()).filter(Boolean),
+        sizes: studioForm.sizes.split(",").map((s) => s.trim()).filter(Boolean),
+        active: studioForm.active,
+        aiEnhanceEnabled: studioForm.aiEnhanceEnabled,
+        safeArea: {
+          x: Number(studioForm.safeArea.x) || 0,
+          y: Number(studioForm.safeArea.y) || 0,
+          width: Number(studioForm.safeArea.width) || 0,
+          height: Number(studioForm.safeArea.height) || 0,
+        },
+      }
+
+      if (editingStudio?._id) {
+        await studioProductsApi.update(editingStudio._id, payload)
+        toast({ title: "Updated", description: "Studio product updated" })
+      } else {
+        await studioProductsApi.create(payload)
+        toast({ title: "Created", description: "Studio product added" })
+      }
+
+      setShowStudioModal(false)
+      resetStudioForm()
+      loadStudioProducts()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to save studio product",
+        variant: "destructive",
+      })
+    }
+  }
+  
+  // Memoize filtered products to avoid recalculating on every render
+  const filteredProducts = useMemo(() => {
+    // First, remove any duplicates from products array
+    const uniqueProducts = products.filter((product, index, self) => {
+      const id = product._id?.toString() || product.id?.toString()
+      return id && index === self.findIndex(p => (p._id?.toString() || p.id?.toString()) === id)
+    })
+    
+    if (!productSearchQuery.trim()) return uniqueProducts
+    const query = productSearchQuery.toLowerCase()
+    return uniqueProducts.filter((product) => {
+      const name = (language === "ar" && product.nameAr ? product.nameAr : product.name)?.toLowerCase() || ""
+      const category = product.category?.toLowerCase() || ""
+      const description = product.description?.toLowerCase() || ""
+      return name.includes(query) || category.includes(query) || description.includes(query)
+    })
+  }, [products, productSearchQuery, language])
+
 
   const loadDashboardData = async () => {
     try {
+      // Check if user is authenticated and has admin role
+      if (!user || user.role !== 'admin') {
+        console.warn("⚠️ Cannot load dashboard data: User is not admin")
+        return
+      }
+
+      // Check if token exists
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+      if (!token) {
+        console.warn("⚠️ Cannot load dashboard data: No token found")
+        toast({
+          title: language === "ar" ? "خطأ في المصادقة" : "Authentication Error",
+          description: language === "ar" ? "يرجى تسجيل الدخول مرة أخرى" : "Please log in again",
+          variant: "destructive",
+        })
+        logout()
+        router.replace("/login")
+        return
+      }
+
       setLoading(true)
       console.log("🔄 Loading dashboard data...")
       
@@ -569,6 +918,19 @@ export default function AdminDashboard() {
       setUsers(usersData.data || [])
     } catch (error: any) {
       console.error("❌ Error loading dashboard data:", error)
+      
+      // Handle 401 Unauthorized - token expired or invalid
+      if (error.status === 401 || error.message?.includes("Not authorized") || error.message?.includes("Unauthorized")) {
+        toast({
+          title: language === "ar" ? "انتهت صلاحية الجلسة" : "Session Expired",
+          description: language === "ar" ? "يرجى تسجيل الدخول مرة أخرى" : "Please log in again",
+          variant: "destructive",
+        })
+        logout()
+        router.replace("/login")
+        return
+      }
+      
       toast({
         title: "Error",
         description: error.message || "Failed to load dashboard data",
@@ -576,6 +938,27 @@ export default function AdminDashboard() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadOrderTracking = async () => {
+    try {
+      setOrderTrackingLoading(true)
+      const status = orderStatusFilter === "all" ? undefined : orderStatusFilter
+      const ordersData = await ordersApi.getAllOrders({ 
+        status,
+        limit: 100 
+      })
+      setOrders(Array.isArray(ordersData) ? ordersData : [])
+    } catch (error: any) {
+      console.error("❌ Error loading orders:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load orders",
+        variant: "destructive",
+      })
+    } finally {
+      setOrderTrackingLoading(false)
     }
   }
 
@@ -616,7 +999,10 @@ export default function AdminDashboard() {
     if (!selectedOrder) return
     
     try {
-      await ordersApi.updateOrderStatus(selectedOrder._id, editOrderStatus, editTrackingNumber || undefined)
+      await ordersApi.updateOrderStatus(selectedOrder._id, {
+        status: editOrderStatus,
+        trackingNumber: editTrackingNumber || undefined,
+      })
       toast({
         title: "Success",
         description: language === "ar" ? "تم تحديث حالة الطلب بنجاح" : "Order status updated successfully",
@@ -832,22 +1218,16 @@ export default function AdminDashboard() {
   // Show loading while checking auth or loading dashboard data
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
 
-  // Redirect if not admin
   if (!user || user.role !== "admin") {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Redirecting...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -888,7 +1268,7 @@ export default function AdminDashboard() {
         onMouseLeave={handleSidebarMouseLeave}
       >
         {/* Header Section */}
-        <div className="p-6 border-b border-border/50 flex-shrink-0">
+        <div className="p-4 lg:p-6 border-b border-border/50 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <Link href="/" className="block">
               <Logo />
@@ -902,9 +1282,9 @@ export default function AdminDashboard() {
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Badge variant="destructive" className="text-xs font-semibold shadow-sm">
+              <Badge variant="destructive" className="text-xs font-semibold shadow-sm flex items-center">
                 <Shield className="h-3 w-3 mr-1" />
                 ADMIN
               </Badge>
@@ -929,20 +1309,20 @@ export default function AdminDashboard() {
               <ChevronLeft className={`h-4 w-4 transition-transform duration-300 ${sidebarOpen ? "" : "rotate-180"}`} />
             </Button>
           </div>
-          <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/10">
+          <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
             <p className="text-sm font-medium text-foreground">{user.firstName} {user.lastName}</p>
             <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p>
           </div>
         </div>
 
         {/* Navigation Section - Scrollable */}
-        <nav className="px-3 lg:px-4 space-y-1 pt-4 pb-4 flex-1 overflow-y-auto">
+        <nav className="px-3 lg:px-4 space-y-1.5 pt-4 pb-4 flex-1 overflow-y-auto">
           <button
             onClick={() => {
               setActiveTab("overview")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 group ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 group ${
               activeTab === "overview" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -957,7 +1337,7 @@ export default function AdminDashboard() {
               setActiveTab("orders")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "orders" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -972,7 +1352,7 @@ export default function AdminDashboard() {
               setActiveTab("products")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "products" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -984,10 +1364,25 @@ export default function AdminDashboard() {
 
           <button
             onClick={() => {
+              setActiveTab("studioProducts")
+              if (window.innerWidth < 1024) setSidebarOpen(false)
+            }}
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
+              activeTab === "studioProducts" 
+                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
+                : "hover:bg-muted/50 hover:translate-x-1"
+            }`}
+          >
+            <PaletteIcon className={`h-5 w-5 flex-shrink-0 ${activeTab === "studioProducts" ? "scale-110" : ""} transition-transform`} />
+            <span className="font-medium text-sm lg:text-base truncate">Studio Products</span>
+          </button>
+
+          <button
+            onClick={() => {
               setActiveTab("customers")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "customers" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -1002,7 +1397,7 @@ export default function AdminDashboard() {
               setActiveTab("reviews")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 relative ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 relative ${
               activeTab === "reviews" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -1022,7 +1417,7 @@ export default function AdminDashboard() {
               setActiveTab("analytics")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "analytics" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -1037,7 +1432,7 @@ export default function AdminDashboard() {
               setActiveTab("staff")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "staff" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -1052,14 +1447,14 @@ export default function AdminDashboard() {
               setActiveTab("tracking")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "tracking" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
             }`}
           >
-            <Activity className={`h-5 w-5 flex-shrink-0 ${activeTab === "tracking" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{language === "ar" ? "تتبع الموظفين" : "Employee Tracking"}</span>
+            <Truck className={`h-5 w-5 flex-shrink-0 ${activeTab === "tracking" ? "scale-110" : ""} transition-transform`} />
+            <span className="font-medium text-sm lg:text-base truncate">{language === "ar" ? "تتبع الطلبات" : "Order Tracking"}</span>
           </button>
 
           <button
@@ -1067,7 +1462,7 @@ export default function AdminDashboard() {
               setActiveTab("reports")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "reports" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -1082,7 +1477,7 @@ export default function AdminDashboard() {
               setActiveTab("settings")
               if (window.innerWidth < 1024) setSidebarOpen(false)
             }}
-            className={`w-full flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
               activeTab === "settings" 
                 ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
                 : "hover:bg-muted/50 hover:translate-x-1"
@@ -1094,13 +1489,15 @@ export default function AdminDashboard() {
         </nav>
 
         {/* Footer Section - Fixed at bottom */}
-        <div className="p-3 lg:p-4 space-y-2 border-t border-border/50 bg-background/95 backdrop-blur-sm flex-shrink-0">
+        <div className="p-3 lg:p-4 space-y-2.5 border-t border-border/50 bg-background/95 backdrop-blur-sm flex-shrink-0">
+          {/* Theme and Language Toggle */}
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="icon"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="flex-1 hover:bg-primary/10 hover:border-primary/20 transition-all h-9"
+              title={theme === "dark" ? (language === "ar" ? "الوضع الفاتح" : "Light Mode") : (language === "ar" ? "الوضع الداكن" : "Dark Mode")}
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
@@ -1109,34 +1506,44 @@ export default function AdminDashboard() {
               size="icon"
               onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
               className="flex-1 hover:bg-primary/10 hover:border-primary/20 transition-all h-9"
+              title={language === "ar" ? "English" : "العربية"}
             >
               <Languages className="h-4 w-4" />
             </Button>
           </div>
-          <Button
-            variant="outline"
-            className="w-full bg-transparent hover:bg-primary/10 hover:border-primary/20 transition-all text-xs lg:text-sm h-9 justify-start"
-            onClick={() => {
-              setIsViewingAsGuest(true)
-              window.open("/", "_blank")
-            }}
-          >
-            <Eye className="h-3.5 w-3.5 lg:h-4 lg:w-4 mr-2 flex-shrink-0" />
-            <span className="truncate">{language === "ar" ? "عرض كزائر" : "View as Guest"}</span>
-          </Button>
-          <Link href="/" className="block">
-            <Button variant="outline" className="w-full bg-transparent hover:bg-primary/10 hover:border-primary/20 transition-all text-xs lg:text-sm h-9 justify-start">
-              <span className="truncate">{language === "ar" ? "العودة للمتجر" : "Back to Store"}</span>
+
+          {/* Navigation Links */}
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              className="w-full bg-transparent hover:bg-primary/10 hover:border-primary/20 transition-all text-sm h-10 justify-start flex items-center font-medium"
+              onClick={() => {
+                setIsViewingAsGuest(true)
+                window.open("/", "_blank")
+              }}
+            >
+              <Eye className="h-4 w-4 flex-shrink-0 mr-2" />
+              <span className="truncate">{language === "ar" ? "عرض كزائر" : "View as Guest"}</span>
             </Button>
-          </Link>
-          <Button 
-            variant="outline" 
-            className="w-full bg-transparent hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive transition-all text-xs lg:text-sm h-9 justify-start" 
-            onClick={logout}
-          >
-            <LogOut className="h-3.5 w-3.5 lg:h-4 lg:w-4 mr-2 flex-shrink-0" />
-            <span className="truncate">{t("logout", language)}</span>
-          </Button>
+
+            <Link href="/" className="block">
+              <Button 
+                variant="outline" 
+                className="w-full bg-transparent hover:bg-primary/10 hover:border-primary/20 transition-all text-sm h-10 justify-start font-medium"
+              >
+                <span className="truncate">{language === "ar" ? "العودة للمتجر" : "Back to Store"}</span>
+              </Button>
+            </Link>
+
+            <Button 
+              variant="outline" 
+              className="w-full bg-transparent hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive transition-all text-sm h-10 justify-start flex items-center font-medium"
+              onClick={logout}
+            >
+              <LogOut className="h-4 w-4 flex-shrink-0 mr-2" />
+              <span className="truncate">{t("logout", language)}</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1355,8 +1762,16 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                          {orders.slice(0, 5).map((order) => (
-                            <TableRow key={order._id}>
+                          {orders
+                            .filter((order, index, self) => {
+                              const orderId = order._id?.toString()
+                              return orderId && index === self.findIndex(o => o._id?.toString() === orderId)
+                            })
+                            .slice(0, 5)
+                            .map((order, idx) => {
+                            const orderId = order._id?.toString() || `order-${idx}`
+                            return (
+                            <TableRow key={orderId}>
                               <TableCell className="font-medium">{order.orderNumber}</TableCell>
                         <TableCell>
                                 {typeof order.user === "object" ? `${order.user.firstName} ${order.user.lastName}` : "N/A"}
@@ -1384,8 +1799,9 @@ export default function AdminDashboard() {
                                   </Button>
                                 </div>
                               </TableCell>
-                      </TableRow>
-                    ))}
+                            </TableRow>
+                            )
+                          })}
                   </TableBody>
                 </Table>
                     ) : (
@@ -1427,8 +1843,15 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                          {orders.map((order) => (
-                            <TableRow key={order._id}>
+                          {orders
+                            .filter((order, index, self) => {
+                              const orderId = order._id?.toString()
+                              return orderId && index === self.findIndex(o => o._id?.toString() === orderId)
+                            })
+                            .map((order, idx) => {
+                            const orderId = order._id?.toString() || `order-${idx}`
+                            return (
+                            <TableRow key={orderId}>
                               <TableCell className="font-medium">{order.orderNumber}</TableCell>
                         <TableCell>
                                 {typeof order.user === "object" ? `${order.user.firstName} ${order.user.lastName}` : "N/A"}
@@ -1448,7 +1871,16 @@ export default function AdminDashboard() {
                             <Button variant="ghost" size="icon" onClick={() => viewOrderDetails(order._id)} title={language === "ar" ? "عرض التفاصيل" : "View Details"}>
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => openEditOrder(order._id)} title={language === "ar" ? "تعديل" : "Edit"}>
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              setSelectedOrder(order)
+                              setEditOrderStatus(order.status)
+                              setEditTrackingNumber(order.trackingNumber || "")
+                              setEditCarrier(order.carrier || "")
+                              setEditEstimatedDelivery(order.estimatedDelivery ? new Date(order.estimatedDelivery).toISOString().split('T')[0] : "")
+                              setEditLocation("")
+                              setEditNote("")
+                              setShowEditOrder(true)
+                            }} title={language === "ar" ? "تحديث التتبع" : "Update Tracking"}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteOrder(order._id)} title={language === "ar" ? "حذف" : "Delete"}>
@@ -1457,7 +1889,8 @@ export default function AdminDashboard() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      )
+                    })}
                   </TableBody>
                 </Table>
                     ) : (
@@ -1499,10 +1932,15 @@ export default function AdminDashboard() {
                     stock: "100",
                     featured: false,
                     active: true,
+                    onSale: false,
+                    salePercentage: "0",
+                    inCollection: false,
                   })
                   setNewImageUrl("")
                   setNewSize("")
                   setNewColor("")
+                  setMainImageFile(null)
+                  setAdditionalImageFiles([])
                   setShowProductModal(true)
                 }}
                 className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
@@ -1514,7 +1952,30 @@ export default function AdminDashboard() {
 
             <Card className="border-2 shadow-lg">
               <CardContent className="p-6">
-                {products.length > 0 ? (
+                {/* Search Bar */}
+                <div className="mb-6">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder={language === "ar" ? "ابحث عن منتج بالاسم أو الفئة..." : "Search products by name or category..."}
+                      value={productSearchQuery}
+                      onChange={(e) => setProductSearchQuery(e.target.value)}
+                      className="pl-10 pr-4"
+                    />
+                    {productSearchQuery && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8"
+                        onClick={() => setProductSearchQuery("")}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {filteredProducts.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1527,10 +1988,34 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {products.map((product) => (
-                        <TableRow key={product._id || product.id}>
+                      {filteredProducts.map((product, index) => {
+                        // Ensure unique key - use both ID and index as fallback
+                        const productId = product._id?.toString() || product.id?.toString() || `product-${index}`
+                        return (
+                        <TableRow key={productId}>
                           <TableCell className="font-medium">
-                            {language === "ar" && product.nameAr ? product.nameAr : product.name}
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                                <Image
+                                  src={product.image || "/placeholder-logo.png"}
+                                  alt={product.name || "Product"}
+                                  fill
+                                  className="object-cover"
+                                  sizes="64px"
+                                  loading="lazy"
+                                  quality={75}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    if (target.src !== "/placeholder-logo.png") {
+                                      target.src = "/placeholder-logo.png";
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <span className="line-clamp-2">
+                                {language === "ar" && product.nameAr ? product.nameAr : product.name}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell>{product.category}</TableCell>
                           <TableCell>${product.price.toFixed(2)}</TableCell>
@@ -1566,10 +2051,15 @@ export default function AdminDashboard() {
                                     stock: product.stock?.toString() || "100",
                                     featured: product.featured || false,
                                     active: product.active !== false,
+                                    onSale: (product as any).onSale || false,
+                                    salePercentage: ((product as any).salePercentage?.toString()) || "0",
+                                    inCollection: (product as any).inCollection || false,
                                   })
                                   setNewImageUrl("")
                                   setNewSize("")
                                   setNewColor("")
+                                  setMainImageFile(null)
+                                  setAdditionalImageFiles([])
                                   setShowProductModal(true)
                                 }}
                               >
@@ -1602,9 +2092,35 @@ export default function AdminDashboard() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        )
+                      })}
                     </TableBody>
                   </Table>
+                ) : productsLoading ? (
+                  <div className="text-center py-16">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                      <div className="relative">
+                        <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-2xl">🛍️</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-lg font-semibold text-foreground">
+                          {language === "ar" ? "جاري تحميل المنتجات..." : "Loading products..."}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {language === "ar" ? "يرجى الانتظار قليلاً" : "Please wait a moment"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : productSearchQuery ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    {language === "ar" 
+                      ? `لا توجد منتجات تطابق "${productSearchQuery}"` 
+                      : `No products found matching "${productSearchQuery}"`}
+                  </p>
                 ) : (
                   <p className="text-center text-muted-foreground py-8">
                     {language === "ar" ? "لا توجد منتجات" : "No products yet"}
@@ -1614,7 +2130,14 @@ export default function AdminDashboard() {
             </Card>
 
             {/* Add/Edit Product Modal */}
-            <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
+            <Dialog open={showProductModal} onOpenChange={(open) => {
+              setShowProductModal(open)
+              if (!open) {
+                // Reset file states when modal closes
+                setMainImageFile(null)
+                setAdditionalImageFiles([])
+              }
+            }}>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-2 shadow-2xl">
                 <DialogHeader>
                   <DialogTitle>
@@ -1700,67 +2223,128 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Main Image Upload (Required) */}
                   <div className="space-y-2">
-                    <Label htmlFor="image">{language === "ar" ? "رابط الصورة الرئيسية" : "Main Image URL"} *</Label>
-                    <Input
-                      id="image"
-                      value={productForm.image}
-                      onChange={(e) => setProductForm({ ...productForm, image: e.target.value })}
-                      placeholder="/product-image.jpg"
-                    />
-                    {productForm.image && (
-                      <div className="mt-2 w-32 h-32 rounded-lg overflow-hidden border border-border relative">
-                        <img src={productForm.image} alt="Preview" className="w-full h-full object-cover" />
-                      </div>
-                    )}
+                    <Label htmlFor="main-image">{language === "ar" ? "الصورة الرئيسية" : "Main Image"} *</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
+                      <Label htmlFor="main-image" className="cursor-pointer">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <p className="text-sm font-medium">
+                            {language === "ar" ? "اضغط لرفع الصورة الرئيسية" : "Click to upload main image"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {language === "ar" ? "PNG, JPG حتى 5 ميجابايت" : "PNG, JPG up to 5MB"}
+                          </p>
+                        </div>
+                      </Label>
+                      <input
+                        id="main-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleMainImageUpload}
+                        className="hidden"
+                      />
+                      {productForm.image && (
+                        <div className="mt-4 relative w-full max-w-xs mx-auto">
+                          <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary">
+                            <img 
+                              src={productForm.image} 
+                              alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => {
+                              setProductForm({ ...productForm, image: "" })
+                              setMainImageFile(null)
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
+                  {/* Additional Images Upload (3 images required) */}
                   <div className="space-y-2">
-                    <Label>{language === "ar" ? "صور إضافية" : "Additional Images"}</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newImageUrl}
-                        onChange={(e) => setNewImageUrl(e.target.value)}
-                        placeholder={language === "ar" ? "أدخل رابط الصورة" : "Enter image URL"}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter" && newImageUrl.trim()) {
-                            setProductForm({ ...productForm, images: [...productForm.images, newImageUrl.trim()] })
-                            setNewImageUrl("")
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          if (newImageUrl.trim()) {
-                            setProductForm({ ...productForm, images: [...productForm.images, newImageUrl.trim()] })
-                            setNewImageUrl("")
-                          }
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    {productForm.images.length > 0 && (
-                      <div className="grid grid-cols-4 gap-2 mt-2">
-                        {productForm.images.map((img, idx) => (
-                          <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
-                            <img src={img} alt={`Image ${idx + 1}`} className="w-full h-full object-cover" />
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              className="absolute top-0 right-0 h-6 w-6"
-                              onClick={() => {
-                                setProductForm({ ...productForm, images: productForm.images.filter((_, i) => i !== idx) })
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
+                    <Label htmlFor="additional-images">
+                      {language === "ar" ? "الصور الإضافية (3 صور مطلوبة)" : "Additional Images (3 images required)"}
+                    </Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
+                      {productForm.images.length < 3 ? (
+                        <Label htmlFor="additional-images" className="cursor-pointer">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <Upload className="h-6 w-6 text-muted-foreground" />
+                            <p className="text-sm font-medium">
+                              {language === "ar" 
+                                ? `اضغط لرفع ${3 - productForm.images.length} صورة إضافية` 
+                                : `Click to upload ${3 - productForm.images.length} additional image(s)`}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {language === "ar" 
+                                ? `PNG, JPG حتى 5 ميجابايت لكل صورة (${productForm.images.length}/3)` 
+                                : `PNG, JPG up to 5MB per image (${productForm.images.length}/3)`}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </Label>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
+                            <Check className="h-4 w-4 text-white" />
+                          </div>
+                          <p className="text-sm font-medium text-green-600">
+                            {language === "ar" ? "تم رفع جميع الصور (3/3)" : "All images uploaded (3/3)"}
+                          </p>
+                        </div>
+                      )}
+                      <input
+                        id="additional-images"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleAdditionalImageUpload}
+                        className="hidden"
+                        disabled={productForm.images.length >= 3}
+                      />
+                      {productForm.images.length > 0 && (
+                        <div className="mt-4 grid grid-cols-3 gap-4">
+                          {Array.from({ length: 3 }).map((_, index) => (
+                            <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-border">
+                              {productForm.images[index] ? (
+                                <>
+                                  <img 
+                                    src={productForm.images[index]} 
+                                    alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute top-2 right-2"
+                                    onClick={() => removeAdditionalImage(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300">
+                                  <span className="text-xs text-gray-400">
+                                    {language === "ar" ? `صورة ${index + 1}` : `Image ${index + 1}`}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -1771,14 +2355,19 @@ export default function AdminDashboard() {
                           <SelectValue placeholder={language === "ar" ? "اختر الفئة" : "Select category"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="T-Shirts">T-Shirts</SelectItem>
-                          <SelectItem value="Hoodies">Hoodies</SelectItem>
-                          <SelectItem value="Sweatshirts">Sweatshirts</SelectItem>
-                          <SelectItem value="Pants">Pants</SelectItem>
-                          <SelectItem value="Shorts">Shorts</SelectItem>
-                          <SelectItem value="Jackets">Jackets</SelectItem>
-                          <SelectItem value="Tank Tops">Tank Tops</SelectItem>
-                          <SelectItem value="Polo Shirts">Polo Shirts</SelectItem>
+                          <SelectItem value="T-Shirts">{language === "ar" ? "تي شيرت" : "T-Shirts"}</SelectItem>
+                          <SelectItem value="Tank Tops">{language === "ar" ? "تانك توب" : "Tank Tops"}</SelectItem>
+                          <SelectItem value="Tops">{language === "ar" ? "ترنك" : "Tops"}</SelectItem>
+                          <SelectItem value="Blouses">{language === "ar" ? "بلوزة" : "Blouses"}</SelectItem>
+                          <SelectItem value="Polo Shirts">{language === "ar" ? "بولو" : "Polo Shirts"}</SelectItem>
+                          <SelectItem value="Hoodies">{language === "ar" ? "هودي" : "Hoodies"}</SelectItem>
+                          <SelectItem value="Sweatshirts">{language === "ar" ? "سويشيرت" : "Sweatshirts"}</SelectItem>
+                          <SelectItem value="Pants">{language === "ar" ? "بنطلون" : "Pants"}</SelectItem>
+                          <SelectItem value="Jeans">{language === "ar" ? "جينز" : "Jeans"}</SelectItem>
+                          <SelectItem value="Shorts">{language === "ar" ? "شورت" : "Shorts"}</SelectItem>
+                          <SelectItem value="Jackets">{language === "ar" ? "جاكيت" : "Jackets"}</SelectItem>
+                          <SelectItem value="Dresses">{language === "ar" ? "فستان" : "Dresses"}</SelectItem>
+                          <SelectItem value="Skirts">{language === "ar" ? "تنورة" : "Skirts"}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1789,9 +2378,10 @@ export default function AdminDashboard() {
                           <SelectValue placeholder={language === "ar" ? "اختر الجنس" : "Select gender"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Men">Men</SelectItem>
-                          <SelectItem value="Women">Women</SelectItem>
-                          <SelectItem value="Unisex">Unisex</SelectItem>
+                          <SelectItem value="Men">{language === "ar" ? "رجال" : "Men"}</SelectItem>
+                          <SelectItem value="Women">{language === "ar" ? "نساء" : "Women"}</SelectItem>
+                          <SelectItem value="Unisex">{language === "ar" ? "للجنسين" : "Unisex"}</SelectItem>
+                          <SelectItem value="Kids">{language === "ar" ? "أطفال" : "Kids"}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1862,6 +2452,19 @@ export default function AdminDashboard() {
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
+                      id="inCollection"
+                      checked={productForm.inCollection}
+                      onChange={(e) => setProductForm({ ...productForm, inCollection: e.target.checked })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="inCollection" className="cursor-pointer">
+                      {language === "ar" ? "إضافة للمجموعة" : "Add to Collection"}
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
                       id="active"
                       checked={productForm.active}
                       onChange={(e) => setProductForm({ ...productForm, active: e.target.checked })}
@@ -1872,101 +2475,134 @@ export default function AdminDashboard() {
                     </Label>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>{language === "ar" ? "الأحجام المتاحة" : "Available Sizes"}</Label>
-                    <div className="flex gap-2">
-                      <Select value={newSize} onValueChange={setNewSize}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder={language === "ar" ? "اختر الحجم" : "Select size"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="XS">XS</SelectItem>
-                          <SelectItem value="S">S</SelectItem>
-                          <SelectItem value="M">M</SelectItem>
-                          <SelectItem value="L">L</SelectItem>
-                          <SelectItem value="XL">XL</SelectItem>
-                          <SelectItem value="XXL">XXL</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          if (newSize && !productForm.sizes.includes(newSize)) {
-                            setProductForm({ ...productForm, sizes: [...productForm.sizes, newSize] })
-                            setNewSize("")
-                          }
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                  {/* Sale Options */}
+                  <div className="border-t pt-4 space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="onSale"
+                        checked={productForm.onSale}
+                        onChange={(e) => setProductForm({ ...productForm, onSale: e.target.checked, salePercentage: e.target.checked ? productForm.salePercentage : "0" })}
+                        className="rounded"
+                      />
+                      <Label htmlFor="onSale" className="cursor-pointer font-semibold">
+                        {language === "ar" ? "تفعيل التخفيض (Sale)" : "Enable Sale"}
+                      </Label>
                     </div>
-                    {productForm.sizes.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {productForm.sizes.map((size) => (
-                          <Badge key={size} variant="secondary" className="flex items-center gap-1">
-                            {size}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 p-0"
-                              onClick={() => {
-                                setProductForm({ ...productForm, sizes: productForm.sizes.filter((s) => s !== size) })
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
+                    
+                    {productForm.onSale && (
+                      <div className="space-y-2 pl-6 border-l-2 border-primary">
+                        <Label htmlFor="salePercentage">
+                          {language === "ar" ? "نسبة الخصم (%)" : "Discount Percentage (%)"}
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="salePercentage"
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={productForm.salePercentage}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || (parseFloat(value) >= 0 && parseFloat(value) <= 100)) {
+                                setProductForm({ ...productForm, salePercentage: value })
+                              }
+                            }}
+                            placeholder="0"
+                            className="w-32"
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {productForm.price && productForm.salePercentage ? (
+                              <>
+                                {language === "ar" ? "السعر بعد الخصم:" : "Price after discount:"}{" "}
+                                <span className="font-bold text-primary">
+                                  ${(parseFloat(productForm.price) * (1 - parseFloat(productForm.salePercentage || "0") / 100)).toFixed(2)}
+                                </span>
+                              </>
+                            ) : null}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
 
                   <div className="space-y-2">
+                    <Label>{language === "ar" ? "الأحجام المتاحة" : "Available Sizes"}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => {
+                            if (productForm.sizes.includes(size)) {
+                              setProductForm({ ...productForm, sizes: productForm.sizes.filter((s) => s !== size) })
+                            } else {
+                              setProductForm({ ...productForm, sizes: [...productForm.sizes, size] })
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                            productForm.sizes.includes(size)
+                              ? "bg-rose-500 text-white border-rose-500 shadow-md"
+                              : "bg-white text-gray-700 border-gray-300 hover:border-rose-300 hover:bg-rose-50"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    {productForm.sizes.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {language === "ar" 
+                          ? `تم اختيار ${productForm.sizes.length} حجم` 
+                          : `${productForm.sizes.length} size(s) selected`}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>{language === "ar" ? "الألوان المتاحة" : "Available Colors"}</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newColor}
-                        onChange={(e) => setNewColor(e.target.value)}
-                        placeholder={language === "ar" ? "أدخل اللون" : "Enter color"}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter" && newColor.trim() && !productForm.colors.includes(newColor.trim())) {
-                            setProductForm({ ...productForm, colors: [...productForm.colors, newColor.trim()] })
-                            setNewColor("")
-                          }
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          if (newColor.trim() && !productForm.colors.includes(newColor.trim())) {
-                            setProductForm({ ...productForm, colors: [...productForm.colors, newColor.trim()] })
-                            setNewColor("")
-                          }
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {["White", "Black", "Gray", "Navy", "Red", "Blue", "Green", "Yellow", "Pink", "Purple", "Brown", "Beige", "Orange"].map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => {
+                            if (productForm.colors.includes(color)) {
+                              setProductForm({ ...productForm, colors: productForm.colors.filter((c) => c !== color) })
+                            } else {
+                              setProductForm({ ...productForm, colors: [...productForm.colors, color] })
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                            productForm.colors.includes(color)
+                              ? "bg-rose-500 text-white border-rose-500 shadow-md"
+                              : "bg-white text-gray-700 border-gray-300 hover:border-rose-300 hover:bg-rose-50"
+                          }`}
+                        >
+                          {language === "ar" ? (
+                            color === "White" ? "أبيض" :
+                            color === "Black" ? "أسود" :
+                            color === "Gray" ? "رمادي" :
+                            color === "Navy" ? "كحلي" :
+                            color === "Red" ? "أحمر" :
+                            color === "Blue" ? "أزرق" :
+                            color === "Green" ? "أخضر" :
+                            color === "Yellow" ? "أصفر" :
+                            color === "Pink" ? "وردي" :
+                            color === "Purple" ? "بنفسجي" :
+                            color === "Brown" ? "بني" :
+                            color === "Beige" ? "بيج" :
+                            color === "Orange" ? "برتقالي" : color
+                          ) : color}
+                        </button>
+                      ))}
                     </div>
                     {productForm.colors.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {productForm.colors.map((color) => (
-                          <Badge key={color} variant="secondary" className="flex items-center gap-1">
-                            {color}
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-4 w-4 p-0"
-                              onClick={() => {
-                                setProductForm({ ...productForm, colors: productForm.colors.filter((c) => c !== color) })
-                              }}
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          </Badge>
-                        ))}
-                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {language === "ar" 
+                          ? `تم اختيار ${productForm.colors.length} لون` 
+                          : `${productForm.colors.length} color(s) selected`}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1986,17 +2622,32 @@ export default function AdminDashboard() {
                         return
                       }
 
+                      // Validate that we have exactly 3 additional images
+                      if (productForm.images.length !== 3) {
+                        toast({
+                          title: "Error",
+                          description: language === "ar" ? "يجب إضافة 3 صور إضافية بالضبط" : "You must add exactly 3 additional images",
+                          variant: "destructive",
+                        })
+                        return
+                      }
+
                       try {
                         if (isEditingProduct && selectedProduct) {
                           // FIXED: Convert productForm to match Product type
-                          const updateData: Partial<Product> = {
+                          // Use File objects if available, otherwise use URLs from productForm
+                          const updateData = {
                             name: productForm.name,
                             nameAr: productForm.nameAr || undefined,
                             description: productForm.description || undefined,
                             descriptionAr: productForm.descriptionAr || undefined,
                             price: parseFloat(productForm.price) || 0,
-                            image: productForm.image,
-                            images: productForm.images.length > 0 ? productForm.images : undefined,
+                            // Use File object if available, otherwise use the image URL/string
+                            image: mainImageFile || productForm.image || undefined,
+                            // Use File objects if available, otherwise use image URLs/strings
+                            images: additionalImageFiles.length > 0 
+                              ? additionalImageFiles 
+                              : (productForm.images.length > 0 ? productForm.images : undefined),
                             category: productForm.category,
                             gender: productForm.gender,
                             season: productForm.season,
@@ -2007,6 +2658,9 @@ export default function AdminDashboard() {
                             stock: parseInt(productForm.stock) || 100,
                             featured: productForm.featured,
                             active: productForm.active,
+                            onSale: productForm.onSale,
+                            salePercentage: productForm.onSale ? parseFloat(productForm.salePercentage || "0") : undefined,
+                            inCollection: productForm.inCollection,
                           }
                           await productsAdminApi.updateProduct(selectedProduct._id || selectedProduct.id?.toString() || "", updateData)
                           toast({
@@ -2014,14 +2668,19 @@ export default function AdminDashboard() {
                             description: language === "ar" ? "تم تحديث المنتج بنجاح" : "Product updated successfully",
                           })
                         } else {
+                          // Pass File objects if available, otherwise use URLs from productForm
                           await productsAdminApi.createProduct({
                             name: productForm.name,
                             nameAr: productForm.nameAr || undefined,
                             description: productForm.description || undefined,
                             descriptionAr: productForm.descriptionAr || undefined,
                             price: parseFloat(productForm.price),
-                            image: productForm.image,
-                            images: productForm.images.length > 0 ? productForm.images : undefined,
+                            // Use File object if available, otherwise use the image URL/string
+                            image: mainImageFile || productForm.image || undefined,
+                            // Use File objects if available, otherwise use image URLs/strings
+                            images: additionalImageFiles.length > 0 
+                              ? additionalImageFiles 
+                              : (productForm.images.length > 0 ? productForm.images : undefined),
                             category: productForm.category,
                             gender: productForm.gender,
                             season: productForm.season,
@@ -2032,6 +2691,9 @@ export default function AdminDashboard() {
                             stock: parseInt(productForm.stock) || 100,
                             featured: productForm.featured,
                             active: productForm.active,
+                            onSale: productForm.onSale,
+                            salePercentage: productForm.onSale ? parseFloat(productForm.salePercentage || "0") : undefined,
+                            inCollection: productForm.inCollection,
                           })
                           toast({
                             title: language === "ar" ? "تمت الإضافة" : "Added",
@@ -2052,6 +2714,122 @@ export default function AdminDashboard() {
                   >
                     {t("save", language)}
                   </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+
+        {/* Studio Products Tab */}
+        {activeTab === "studioProducts" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Studio Products</h1>
+                <p className="text-muted-foreground">Manage custom-designable products for the studio experience.</p>
+              </div>
+              <Button onClick={() => {
+                resetStudioForm();
+                setShowStudioModal(true);
+              }} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Studio Product
+              </Button>
+            </div>
+
+            <Card className="border-2 shadow-lg">
+              <CardContent className="p-6">
+                {studioLoading ? (
+                  <div className="flex items-center justify-center py-10 text-muted-foreground">Loading...</div>
+                ) : studioProducts.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">No studio products yet</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Active</TableHead>
+                        <TableHead>AI</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {studioProducts.map((p) => (
+                        <TableRow key={p._id}>
+                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="text-muted-foreground">{p.type}</TableCell>
+                          <TableCell>${p.price.toFixed(2)}</TableCell>
+                          <TableCell>{p.active ? 'Yes' : 'No'}</TableCell>
+                          <TableCell>{p.aiEnhanceEnabled ? 'On' : 'Off'}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditStudioProduct(p)}><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteStudioProduct(p._id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            <Dialog open={showStudioModal} onOpenChange={setShowStudioModal}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>{editingStudio ? 'Edit Studio Product' : 'Add Studio Product'}</DialogTitle>
+                  <DialogDescription>Define designable product details, pricing, and safe area.</DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <Label>Name</Label>
+                    <Input value={studioForm.name} onChange={(e) => setStudioForm({ ...studioForm, name: e.target.value })} placeholder="Hoodie Pro" />
+                    <Label>Type</Label>
+                    <Input value={studioForm.type} onChange={(e) => setStudioForm({ ...studioForm, type: e.target.value })} placeholder="hoodie" />
+                    <Label>Description</Label>
+                    <Textarea value={studioForm.description} onChange={(e) => setStudioForm({ ...studioForm, description: e.target.value })} placeholder="Premium hoodie..." />
+                    <Label>Mockup URL</Label>
+                    <Input value={studioForm.baseMockupUrl} onChange={(e) => setStudioForm({ ...studioForm, baseMockupUrl: e.target.value })} placeholder="https://..." />
+                    <Label>Price</Label>
+                    <Input type="number" value={studioForm.price} onChange={(e) => setStudioForm({ ...studioForm, price: e.target.value })} />
+                  </div>
+                  <div className="space-y-3">
+                    <Label>Colors (comma separated)</Label>
+                    <Input value={studioForm.colors} onChange={(e) => setStudioForm({ ...studioForm, colors: e.target.value })} placeholder="white, black, navy" />
+                    <Label>Sizes (comma separated)</Label>
+                    <Input value={studioForm.sizes} onChange={(e) => setStudioForm({ ...studioForm, sizes: e.target.value })} placeholder="S, M, L" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Safe X</Label>
+                        <Input type="number" value={studioForm.safeArea.x} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, x: Number(e.target.value) } })} />
+                      </div>
+                      <div>
+                        <Label>Safe Y</Label>
+                        <Input type="number" value={studioForm.safeArea.y} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, y: Number(e.target.value) } })} />
+                      </div>
+                      <div>
+                        <Label>Safe Width</Label>
+                        <Input type="number" value={studioForm.safeArea.width} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, width: Number(e.target.value) } })} />
+                      </div>
+                      <div>
+                        <Label>Safe Height</Label>
+                        <Input type="number" value={studioForm.safeArea.height} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, height: Number(e.target.value) } })} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Checkbox id="studio-active" checked={studioForm.active} onCheckedChange={(v) => setStudioForm({ ...studioForm, active: Boolean(v) })} />
+                      <Label htmlFor="studio-active">Active</Label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Checkbox id="studio-ai" checked={studioForm.aiEnhanceEnabled} onCheckedChange={(v) => setStudioForm({ ...studioForm, aiEnhanceEnabled: Boolean(v) })} />
+                      <Label htmlFor="studio-ai">AI Enhancement Enabled</Label>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter className="mt-4">
+                  <Button variant="outline" onClick={() => { setShowStudioModal(false); resetStudioForm(); }}>Cancel</Button>
+                  <Button onClick={handleSaveStudioProduct}>{editingStudio ? 'Update' : 'Create'}</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -2531,119 +3309,525 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* FIXED: Employee Tracking Tab */}
-        {activeTab === "tracking" && (
+        {/* Messages Tab */}
+        {activeTab === "messages" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold mb-2">{language === "ar" ? "تتبع الموظفين" : "Employee Tracking"}</h1>
+                <h1 className="text-3xl font-bold mb-2">{language === "ar" ? "الرسائل" : "Messages"}</h1>
                 <p className="text-muted-foreground">
-                  {language === "ar" ? "تتبع أنشطة الموظفين والإجراءات" : "Track employee activities and actions"}
+                  {language === "ar" ? "إدارة رسائل التواصل من العملاء" : "Manage contact messages from customers"}
                 </p>
               </div>
-              <Button onClick={loadEmployeeTracking} variant="outline">
+              <Button onClick={loadContactMessages} variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 {language === "ar" ? "تحديث" : "Refresh"}
               </Button>
             </div>
 
-            {/* Employee Statistics */}
+            {/* Status Filter */}
             <Card>
-              <CardHeader>
-                <CardTitle>{language === "ar" ? "إحصائيات الموظفين" : "Employee Statistics"}</CardTitle>
-                <CardDescription>
-                  {language === "ar" ? "نظرة عامة على أنشطة الموظفين" : "Overview of employee activities"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {trackingLoading ? (
+              <CardContent className="p-4">
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant={messageStatusFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMessageStatusFilter("all")}
+                  >
+                    {language === "ar" ? "الكل" : "All"}
+                  </Button>
+                  <Button
+                    variant={messageStatusFilter === "new" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMessageStatusFilter("new")}
+                  >
+                    {language === "ar" ? "جديدة" : "New"}
+                    {contactMessages.filter(m => m.status === "new").length > 0 && (
+                      <Badge className="ml-2 bg-red-500 text-white">
+                        {contactMessages.filter(m => m.status === "new").length}
+                      </Badge>
+                    )}
+                  </Button>
+                  <Button
+                    variant={messageStatusFilter === "read" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMessageStatusFilter("read")}
+                  >
+                    {language === "ar" ? "مقروءة" : "Read"}
+                  </Button>
+                  <Button
+                    variant={messageStatusFilter === "replied" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMessageStatusFilter("replied")}
+                  >
+                    {language === "ar" ? "تم الرد" : "Replied"}
+                  </Button>
+                  <Button
+                    variant={messageStatusFilter === "archived" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setMessageStatusFilter("archived")}
+                  >
+                    {language === "ar" ? "مؤرشفة" : "Archived"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Messages List */}
+            <Card>
+              <CardContent className="p-6">
+                {messagesLoading ? (
                   <div className="text-center py-8">
                     <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4" />
                     <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
                   </div>
-                ) : employeeStats.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{language === "ar" ? "الموظف" : "Employee"}</TableHead>
-                        <TableHead>{language === "ar" ? "إجمالي الإجراءات" : "Total Actions"}</TableHead>
-                        <TableHead>{language === "ar" ? "المنتجات المضافة" : "Products Added"}</TableHead>
-                        <TableHead>{language === "ar" ? "الطلبات المحدثة" : "Orders Updated"}</TableHead>
-                        <TableHead>{language === "ar" ? "آخر نشاط" : "Last Activity"}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {employeeStats.map((stat: any) => (
-                        <TableRow key={stat.employeeId}>
-                          <TableCell className="font-medium">
-                            <div>
-                              <p>{stat.employeeName}</p>
-                              <p className="text-xs text-muted-foreground">{stat.employeeEmail}</p>
+                ) : contactMessages.length > 0 ? (
+                  <div className="space-y-4">
+                    {contactMessages.map((message) => (
+                      <Card
+                        key={message._id}
+                        className={`cursor-pointer transition-all hover:shadow-md ${
+                          message.status === "new" ? "border-2 border-primary" : ""
+                        }`}
+                        onClick={() => {
+                          setSelectedMessage(message)
+                          setShowMessageDetails(true)
+                        }}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Badge
+                                  variant={
+                                    message.status === "new"
+                                      ? "default"
+                                      : message.status === "replied"
+                                      ? "secondary"
+                                      : "outline"
+                                  }
+                                >
+                                  {message.status === "new"
+                                    ? language === "ar" ? "جديدة" : "New"
+                                    : message.status === "replied"
+                                    ? language === "ar" ? "تم الرد" : "Replied"
+                                    : message.status === "read"
+                                    ? language === "ar" ? "مقروءة" : "Read"
+                                    : language === "ar" ? "مؤرشفة" : "Archived"}
+                                </Badge>
+                                <h3 className="font-semibold text-lg">{message.subject}</h3>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-4 w-4" />
+                                  {message.email}
+                                </span>
+                                <span>•</span>
+                                <span>{message.name}</span>
+                                <span>•</span>
+                                <span>{new Date(message.createdAt || "").toLocaleDateString()}</span>
+                              </div>
+                              <p className="text-muted-foreground line-clamp-2">{message.message}</p>
                             </div>
-                          </TableCell>
-                          <TableCell>{stat.totalActions}</TableCell>
-                          <TableCell>{stat.productsAdded}</TableCell>
-                          <TableCell>{stat.ordersUpdated}</TableCell>
-                          <TableCell>
-                            {stat.lastActivity ? new Date(stat.lastActivity).toLocaleDateString() : 'N/A'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedMessage(message)
+                                  setShowMessageDetails(true)
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {user?.role === "admin" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    if (confirm(language === "ar" ? "هل أنت متأكد من الحذف؟" : "Are you sure you want to delete?")) {
+                                      try {
+                                        await deleteContactMessage(message._id!)
+                                        toast({
+                                          title: language === "ar" ? "تم الحذف" : "Deleted",
+                                          description: language === "ar" ? "تم حذف الرسالة بنجاح" : "Message deleted successfully",
+                                        })
+                                        loadContactMessages()
+                                      } catch (error: any) {
+                                        toast({
+                                          title: language === "ar" ? "خطأ" : "Error",
+                                          description: error.message || (language === "ar" ? "فشل حذف الرسالة" : "Failed to delete message"),
+                                          variant: "destructive",
+                                        })
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 ) : (
                   <div className="text-center py-8">
-                    <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">
-                      {language === "ar" ? "لا توجد بيانات تتبع متاحة" : "No tracking data available"}
+                      {language === "ar" ? "لا توجد رسائل" : "No messages found"}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Message Details Dialog */}
+        <Dialog open={showMessageDetails} onOpenChange={setShowMessageDetails}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{selectedMessage?.subject}</DialogTitle>
+              <DialogDescription>
+                {language === "ar" ? "تفاصيل الرسالة" : "Message Details"}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedMessage && (
+              <div className="space-y-4">
+                <div>
+                  <Label>{language === "ar" ? "من" : "From"}</Label>
+                  <p className="font-medium">{selectedMessage.name} ({selectedMessage.email})</p>
+                </div>
+                <div>
+                  <Label>{language === "ar" ? "التاريخ" : "Date"}</Label>
+                  <p>{new Date(selectedMessage.createdAt || "").toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label>{language === "ar" ? "الرسالة" : "Message"}</Label>
+                  <p className="whitespace-pre-wrap bg-muted p-4 rounded-lg">{selectedMessage.message}</p>
+                </div>
+                {selectedMessage.replyMessage && (
+                  <div>
+                    <Label>{language === "ar" ? "الرد" : "Reply"}</Label>
+                    <p className="whitespace-pre-wrap bg-primary/10 p-4 rounded-lg">{selectedMessage.replyMessage}</p>
+                    {selectedMessage.repliedBy && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {language === "ar" ? "رد بواسطة:" : "Replied by:"}{" "}
+                        {typeof selectedMessage.repliedBy === "object"
+                          ? `${selectedMessage.repliedBy.firstName} ${selectedMessage.repliedBy.lastName}`
+                          : ""}
+                        {" "}
+                        {selectedMessage.repliedAt
+                          ? `(${new Date(selectedMessage.repliedAt).toLocaleString()})`
+                          : ""}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {!selectedMessage.replyMessage && (
+                  <div>
+                    <Label>{language === "ar" ? "الرد" : "Reply"}</Label>
+                    <Textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder={language === "ar" ? "اكتب ردك هنا..." : "Write your reply here..."}
+                      className="min-h-[150px]"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedMessage.status}
+                    onValueChange={async (value) => {
+                      try {
+                        await updateContactMessage(selectedMessage._id!, { status: value })
+                        toast({
+                          title: language === "ar" ? "تم التحديث" : "Updated",
+                          description: language === "ar" ? "تم تحديث حالة الرسالة" : "Message status updated",
+                        })
+                        loadContactMessages()
+                        setShowMessageDetails(false)
+                      } catch (error: any) {
+                        toast({
+                          title: language === "ar" ? "خطأ" : "Error",
+                          description: error.message || (language === "ar" ? "فشل التحديث" : "Failed to update"),
+                          variant: "destructive",
+                        })
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">{language === "ar" ? "جديدة" : "New"}</SelectItem>
+                      <SelectItem value="read">{language === "ar" ? "مقروءة" : "Read"}</SelectItem>
+                      <SelectItem value="replied">{language === "ar" ? "تم الرد" : "Replied"}</SelectItem>
+                      <SelectItem value="archived">{language === "ar" ? "مؤرشفة" : "Archived"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {!selectedMessage.replyMessage && replyText && (
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await updateContactMessage(selectedMessage._id!, {
+                            status: "replied",
+                            replyMessage: replyText,
+                          })
+                          toast({
+                            title: language === "ar" ? "تم الإرسال" : "Sent",
+                            description: language === "ar" ? "تم إرسال الرد بنجاح" : "Reply sent successfully",
+                          })
+                          setReplyText("")
+                          loadContactMessages()
+                          setShowMessageDetails(false)
+                        } catch (error: any) {
+                          toast({
+                            title: language === "ar" ? "خطأ" : "Error",
+                            description: error.message || (language === "ar" ? "فشل إرسال الرد" : "Failed to send reply"),
+                            variant: "destructive",
+                          })
+                        }
+                      }}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      {language === "ar" ? "إرسال الرد" : "Send Reply"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Order Tracking Tab */}
+        {activeTab === "tracking" && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">{language === "ar" ? "تتبع الطلبات" : "Order Tracking"}</h1>
+                <p className="text-muted-foreground">
+                  {language === "ar" ? "تتبع حالة الطلبات وتاريخ التحديثات" : "Track order status and update history"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select value={orderStatusFilter} onValueChange={(value) => {
+                  setOrderStatusFilter(value)
+                  setTimeout(() => loadOrderTracking(), 100)
+                }}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={language === "ar" ? "فلتر حسب الحالة" : "Filter by status"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{language === "ar" ? "الكل" : "All"}</SelectItem>
+                    <SelectItem value="pending">{language === "ar" ? "قيد الانتظار" : "Pending"}</SelectItem>
+                    <SelectItem value="processing">{language === "ar" ? "قيد المعالجة" : "Processing"}</SelectItem>
+                    <SelectItem value="shipped">{language === "ar" ? "تم الشحن" : "Shipped"}</SelectItem>
+                    <SelectItem value="delivered">{language === "ar" ? "تم التسليم" : "Delivered"}</SelectItem>
+                    <SelectItem value="cancelled">{language === "ar" ? "ملغي" : "Cancelled"}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={loadOrderTracking} variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  {language === "ar" ? "تحديث" : "Refresh"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Orders Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === "ar" ? "قائمة الطلبات" : "Orders List"}</CardTitle>
+                <CardDescription>
+                  {language === "ar" ? "عرض جميع الطلبات مع تفاصيل التتبع" : "View all orders with tracking details"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {orderTrackingLoading ? (
+                  <div className="text-center py-8">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4" />
+                    <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
+                  </div>
+                ) : orders.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{language === "ar" ? "رقم الطلب" : "Order Number"}</TableHead>
+                          <TableHead>{language === "ar" ? "العميل" : "Customer"}</TableHead>
+                          <TableHead>{language === "ar" ? "الحالة" : "Status"}</TableHead>
+                          <TableHead>{language === "ar" ? "رقم التتبع" : "Tracking Number"}</TableHead>
+                          <TableHead>{language === "ar" ? "الناقل" : "Carrier"}</TableHead>
+                          <TableHead>{language === "ar" ? "الإجمالي" : "Total"}</TableHead>
+                          <TableHead>{language === "ar" ? "تاريخ الإنشاء" : "Created At"}</TableHead>
+                          <TableHead>{language === "ar" ? "آخر تحديث" : "Last Update"}</TableHead>
+                          <TableHead>{language === "ar" ? "الإجراءات" : "Actions"}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {orders
+                          .filter((order, index, self) => {
+                            // Remove duplicates by ID
+                            const orderId = order._id?.toString()
+                            return orderId && index === self.findIndex(o => o._id?.toString() === orderId)
+                          })
+                          .map((order, index) => {
+                          const statusConfig: Record<string, { label: { en: string; ar: string }; color: string }> = {
+                            pending: {
+                              label: { en: "Pending", ar: "قيد الانتظار" },
+                              color: "bg-yellow-100 text-yellow-800 border-yellow-300",
+                            },
+                            processing: {
+                              label: { en: "Processing", ar: "قيد المعالجة" },
+                              color: "bg-blue-100 text-blue-800 border-blue-300",
+                            },
+                            shipped: {
+                              label: { en: "Shipped", ar: "تم الشحن" },
+                              color: "bg-cyan-100 text-cyan-800 border-cyan-300",
+                            },
+                            delivered: {
+                              label: { en: "Delivered", ar: "تم التسليم" },
+                              color: "bg-green-100 text-green-800 border-green-300",
+                            },
+                            cancelled: {
+                              label: { en: "Cancelled", ar: "ملغي" },
+                              color: "bg-red-100 text-red-800 border-red-300",
+                            },
+                          }
+                          const status = statusConfig[order.status] || statusConfig.pending
+                          const lastUpdate = order.trackingHistory && order.trackingHistory.length > 0
+                            ? order.trackingHistory[order.trackingHistory.length - 1].updatedAt
+                            : order.updatedAt
+
+                          return (
+                            <TableRow key={order._id}>
+                              <TableCell className="font-medium">{order.orderNumber}</TableCell>
+                              <TableCell>
+                                {typeof order.user === "object" ? (
+                                  <div>
+                                    <p>{order.user.firstName} {order.user.lastName}</p>
+                                    <p className="text-xs text-muted-foreground">{order.user.email}</p>
+                                  </div>
+                                ) : (
+                                  "N/A"
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={status.color}>
+                                  {status.label[language as "en" | "ar"]}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {order.trackingNumber || (
+                                  <span className="text-muted-foreground text-sm">
+                                    {language === "ar" ? "غير متوفر" : "N/A"}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {order.carrier || (
+                                  <span className="text-muted-foreground text-sm">
+                                    {language === "ar" ? "غير متوفر" : "N/A"}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>${order.total.toFixed(2)}</TableCell>
+                              <TableCell>
+                                {new Date(order.createdAt).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                {new Date(lastUpdate).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => viewOrderDetails(order._id)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openEditOrder(order._id)}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      {language === "ar" ? "لا توجد طلبات متاحة" : "No orders available"}
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Recent Activities */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === "ar" ? "الأنشطة الأخيرة" : "Recent Activities"}</CardTitle>
-                <CardDescription>
-                  {language === "ar" ? "سجل أنشطة الموظفين" : "Employee activity log"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {trackingLoading ? (
-                  <div className="text-center py-8">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4" />
-                    <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
+            {/* Order Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {language === "ar" ? "قيد الانتظار" : "Pending"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {orders.filter(o => o.status === "pending").length}
                   </div>
-                ) : employeeActivities.length > 0 ? (
-                  <div className="space-y-4">
-                    {employeeActivities.map((activity: any) => (
-                      <div key={activity._id} className="flex items-start gap-4 p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="secondary">{activity.action}</Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {activity.employee?.firstName} {activity.employee?.lastName}
-                            </span>
-                          </div>
-                          <p className="text-sm">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(activity.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {language === "ar" ? "قيد المعالجة" : "Processing"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {orders.filter(o => o.status === "processing").length}
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">
-                      {language === "ar" ? "لا توجد أنشطة مسجلة" : "No activities recorded"}
-                    </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {language === "ar" ? "تم الشحن" : "Shipped"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {orders.filter(o => o.status === "shipped").length}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {language === "ar" ? "تم التسليم" : "Delivered"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {orders.filter(o => o.status === "delivered").length}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 
@@ -2722,31 +3906,6 @@ export default function AdminDashboard() {
                           onClick={async () => {
                             try {
                               const report = await adminApi.getSalesReport()
-                              // Generate PDF content
-                              const pdfContent = generateSalesPDF(report, language)
-                              downloadPDF(pdfContent, `sales-report-${new Date().toISOString().split('T')[0]}.pdf`)
-                              toast({
-                                title: "Success",
-                                description: language === "ar" ? "تم تحميل تقرير المبيعات" : "Sales report downloaded",
-                              })
-                            } catch (error: any) {
-                              toast({
-                                title: "Error",
-                                description: error.message || "Failed to generate report",
-                                variant: "destructive",
-                              })
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          {language === "ar" ? "PDF" : "PDF"}
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={async () => {
-                            try {
-                              const report = await adminApi.getSalesReport()
                               // FIXED: Convert SalesReport to array format for exportToExcel
                               const salesData = report.salesByDay?.map((day: any) => ({
                                 Date: day._id,
@@ -2783,36 +3942,6 @@ export default function AdminDashboard() {
                         {language === "ar" ? "مستويات المخزون الحالية والتنبيهات" : "Current stock levels and alerts"}
                       </p>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={async () => {
-                            try {
-                              await loadProducts()
-                              const inventoryData = products.map(p => ({
-                                name: p.name,
-                                stock: p.stock,
-                                category: p.category,
-                                price: p.price,
-                              }))
-                              const pdfContent = generateInventoryPDF(inventoryData, language)
-                              downloadPDF(pdfContent, `inventory-report-${new Date().toISOString().split('T')[0]}.pdf`)
-                              toast({
-                                title: "Success",
-                                description: language === "ar" ? "تم تحميل تقرير المخزون" : "Inventory report downloaded",
-                              })
-                            } catch (error: any) {
-                              toast({
-                                title: "Error",
-                                description: error.message || "Failed to generate report",
-                                variant: "destructive",
-                              })
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          {language === "ar" ? "PDF" : "PDF"}
-                        </Button>
                         <Button 
                           variant="outline" 
                           className="flex-1"
@@ -2867,36 +3996,6 @@ export default function AdminDashboard() {
                                 phone: u.phone || 'N/A',
                                 createdAt: new Date(u.createdAt).toLocaleDateString(),
                               }))
-                              const pdfContent = generateCustomerPDF(customerData, language)
-                              downloadPDF(pdfContent, `customer-report-${new Date().toISOString().split('T')[0]}.pdf`)
-                              toast({
-                                title: "Success",
-                                description: language === "ar" ? "تم تحميل تقرير العملاء" : "Customer report downloaded",
-                              })
-                            } catch (error: any) {
-                              toast({
-                                title: "Error",
-                                description: error.message || "Failed to generate report",
-                                variant: "destructive",
-                              })
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          {language === "ar" ? "PDF" : "PDF"}
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={async () => {
-                            try {
-                              await loadCustomers()
-                              const customerData = users.map(u => ({
-                                name: `${u.firstName} ${u.lastName}`,
-                                email: u.email,
-                                phone: u.phone || 'N/A',
-                                createdAt: new Date(u.createdAt).toLocaleDateString(),
-                              }))
                               exportToExcel(customerData, 'customer-report', language)
                               toast({
                                 title: "Success",
@@ -2939,11 +4038,11 @@ export default function AdminDashboard() {
                 <CardContent className="space-y-4">
                   <div>
                         <Label>{language === "ar" ? "اسم المتجر" : "Store Name"}</Label>
-                    <Input defaultValue="StyleCraft" />
+                    <Input defaultValue="Fashion Hub" />
                   </div>
                   <div>
                         <Label>{language === "ar" ? "البريد الإلكتروني للتواصل" : "Contact Email"}</Label>
-                    <Input defaultValue="admin@stylecraft.com" />
+                    <Input defaultValue="admin@fashionhub.com" />
                   </div>
                   <div>
                         <Label>{language === "ar" ? "العملة" : "Currency"}</Label>
@@ -3139,6 +4238,128 @@ export default function AdminDashboard() {
                 {language === "ar" ? "حفظ" : "Save"}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Order Tracking Update Dialog */}
+        <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{language === "ar" ? "تحديث حالة الطلب والتتبع" : "Update Order Status & Tracking"}</DialogTitle>
+              <DialogDescription>
+                {selectedOrder && `${language === "ar" ? "رقم الطلب" : "Order"}: ${selectedOrder.orderNumber}`}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedOrder && (
+              <div className="space-y-4">
+                <div>
+                  <Label>{language === "ar" ? "حالة الطلب" : "Order Status"}</Label>
+                  <Select value={editOrderStatus} onValueChange={(value) => setEditOrderStatus(value as Order["status"])}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">{language === "ar" ? "قيد الانتظار" : "Pending"}</SelectItem>
+                      <SelectItem value="processing">{language === "ar" ? "قيد المعالجة" : "Processing"}</SelectItem>
+                      <SelectItem value="shipped">{language === "ar" ? "تم الشحن" : "Shipped"}</SelectItem>
+                      <SelectItem value="delivered">{language === "ar" ? "تم التسليم" : "Delivered"}</SelectItem>
+                      <SelectItem value="cancelled">{language === "ar" ? "ملغي" : "Cancelled"}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>{language === "ar" ? "رقم التتبع" : "Tracking Number"}</Label>
+                  <Input
+                    value={editTrackingNumber}
+                    onChange={(e) => setEditTrackingNumber(e.target.value)}
+                    placeholder={language === "ar" ? "أدخل رقم التتبع" : "Enter tracking number"}
+                  />
+                </div>
+
+                <div>
+                  <Label>{language === "ar" ? "شركة الشحن" : "Carrier"}</Label>
+                  <Input
+                    value={editCarrier}
+                    onChange={(e) => setEditCarrier(e.target.value)}
+                    placeholder={language === "ar" ? "مثال: DHL, FedEx, UPS" : "e.g., DHL, FedEx, UPS"}
+                  />
+                </div>
+
+                <div>
+                  <Label>{language === "ar" ? "تاريخ التسليم المتوقع" : "Estimated Delivery Date"}</Label>
+                  <Input
+                    type="date"
+                    value={editEstimatedDelivery}
+                    onChange={(e) => setEditEstimatedDelivery(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label>{language === "ar" ? "الموقع الحالي" : "Current Location"}</Label>
+                  <Input
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder={language === "ar" ? "مثال: الرياض، السعودية" : "e.g., Riyadh, Saudi Arabia"}
+                  />
+                </div>
+
+                <div>
+                  <Label>{language === "ar" ? "ملاحظة" : "Note"}</Label>
+                  <Textarea
+                    value={editNote}
+                    onChange={(e) => setEditNote(e.target.value)}
+                    placeholder={language === "ar" ? "أضف ملاحظة حول حالة الطلب..." : "Add a note about the order status..."}
+                    className="min-h-[100px]"
+                  />
+                </div>
+
+                {/* Tracking History */}
+                {selectedOrder.trackingHistory && selectedOrder.trackingHistory.length > 0 && (
+                  <div>
+                    <Label>{language === "ar" ? "سجل التتبع" : "Tracking History"}</Label>
+                    <div className="space-y-2 mt-2 max-h-48 overflow-y-auto border rounded-lg p-4">
+                      {selectedOrder.trackingHistory.map((entry, index) => (
+                        <div key={index} className="flex items-start gap-3 pb-3 border-b last:border-0">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="secondary">{entry.status}</Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(entry.updatedAt).toLocaleString()}
+                              </span>
+                            </div>
+                            {entry.location && (
+                              <p className="text-sm text-muted-foreground">
+                                <strong>{language === "ar" ? "الموقع:" : "Location:"}</strong> {entry.location}
+                              </p>
+                            )}
+                            {entry.note && (
+                              <p className="text-sm text-muted-foreground">
+                                <strong>{language === "ar" ? "ملاحظة:" : "Note:"}</strong> {entry.note}
+                              </p>
+                            )}
+                            {entry.updatedBy && typeof entry.updatedBy === "object" && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {language === "ar" ? "تم التحديث بواسطة:" : "Updated by:"} {entry.updatedBy.firstName} {entry.updatedBy.lastName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowEditOrder(false)}>
+                    {language === "ar" ? "إلغاء" : "Cancel"}
+                  </Button>
+                  <Button onClick={handleUpdateOrderStatus}>
+                    {language === "ar" ? "حفظ التغييرات" : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

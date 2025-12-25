@@ -10,6 +10,7 @@ import {
 } from '../controllers/productController';
 import { protect, authorize } from '../middleware/auth';
 import { productValidation, validate } from '../middleware/validator';
+import { uploadProductImages } from '../middleware/upload';
 
 const router = express.Router();
 
@@ -21,8 +22,24 @@ router.get('/', getProducts);
 router.get('/:id', getProduct);
 
 // Admin and Employee routes (both can manage products)
-router.post('/', protect, authorize('admin', 'employee'), productValidation, validate, createProduct);
-router.put('/:id', protect, authorize('admin', 'employee'), updateProduct);
+// Use multer middleware to handle file uploads
+// uploadProductImages handles both 'image' (single) and 'images' (array) fields
+router.post(
+  '/',
+  protect,
+  authorize('admin', 'employee'),
+  uploadProductImages,
+  productValidation,
+  validate,
+  createProduct
+);
+router.put(
+  '/:id',
+  protect,
+  authorize('admin', 'employee'),
+  uploadProductImages,
+  updateProduct
+);
 router.delete('/:id', protect, authorize('admin', 'employee'), deleteProduct);
 
 export default router;

@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IOrderItem {
   product?: mongoose.Types.ObjectId;
   design?: mongoose.Types.ObjectId;
+  baseProductId?: mongoose.Types.ObjectId;
   name: string;
   price: number;
   quantity: number;
@@ -10,6 +11,8 @@ export interface IOrderItem {
   color: string;
   image: string;
   isCustom: boolean;
+  designMetadata?: Record<string, any>;
+  designImageURL?: string;
 }
 
 export interface IOrder extends Document {
@@ -38,6 +41,15 @@ export interface IOrder extends Document {
   total: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   trackingNumber?: string;
+  trackingHistory?: Array<{
+    status: string;
+    location?: string;
+    note?: string;
+    updatedBy?: mongoose.Types.ObjectId;
+    updatedAt: Date;
+  }>;
+  carrier?: string; // Shipping carrier name
+  estimatedDelivery?: Date; // Estimated delivery date
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -66,6 +78,10 @@ const orderSchema = new Schema<IOrder>(
           type: Schema.Types.ObjectId,
           ref: 'Design',
         },
+        baseProductId: {
+          type: Schema.Types.ObjectId,
+          ref: 'StudioProduct',
+        },
         name: { type: String, required: true },
         price: { type: Number, required: true },
         quantity: { type: Number, required: true, min: 1 },
@@ -73,6 +89,8 @@ const orderSchema = new Schema<IOrder>(
         color: { type: String, required: true },
         image: { type: String, required: true },
         isCustom: { type: Boolean, default: false },
+        designMetadata: Schema.Types.Mixed,
+        designImageURL: String,
       },
     ],
     shippingAddress: {
@@ -117,6 +135,15 @@ const orderSchema = new Schema<IOrder>(
       default: 'pending',
     },
     trackingNumber: String,
+    trackingHistory: [{
+      status: { type: String, required: true },
+      location: String,
+      note: String,
+      updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      updatedAt: { type: Date, default: Date.now },
+    }],
+    carrier: String,
+    estimatedDelivery: Date,
     notes: String,
   },
   {
@@ -161,4 +188,3 @@ orderSchema.pre('save', async function (next) {
 });
 
 export default mongoose.model<IOrder>('Order', orderSchema);
-

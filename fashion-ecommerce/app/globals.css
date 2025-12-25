@@ -1,10 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@custom-variant dark (&:is(.dark *));
-
 :root {
-  --background: oklch(0.99 0.005 106.423);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.15 0.02 256.802);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -40,38 +38,38 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --background: oklch(0.15 0.02 256.802);
+  --foreground: oklch(0.98 0 0);
+  --card: oklch(0.2 0.02 256.802);
+  --card-foreground: oklch(0.98 0 0);
+  --popover: oklch(0.2 0.02 256.802);
+  --popover-foreground: oklch(0.98 0 0);
+  --primary: oklch(0.55 0.18 256.802);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.25 0.02 256.802);
+  --secondary-foreground: oklch(0.98 0 0);
+  --muted: oklch(0.25 0.02 256.802);
+  --muted-foreground: oklch(0.7 0.015 256.802);
+  --accent: oklch(0.3 0.02 256.802);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.3 0.02 256.802);
+  --input: oklch(0.25 0.02 256.802);
+  --ring: oklch(0.55 0.18 256.802);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.18 0.02 256.802);
+  --sidebar-foreground: oklch(0.98 0 0);
+  --sidebar-primary: oklch(0.55 0.18 256.802);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.25 0.02 256.802);
+  --sidebar-accent-foreground: oklch(0.98 0 0);
+  --sidebar-border: oklch(0.3 0.02 256.802);
+  --sidebar-ring: oklch(0.55 0.18 256.802);
 }
 
 @theme inline {
@@ -129,6 +127,11 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  direction: ltr !important;
+}
+
+body {
+  direction: ltr !important;
 }
 
 /* Minimal Professional Scrollbar */
@@ -149,6 +152,14 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Professional Typography */
@@ -336,3 +347,144 @@ h1, h2, h3, h4, h5, h6 {
   direction: ltr;
   text-align: left;
 }
+
+/* ==============================
+   Student UI overrides (simpler)
+   ==============================
+   Goal: keep structure and functionality intact while toning down
+   colors, gradients, animations, shadows, and fancy effects so the
+   UI feels simpler and more "student-level" rather than fully polished.
+   Activate via adding `student-ui` on <body> (already applied).
+*/
+.student-ui [class*="bg-gradient-to-"],
+.student-ui [class*="from-"],
+.student-ui [class*="via-"],
+.student-ui [class*="to-"] {
+  background-image: none !important;
+}
+
+/* Remove custom gradient utilities/patterns */
+.student-ui [class*="bg-[radial-gradient"],
+.student-ui [class*="bg-[linear-gradient"],
+.student-ui [class*="bg-[conic-gradient"] {
+  background-image: none !important;
+}
+
+/* Hide decorative blur blobs */
+.student-ui [class~="blur-sm"],
+.student-ui [class~="blur-md"],
+.student-ui [class~="blur-lg"],
+.student-ui [class~="blur-xl"],
+.student-ui [class~="blur-2xl"],
+.student-ui [class~="blur-3xl"] {
+  display: none !important;
+}
+
+/* Drop background images used only for decoration */
+.student-ui [class~="bg-cover"] {
+  background-image: none !important;
+}
+
+/* Tone down glass/backdrop blur effects */
+.student-ui [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Remove heavy shadows site-wide */
+.student-ui [class*="shadow"],
+.student-ui [class*="hover:shadow"] {
+  box-shadow: none !important;
+}
+
+/* Remove drop-shadow filters */
+.student-ui [class*="drop-shadow"] {
+  filter: none !important;
+}
+
+/* Remove ring shadows (keep focus outline from base styles) */
+.student-ui [class*="ring-"] {
+  box-shadow: none !important;
+}
+
+/* Make transitions instant (or minimal) */
+.student-ui [class*="transition"],
+.student-ui [class*="duration-"],
+.student-ui [class*="ease-"] {
+  transition: none !important;
+}
+
+/* Stop CSS-based animations */
+.student-ui [class*="animate-"],
+.student-ui [class*="group-hover:animate"] {
+  animation: none !important;
+}
+
+/* Reduce hover motion flair (scales/rotations/translations) */
+.student-ui [class*="hover:scale-"],
+.student-ui [class*="group-hover:scale-"],
+.student-ui [class*="hover:rotate-"],
+.student-ui [class*="group-hover:rotate-"],
+.student-ui [class*="hover:translate-"],
+.student-ui [class*="group-hover:translate-"] {
+  transform: none !important;
+}
+
+/* Ensure gradient text remains readable */
+.student-ui .text-transparent {
+  color: inherit !important;
+}
+
+/* Soften typography weight and oversized headings */
+.student-ui .font-extrabold,
+.student-ui .font-black {
+  font-weight: 700 !important;
+}
+
+.student-ui .tracking-tight,
+.student-ui .tracking-tighter {
+  letter-spacing: -0.01em !important;
+}
+
+.student-ui .text-8xl {
+  font-size: 4.5rem !important;
+}
+
+.student-ui .text-7xl {
+  font-size: 3.75rem !important;
+}
+
+.student-ui .text-6xl {
+  font-size: 3rem !important;
+}
+
+/* Normalize semi-transparent white backgrounds to solid white */
+.student-ui [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 1) !important;
+}
+
+/* Reduce oversized rounding */
+.student-ui [class*="rounded-3xl"],
+.student-ui [class*="rounded-[3rem]"],
+.student-ui [class*="rounded-[2.5rem]"] {
+  border-radius: 0.75rem !important;
+}
+
+.student-ui [class*="rounded-2xl"] {
+  border-radius: 0.625rem !important;
+}
+
+/* Tone down custom helper classes if used */
+.student-ui .hover-lift:hover,
+.student-ui .hover-scale:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Optional: slightly calmer primary color without changing structure */
+.student-ui {
+  --primary: oklch(0.55 0.08 260); /* muted bluish */
+  --ring: oklch(0.55 0.08 260);
+  --radius: 0.5rem;
+}
+

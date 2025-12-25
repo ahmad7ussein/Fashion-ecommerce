@@ -12,6 +12,8 @@ type ProductPreviewProps = {
   onSideChange: (side: DesignSide) => void
   designElements: DesignElement[]
   zoom?: number
+  safeArea?: { x: number; y: number; width: number; height: number }
+  mockupUrl?: string
 }
 
 const availableSides: Record<ProductType, DesignSide[]> = {
@@ -41,10 +43,12 @@ export function ProductPreview({
   onSideChange,
   designElements,
   zoom = 100,
+  safeArea,
+  mockupUrl,
 }: ProductPreviewProps) {
-  const sides = availableSides[productType]
+  const sides = availableSides[productType] || ["front"]
   const currentIndex = sides.indexOf(currentSide)
-  const currentImage = getProductImagePath(productType, currentSide)
+  const currentImage = mockupUrl || getProductImagePath(productType, currentSide)
 
   const currentSideElements = designElements.filter((el) => (el.side || "front") === currentSide)
 
@@ -118,10 +122,23 @@ export function ProductPreview({
                 filter: productColor !== "#FFFFFF" ? "brightness(0.9)" : undefined,
               }}
               onError={(e) => {
-                // Fallback if PNG doesn't exist
-                ;(e.target as HTMLImageElement).src = `/white-t-shirt.png`
+                ;(e.target as HTMLImageElement).src = mockupUrl || "/placeholder-logo.png"
               }}
             />
+
+            {/* Safe Area Overlay */}
+            {safeArea && safeArea.width > 0 && safeArea.height > 0 && (
+              <div
+                className="absolute pointer-events-none border-2 border-dashed border-rose-400/80 bg-rose-200/10"
+                style={{
+                  left: `${safeArea.x}px`,
+                  top: `${safeArea.y}px`,
+                  width: `${safeArea.width}px`,
+                  height: `${safeArea.height}px`,
+                  boxShadow: "0 0 0 9999px rgba(255,255,255,0.35)",
+                }}
+              />
+            )}
 
             {/* Design Elements Overlay */}
             <div className="absolute inset-0 pointer-events-none">
@@ -177,4 +194,3 @@ export function ProductPreview({
     </div>
   )
 }
-

@@ -22,6 +22,7 @@ export const getAllEmployeeActivities = async (req: AuthRequest, res: Response) 
     const activities = await EmployeeActivity.find(query)
       .populate('employee', 'firstName lastName email role')
       .sort({ createdAt: -1 })
+      .allowDiskUse(true)
       .skip(skip)
       .limit(limitNum);
 

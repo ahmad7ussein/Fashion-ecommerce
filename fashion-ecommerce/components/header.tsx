@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ShoppingBag, Menu, X, ChevronDown, User, UserCircle2, Package, Settings, LogOut, Sparkles, Moon, Sun, Languages } from "lucide-react"
+import { ShoppingBag, Menu, X, ChevronDown, User, UserCircle2, Package, Settings, LogOut, Sparkles, Languages, Moon, Sun } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { useCart } from "@/lib/cart"
 import { useAuth } from "@/lib/auth"
@@ -179,6 +179,26 @@ export function Header() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
+                  <Link href="/new-arrival">
+                    <Button variant="ghost" className="text-sm font-semibold group relative overflow-hidden transition-all hover:scale-105">
+                      <Sparkles className="mr-1.5 h-4 w-4 relative z-10 group-hover:animate-pulse" />
+                      <span className="relative z-10">{language === "ar" ? "وصل جديد" : "New Arrival"}</span>
+                      <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+                    </Button>
+                  </Link>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
+                  <Link href="/collection">
+                    <Button variant="ghost" className="text-sm font-semibold group relative overflow-hidden transition-all hover:scale-105">
+                      <Sparkles className="mr-1.5 h-4 w-4 relative z-10 group-hover:rotate-180 transition-transform duration-500" />
+                      <span className="relative z-10">{language === "ar" ? "المجموعة" : "Collection"}</span>
+                      <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
+                    </Button>
+                  </Link>
+                </NavigationMenuItem>
+
+                <NavigationMenuItem>
                   <Link href="/studio">
                     <Button variant="ghost" className="text-sm font-semibold group relative overflow-hidden transition-all hover:scale-105">
                       <Sparkles className="mr-1.5 h-4 w-4 relative z-10 group-hover:animate-spin" />
@@ -205,7 +225,7 @@ export function Header() {
             {/* Language Toggle */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300">
+                <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600">
                   <Languages className="h-5 w-5 group-hover:rotate-180 transition-transform duration-500" />
                   <span className="sr-only">Change Language</span>
                 </Button>
@@ -227,23 +247,20 @@ export function Header() {
             </DropdownMenu>
 
             {/* Theme Toggle */}
-            {mounted && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="relative group hover:scale-110 transition-all duration-300"
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              >
-                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0" />
-                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100" />
-                <span className="sr-only">Toggle theme</span>
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600"
+              title={theme === "dark" ? (language === "ar" ? "الوضع الفاتح" : "Light Mode") : (language === "ar" ? "الوضع الداكن" : "Dark Mode")}
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <span className="sr-only">Toggle Theme</span>
+            </Button>
 
             {/* Cart */}
             <Link href="/cart">
-              <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300">
+              <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600">
                 <ShoppingBag className="h-5 w-5 group-hover:animate-bounce" />
                 {itemCount > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs bg-primary animate-pulse">
@@ -423,6 +440,22 @@ export function Header() {
                     >
                       <Package className="h-4 w-4" />
                       {t("allProducts")}
+                    </Link>
+                    <Link
+                      href="/new-arrival"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-3 text-sm font-semibold rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 hover:shadow-md"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {language === "ar" ? "وصل جديد" : "New Arrival"}
+                    </Link>
+                    <Link
+                      href="/collection"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-3 text-sm font-semibold rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 hover:shadow-md"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {language === "ar" ? "المجموعة" : "Collection"}
                     </Link>
                     <Link
                       href="/studio"
