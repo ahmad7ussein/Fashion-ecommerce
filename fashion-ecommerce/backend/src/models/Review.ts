@@ -58,9 +58,31 @@ const reviewSchema = new Schema<IReview>(
   }
 );
 
-// Index for faster queries
+/**
+ * MongoDB Indexes for Review Queries
+ * 
+ * Query Patterns:
+ * 1. Get approved reviews: { status: 'approved' } + sort { createdAt: -1 }
+ * 2. Get user reviews: { user: userId }
+ * 3. Get product reviews: { product: productId, status: 'approved' }
+ */
+
+// Primary index for approved reviews listing
 reviewSchema.index({ status: 1, createdAt: -1 });
-reviewSchema.index({ user: 1 });
+// Why: Most common query - get approved reviews sorted by date
+// Usage: GET /api/reviews (public endpoint)
+// ESR: Equality(status) + Sort(createdAt)
+
+// User reviews index
+reviewSchema.index({ user: 1, createdAt: -1 });
+// Why: Get all reviews by a specific user, sorted by date
+// Usage: GET /api/reviews (user's own reviews)
+// ESR: Equality(user) + Sort(createdAt)
+
+// Product reviews index (if product field exists in future)
+// reviewSchema.index({ product: 1, status: 1, createdAt: -1 });
+// Why: Get approved reviews for a specific product
+// Usage: GET /api/products/:id/reviews
 
 export default mongoose.model<IReview>('Review', reviewSchema);
 

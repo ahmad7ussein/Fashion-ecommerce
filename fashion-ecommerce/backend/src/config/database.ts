@@ -4,43 +4,38 @@ import env from './env';
 const connectDB = async (): Promise<void> => {
   try {
     const mongoURI = env.mongodbUri;
-    
-    // Detect if using MongoDB Atlas (cloud) or local
     const isAtlas = mongoURI.includes('mongodb+srv://') || mongoURI.includes('mongodb.net');
     
-    // Connection options optimized for both local and Atlas
     const options: mongoose.ConnectOptions = {
-      // Connection pool settings
-      maxPoolSize: isAtlas ? 50 : 10, // Atlas can handle more connections
-      minPoolSize: isAtlas ? 5 : 5,
-      
-      // Timeout settings (longer for Atlas due to network latency)
-      serverSelectionTimeoutMS: isAtlas ? 30000 : 5000,
-      socketTimeoutMS: isAtlas ? 45000 : 45000,
-      connectTimeoutMS: isAtlas ? 30000 : 10000,
-      
-      // Retry settings (important for Atlas)
+      maxPoolSize: isAtlas ? 15 : 5, // Increased pool size for better concurrency
+      minPoolSize: isAtlas ? 3 : 1, // Keep more connections alive
+      serverSelectionTimeoutMS: isAtlas ? 20000 : 10000, // 20s - fail faster
+      socketTimeoutMS: isAtlas ? 45000 : 20000, // 45s - increased for network latency
+      connectTimeoutMS: isAtlas ? 20000 : 10000, // 20s - fail faster
       retryWrites: true,
       retryReads: true,
+      heartbeatFrequencyMS: 5000, // Check connection health every 5s (more frequent)
+      maxIdleTimeMS: 60000, // Keep connections alive longer (60s) to reduce reconnection overhead
+      // Disable buffering - fail fast if not connected
+      bufferCommands: false, // Disable buffering - fail fast if not connected
+      // Add connection monitoring
+      monitorCommands: false, // Disable command monitoring to reduce overhead
     };
 
     console.log('');
     console.log('🔄 ========================================');
     console.log(isAtlas ? '🔄 Attempting to connect to MongoDB Atlas...' : '🔄 Attempting to connect to local MongoDB...');
     console.log('🔄 ========================================');
-    console.log(`📍 Connection String: ${mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`); // Hide credentials
+    console.log(`📍 Connection String: ${mongoURI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
     console.log('⏳ Connecting...');
     console.log('');
     
-    // Connect to MongoDB
     await mongoose.connect(mongoURI, options);
     
-    // Verify connection
     if (mongoose.connection.readyState !== 1) {
       throw new Error('Connection established but readyState is not 1 (Connected)');
     }
     
-    // Test connection with a simple operation
     try {
       if (mongoose.connection.db) {
         await mongoose.connection.db.admin().ping();
@@ -50,7 +45,6 @@ const connectDB = async (): Promise<void> => {
       console.warn('⚠️  Database ping failed, but connection seems active');
     }
     
-    // Success message
     console.log('');
     console.log('✅ ========================================');
     console.log('✅ MongoDB Connected Successfully!');
@@ -77,8 +71,6 @@ const connectDB = async (): Promise<void> => {
     console.error('❌ Database Connection Failed');
     console.error('❌ ========================================');
     console.error('');
-    console.error('❌ Connection was NOT successful');
-    console.error('');
     console.error(`❌ Error Type: ${error.name}`);
     console.error(`❌ Error Message: ${error.message}`);
     console.error('');
@@ -87,8 +79,6 @@ const connectDB = async (): Promise<void> => {
       console.error(error.stack.split('\n').slice(0, 5).join('\n'));
       console.error('');
     }
-    
-    // Provide helpful error messages
     if (error.message.includes('authentication failed') || error.message.includes('Authentication failed')) {
       console.error('💡 Tip: Check your username and password in MONGODB_URI');
       console.error('   Make sure the credentials in your connection string are correct');
@@ -144,24 +134,20 @@ const connectDB = async (): Promise<void> => {
     console.error('❌ ========================================');
     console.error('');
     
-    // Re-throw error so caller can handle it
     throw error;
   }
 };
 
-// Handle connection events
 mongoose.connection.on('connected', () => {
   console.log(' Mongoose connected to MongoDB');
 });
 
 mongoose.connection.on('disconnected', () => {
-  // Check if disconnect was intentional (set by server.ts)
   const isIntentional = (mongoose.connection as any)._intentionalDisconnect;
   if (!isIntentional) {
     console.log('  MongoDB Disconnected');
     console.log(' Attempting to reconnect...');
   } else {
-    // Reset flag
     (mongoose.connection as any)._intentionalDisconnect = false;
   }
 });
@@ -174,7 +160,6 @@ mongoose.connection.on('reconnected', () => {
   console.log(' MongoDB Reconnected');
 });
 
-// Graceful shutdown
 process.on('SIGINT', async () => {
   await mongoose.connection.close();
   console.log(' MongoDB connection closed through app termination');

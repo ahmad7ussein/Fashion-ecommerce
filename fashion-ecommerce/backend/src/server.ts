@@ -21,6 +21,19 @@ import adminRoutes from './routes/adminRoutes';
 import cartRoutes from './routes/cartRoutes';
 import userPreferencesRoutes from './routes/userPreferencesRoutes';
 import reviewRoutes from './routes/reviewRoutes';
+import contactRoutes from './routes/contactRoutes';
+import notificationRoutes from './routes/notificationRoutes';
+import favoriteRoutes from './routes/favoriteRoutes';
+import studioProductRoutes from './routes/studioProductRoutes';
+import supplierRoutes from './routes/supplierRoutes';
+import supplierProductRoutes from './routes/supplierProductRoutes';
+import partnerStoreRoutes from './routes/partnerStoreRoutes';
+import partnerProductRoutes from './routes/partnerProductRoutes';
+import partnerPanelRoutes from './routes/partnerPanelRoutes';
+import featureControlRoutes from './routes/featureControlRoutes';
+import customDesignRoutes from './routes/customDesignRoutes';
+import vendorRoutes from './routes/vendorRoutes';
+import roleAssignmentRoutes from './routes/roleAssignmentRoutes';
 
 const app: Application = express();
 
@@ -131,7 +144,7 @@ app.use(compression());
 
 // Logging
 if (env.nodeEnv === 'development') {
-  app.use(morgan('dev'));
+  app.use(morgan(':method :url :status :response-time ms'));
 }
 
 // Health check
@@ -147,12 +160,10 @@ app.get('/health', (_req, res) => {
 
 // Database connection check middleware (for API routes only)
 app.use('/api', (req, res, next) => {
-  // Skip health check endpoint
   if (req.path === '/health') {
     return next();
   }
   
-  // Check if database is connected
   if (mongoose.connection.readyState !== 1) {
     return res.status(503).json({
       success: false,
@@ -164,21 +175,61 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+mongoose.connection.on('error', (err) => {
+  if (err.message?.includes('timeout')) {
+    console.warn('⚠️  MongoDB connection timeout:', err.message);
+  } else {
+    console.error('❌ MongoDB Error:', err);
+  }
+});
+
+mongoose.connection.on('disconnected', () => {
+  const isIntentional = (mongoose.connection as any)._intentionalDisconnect;
+  if (!isIntentional) {
+    console.warn('⚠️  MongoDB disconnected. Mongoose will attempt to reconnect automatically.');
+  }
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/designs', designRoutes);
+app.use('/api/studio-products', studioProductRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/user-preferences', userPreferencesRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/supplier-products', supplierProductRoutes);
+app.use('/api/partner-stores', partnerStoreRoutes);
+app.use('/api/partner-products', partnerProductRoutes);
+app.use('/api/partner', partnerPanelRoutes);
+app.use('/api/feature-controls', featureControlRoutes);
+app.use('/api/custom-design-requests', customDesignRoutes);
+app.use('/api/vendor', vendorRoutes);
+app.use('/api/role-assignments', roleAssignmentRoutes);
 
 // 404 handler
-app.use((_req, res) => {
+app.use((req, res) => {
+  // Log the missing route for debugging
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('⚠️  Route not found:', {
+      method: req.method,
+      path: req.path,
+      url: req.url,
+      originalUrl: req.originalUrl,
+    });
+  }
+  
   res.status(404).json({
     success: false,
     message: 'Route not found',
+    path: req.path,
+    method: req.method,
   });
 });
 
@@ -213,7 +264,14 @@ const startServer = async () => {
       console.log(`🚀 API URL: http://localhost:${env.port}/api`);
       console.log('🚀 ========================================');
       console.log('');
-    }).on('error', async (err: NodeJS.ErrnoException) => {
+    });
+    
+    // Increase timeout for file uploads (Cloudinary uploads can take time)
+    server.timeout = 180000; // 3 minutes
+    server.keepAliveTimeout = 65000; // 65 seconds
+    server.headersTimeout = 66000; // 66 seconds (must be > keepAliveTimeout)
+    
+    server.on('error', async (err: NodeJS.ErrnoException) => {
       // Close database connection before exiting
       if (mongoose.connection.readyState === 1) {
         console.log('');
@@ -331,4 +389,3 @@ const startServer = async () => {
 startServer();
 
 export default app;
-

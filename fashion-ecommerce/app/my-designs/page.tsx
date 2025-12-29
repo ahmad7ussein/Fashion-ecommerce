@@ -243,7 +243,7 @@ export default function MyDesignsPage() {
               <Card key={design._id} className="group overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="relative aspect-square bg-muted overflow-hidden">
                   <Image
-                    src={design.thumbnail || "/placeholder.svg"}
+                    src={design.thumbnail || "/placeholder-logo.png"}
                     alt={design.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -306,7 +306,7 @@ export default function MyDesignsPage() {
                   <div className="flex gap-6">
                     <div className="w-32 h-32 rounded-lg bg-muted overflow-hidden flex-shrink-0 relative">
                       <Image
-                        src={design.thumbnail || "/placeholder.svg"}
+                        src={design.thumbnail || "/placeholder-logo.png"}
                         alt={design.name}
                         fill
                         className="object-cover"

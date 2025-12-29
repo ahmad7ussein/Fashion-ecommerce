@@ -71,7 +71,7 @@ function AnimatedText() {
           bevelOffset={0}
           bevelSegments={5}
         >
-          StyleCraft
+          FashionHub
           <meshStandardMaterial 
             color="#000000" 
             roughness={0.2}

@@ -1,12 +1,30 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Load environment variables
+// Try to load from parent directory .env.local first (for SMTP_USER, SMTP_PASS, etc.)
+const parentEnvPath = path.resolve(__dirname, '../../../.env.local');
+dotenv.config({ path: parentEnvPath });
+
+// Then load from backend/.env.local (overrides parent if exists)
+const backendEnvLocalPath = path.resolve(__dirname, '../../.env.local');
+dotenv.config({ path: backendEnvLocalPath });
+
+// Finally load from backend/.env (default)
 dotenv.config();
 
 // Required environment variables
 const requiredEnvVars = [
   'MONGODB_URI',
   'JWT_SECRET',
+];
+
+// Optional but recommended for production
+const recommendedEnvVars = [
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'GOOGLE_CLIENT_ID',
 ];
 
 // Validate required environment variables
@@ -24,6 +42,19 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   jwtExpire: process.env.JWT_EXPIRE || '7d',
+  gmailUser: process.env.GMAIL_USER,
+  gmailAppPassword: process.env.GMAIL_APP_PASSWORD,
+  smtpUser: process.env.SMTP_USER,
+  smtpPass: process.env.SMTP_PASS,
+  smtpFrom: process.env.SMTP_FROM,
+  smtpHost: process.env.SMTP_HOST,
+  smtpPort: process.env.SMTP_PORT,
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET,
+  },
 };
 
 // Log environment info (without sensitive data)
@@ -49,4 +80,3 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export default env;
-

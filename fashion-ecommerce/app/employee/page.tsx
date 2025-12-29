@@ -40,7 +40,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/lib/language"
 import { t } from "@/lib/i18n"
-import { Trash2, Plus, Upload, X } from "lucide-react"
+import { Trash2, Plus, Upload, X, Check } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import Image from "next/image"
@@ -91,6 +91,9 @@ export default function EmployeeDashboard() {
     stock: "100",
     featured: false,
     active: true,
+    onSale: false,
+    salePercentage: "0",
+    newArrival: false,
   })
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
@@ -102,26 +105,17 @@ export default function EmployeeDashboard() {
   const { toast } = useToast()
   const router = useRouter()
 
-  // Redirect if not employee (only check once)
-  const hasCheckedAuth = useRef(false)
+  // Redirect if not employee - use router for faster navigation
   useEffect(() => {
-    // Wait for auth to load
     if (authLoading) return
     
-    // Only check once
-    if (hasCheckedAuth.current) return
-    hasCheckedAuth.current = true
-    
     if (user && user.role !== "employee") {
-      console.log("⚠️ User is not employee, redirecting. Role:", user.role)
-      window.location.href = "/"
+      router.replace("/")
       return
     }
     
-    // If no user and auth finished loading, redirect to login
     if (!user && !authLoading) {
-      console.log("⚠️ No user found, redirecting to login")
-      window.location.href = "/login"
+      router.replace("/login")
       return
     }
   }, [user, authLoading, router])
@@ -296,26 +290,39 @@ export default function EmployeeDashboard() {
     }
   }
 
-  // Handle additional images upload (max 2)
+  // Handle additional images upload (exactly 3 images required)
   const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    // Check if adding these files would exceed the limit of 2
-    if (productForm.images.length + files.length > 2) {
+    // Limit to 3 additional images
+    const maxImages = 3
+    const currentImagesCount = productForm.images.length
+    const remainingSlots = maxImages - currentImagesCount
+
+    if (remainingSlots <= 0) {
       toast({
-        title: "Error",
-        description: language === "ar" ? "يمكنك إضافة صورتين فرعيتين فقط" : "You can only add 2 additional images",
+        title: language === "ar" ? "حد أقصى" : "Maximum reached",
+        description: language === "ar" ? "يمكنك إضافة 3 صور إضافية فقط" : "You can only add 3 additional images",
         variant: "destructive",
       })
       return
+    }
+
+    const filesToProcess = files.slice(0, remainingSlots)
+    if (files.length > remainingSlots) {
+      toast({
+        title: language === "ar" ? "تنبيه" : "Notice",
+        description: language === "ar" ? `تم اختيار أول ${remainingSlots} صورة فقط` : `Only the first ${remainingSlots} image(s) were selected`,
+        variant: "default",
+      })
     }
 
     try {
       const newFiles: File[] = []
       const newBase64Images: string[] = []
 
-      for (const file of files) {
+      for (const file of filesToProcess) {
         // Validate file type
         if (!file.type.startsWith('image/')) {
           toast({
@@ -377,21 +384,52 @@ export default function EmployeeDashboard() {
     }
   }
 
-  const updateOrderStatus = async (orderId: string, newStatus: Order["status"], trackingNumber?: string) => {
+  const [showEditOrder, setShowEditOrder] = useState(false)
+  const [editOrderStatus, setEditOrderStatus] = useState<Order["status"]>("pending")
+  const [editTrackingNumber, setEditTrackingNumber] = useState("")
+  const [editCarrier, setEditCarrier] = useState("")
+  const [editEstimatedDelivery, setEditEstimatedDelivery] = useState("")
+  const [editLocation, setEditLocation] = useState("")
+  const [editNote, setEditNote] = useState("")
+
+  const openEditOrder = async (order: Order) => {
+    setSelectedOrder(order)
+    setEditOrderStatus(order.status)
+    setEditTrackingNumber(order.trackingNumber || "")
+    setEditCarrier(order.carrier || "")
+    setEditEstimatedDelivery(order.estimatedDelivery ? new Date(order.estimatedDelivery).toISOString().split('T')[0] : "")
+    setEditLocation("")
+    setEditNote("")
+    setShowEditOrder(true)
+  }
+
+    const updateOrderStatus = async (
+    orderId?: string,
+    statusOverride?: Order["status"],
+    trackingOverride?: string
+  ) => {
+    const targetId = orderId || selectedOrder?._id
+    if (!targetId) return
     try {
-      await ordersApi.updateOrderStatus(orderId, newStatus, trackingNumber)
+      await ordersApi.updateOrderStatus(targetId, {
+        status: statusOverride || editOrderStatus,
+        trackingNumber: trackingOverride || editTrackingNumber || undefined,
+        carrier: editCarrier || undefined,
+        estimatedDelivery: editEstimatedDelivery || undefined,
+        location: editLocation || undefined,
+        note: editNote || undefined,
+      })
       toast({
         title: "Success",
-        description: "Order status updated successfully",
+        description: language === "ar" ? "?? ????? ???? ????? ?????" : "Order status and tracking updated successfully",
       })
+      setShowEditOrder(false)
+      setSelectedOrder(null)
       loadOrders()
-    if (selectedOrder?._id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus, trackingNumber })
-      }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update order status",
+        description: (error as any)?.message || "Failed to update order status",
         variant: "destructive",
       })
     }
@@ -449,10 +487,8 @@ export default function EmployeeDashboard() {
   // Redirect if not employee
   if (!user || user.role !== "employee") {
     return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Redirecting...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
@@ -463,7 +499,7 @@ export default function EmployeeDashboard() {
       <div className="fixed left-0 top-0 h-full w-64 bg-background border-r border-border overflow-y-auto z-50">
         <div className="p-6">
           <Link href="/">
-            <Logo />
+            <Logo className="h-20 w-auto" />
           </Link>
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="secondary" className="text-xs">
@@ -480,7 +516,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("overview")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "overview" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "overview" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <LayoutDashboard className="h-5 w-5" />
@@ -490,7 +526,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("orders")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "orders" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "orders" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <ShoppingCart className="h-5 w-5" />
@@ -505,7 +541,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("progress")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "progress" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "progress" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <Printer className="h-5 w-5" />
@@ -515,7 +551,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("products")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "products" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "products" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <Package className="h-5 w-5" />
@@ -525,7 +561,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("customers")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "customers" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "customers" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <Users className="h-5 w-5" />
@@ -742,8 +778,11 @@ export default function EmployeeDashboard() {
                                 <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                             <TableCell>
                               <div className="flex gap-2">
-                                <Button variant="ghost" size="icon" onClick={() => viewOrderDetails(order)}>
+                                <Button variant="ghost" size="icon" onClick={() => viewOrderDetails(order)} title={language === "ar" ? "عرض التفاصيل" : "View Details"}>
                                   <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => openEditOrder(order)} title={language === "ar" ? "تحديث التتبع" : "Update Tracking"}>
+                                  <Edit className="h-4 w-4" />
                                 </Button>
                               </div>
                             </TableCell>
@@ -982,498 +1021,6 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-        {/* Products Tab */}
-        {activeTab === "products" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">
-                  {language === "ar" ? "إدارة المنتجات" : "Product Management"}
-                </h1>
-                <p className="text-muted-foreground">
-                  {language === "ar" ? "إضافة وتعديل وحذف المنتجات من قاعدة البيانات" : "Add, edit, and delete products from database"}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={loadProducts} variant="outline">
-                  {language === "ar" ? "تحديث" : "Refresh"}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedProduct(null)
-                    setIsEditingProduct(false)
-                    setProductForm({
-                      name: "",
-                      nameAr: "",
-                      description: "",
-                      descriptionAr: "",
-                      price: "",
-                      image: "",
-                      images: [],
-                      category: "",
-                      gender: "",
-                      season: "",
-                      style: "",
-                      occasion: "",
-                      sizes: [],
-                      colors: [],
-                      stock: "100",
-                      featured: false,
-                      active: true,
-                    })
-                    setMainImageFile(null)
-                    setAdditionalImageFiles([])
-                    setNewSize("")
-                    setNewColor("")
-                    setShowProductModal(true)
-                  }}
-                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {language === "ar" ? "إضافة منتج" : "Add Product"}
-                </Button>
-              </div>
-            </div>
-
-            <Card className="border-2 shadow-lg">
-              <CardContent className="p-6">
-                {products.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{language === "ar" ? "الاسم" : "Name"}</TableHead>
-                        <TableHead>{language === "ar" ? "الفئة" : "Category"}</TableHead>
-                        <TableHead>{language === "ar" ? "السعر" : "Price"}</TableHead>
-                        <TableHead>{language === "ar" ? "المخزون" : "Stock"}</TableHead>
-                        <TableHead>{language === "ar" ? "الحالة" : "Status"}</TableHead>
-                        <TableHead className="text-right">{language === "ar" ? "الإجراءات" : "Actions"}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {products.map((product) => (
-                        <TableRow key={product._id || product.id}>
-                          <TableCell className="font-medium">
-                            {language === "ar" && product.nameAr ? product.nameAr : product.name}
-                          </TableCell>
-                          <TableCell>{product.category}</TableCell>
-                          <TableCell>${product.price.toFixed(2)}</TableCell>
-                          <TableCell>{product.stock || 0}</TableCell>
-                          <TableCell>
-                            <Badge variant={product.active !== false ? "default" : "secondary"}>
-                              {product.active !== false ? (language === "ar" ? "نشط" : "Active") : (language === "ar" ? "غير نشط" : "Inactive")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedProduct(product)
-                                  setIsEditingProduct(true)
-                                  setProductForm({
-                                    name: product.name || "",
-                                    nameAr: (product as any).nameAr || "",
-                                    description: product.description || "",
-                                    descriptionAr: (product as any).descriptionAr || "",
-                                    price: product.price?.toString() || "",
-                                    image: product.image || "",
-                                    images: product.images || [],
-                                    category: product.category || "",
-                                    gender: product.gender || "",
-                                    season: product.season || "",
-                                    style: product.style || "",
-                                    occasion: product.occasion || "",
-                                    sizes: product.sizes || [],
-                                    colors: product.colors || [],
-                                    stock: product.stock?.toString() || "100",
-                                    featured: product.featured || false,
-                                    active: product.active !== false,
-                                  })
-                                  setMainImageFile(null)
-                                  setAdditionalImageFiles([])
-                                  setNewSize("")
-                                  setNewColor("")
-                                  setShowProductModal(true)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={async () => {
-                                  if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذا المنتج؟" : "Are you sure you want to delete this product?")) {
-                                    try {
-                                      await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "")
-                                      toast({
-                                        title: language === "ar" ? "تم الحذف" : "Deleted",
-                                        description: language === "ar" ? "تم حذف المنتج بنجاح" : "Product deleted successfully",
-                                      })
-                                      loadProducts()
-                                    } catch (error: any) {
-                                      toast({
-                                        title: "Error",
-                                        description: error.message || "Failed to delete product",
-                                        variant: "destructive",
-                                      })
-                                    }
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    {language === "ar" ? "لا توجد منتجات" : "No products yet"}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Add/Edit Product Modal */}
-            <Dialog open={showProductModal} onOpenChange={setShowProductModal}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-2 shadow-2xl">
-                <DialogHeader>
-                  <DialogTitle>
-                    {isEditingProduct
-                      ? language === "ar" ? "تعديل المنتج" : "Edit Product"
-                      : language === "ar" ? "إضافة منتج جديد" : "Add New Product"}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {language === "ar" ? "املأ المعلومات أدناه" : "Fill in the information below"}
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">{language === "ar" ? "الاسم (إنجليزي)" : "Name (English)"} *</Label>
-                      <Input
-                        id="name"
-                        value={productForm.name}
-                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                        placeholder={language === "ar" ? "اسم المنتج بالإنجليزية" : "Product name in English"}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nameAr">{language === "ar" ? "الاسم (عربي)" : "Name (Arabic)"}</Label>
-                      <Input
-                        id="nameAr"
-                        value={productForm.nameAr}
-                        onChange={(e) => setProductForm({ ...productForm, nameAr: e.target.value })}
-                        placeholder={language === "ar" ? "اسم المنتج بالعربية" : "Product name in Arabic"}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="description">{language === "ar" ? "الوصف (إنجليزي)" : "Description (English)"}</Label>
-                      <Textarea
-                        id="description"
-                        value={productForm.description}
-                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                        placeholder={language === "ar" ? "وصف المنتج بالإنجليزية" : "Product description in English"}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="descriptionAr">{language === "ar" ? "الوصف (عربي)" : "Description (Arabic)"}</Label>
-                      <Textarea
-                        id="descriptionAr"
-                        value={productForm.descriptionAr}
-                        onChange={(e) => setProductForm({ ...productForm, descriptionAr: e.target.value })}
-                        placeholder={language === "ar" ? "وصف المنتج بالعربية" : "Product description in Arabic"}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="price">{language === "ar" ? "السعر" : "Price"} *</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        value={productForm.price}
-                        onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="stock">{language === "ar" ? "المخزون" : "Stock"}</Label>
-                      <Input
-                        id="stock"
-                        type="number"
-                        value={productForm.stock}
-                        onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                        placeholder="100"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Main Image Upload (Required) */}
-                  <div className="space-y-2">
-                    <Label htmlFor="main-image">{language === "ar" ? "الصورة الرئيسية" : "Main Image"} *</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
-                      <Label htmlFor="main-image" className="cursor-pointer">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <Upload className="h-8 w-8 text-muted-foreground" />
-                          <p className="text-sm font-medium">
-                            {language === "ar" ? "اضغط لرفع الصورة الرئيسية" : "Click to upload main image"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {language === "ar" ? "PNG, JPG حتى 5 ميجابايت" : "PNG, JPG up to 5MB"}
-                          </p>
-                        </div>
-                      </Label>
-                      <input
-                        id="main-image"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleMainImageUpload}
-                        className="hidden"
-                      />
-                      {productForm.image && (
-                        <div className="mt-4 relative w-full max-w-xs mx-auto">
-                          <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary">
-                            <img 
-                              src={productForm.image} 
-                              alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2"
-                            onClick={() => {
-                              setProductForm({ ...productForm, image: "" })
-                              setMainImageFile(null)
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Additional Images Upload (Optional, max 2) */}
-                  <div className="space-y-2">
-                    <Label htmlFor="additional-images">
-                      {language === "ar" ? "الصور الفرعية (اختياري)" : "Additional Images (Optional)"}
-                      <span className="text-xs text-muted-foreground ml-2">
-                        ({language === "ar" ? "حد أقصى صورتان" : "Max 2 images"})
-                      </span>
-                    </Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
-                      <Label htmlFor="additional-images" className="cursor-pointer">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <Upload className="h-6 w-6 text-muted-foreground" />
-                          <p className="text-sm font-medium">
-                            {language === "ar" ? "اضغط لرفع صور فرعية" : "Click to upload additional images"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {language === "ar" ? "PNG, JPG حتى 5 ميجابايت لكل صورة" : "PNG, JPG up to 5MB per image"}
-                          </p>
-                        </div>
-                      </Label>
-                      <input
-                        id="additional-images"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleAdditionalImageUpload}
-                        className="hidden"
-                        disabled={productForm.images.length >= 2}
-                      />
-                      {productForm.images.length > 0 && (
-                        <div className="mt-4 grid grid-cols-2 gap-4">
-                          {productForm.images.map((img, index) => (
-                            <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-border">
-                              <img 
-                                src={img} 
-                                alt={language === "ar" ? `صورة فرعية ${index + 1}` : `Additional image ${index + 1}`} 
-                                className="w-full h-full object-cover"
-                              />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                className="absolute top-2 right-2"
-                                onClick={() => removeAdditionalImage(index)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">{language === "ar" ? "الفئة" : "Category"} *</Label>
-                      <Input
-                        id="category"
-                        value={productForm.category}
-                        onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                        placeholder="T-Shirts"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="gender">{language === "ar" ? "الجنس" : "Gender"} *</Label>
-                      <Select value={productForm.gender} onValueChange={(value) => setProductForm({ ...productForm, gender: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={language === "ar" ? "اختر الجنس" : "Select gender"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Men">{language === "ar" ? "رجال" : "Men"}</SelectItem>
-                          <SelectItem value="Women">{language === "ar" ? "نساء" : "Women"}</SelectItem>
-                          <SelectItem value="Kids">{language === "ar" ? "أطفال" : "Kids"}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="season">{language === "ar" ? "الموسم" : "Season"} *</Label>
-                      <Select value={productForm.season} onValueChange={(value) => setProductForm({ ...productForm, season: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={language === "ar" ? "اختر الموسم" : "Select season"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Summer">{language === "ar" ? "صيف" : "Summer"}</SelectItem>
-                          <SelectItem value="Winter">{language === "ar" ? "شتاء" : "Winter"}</SelectItem>
-                          <SelectItem value="All Season">{language === "ar" ? "كل المواسم" : "All Season"}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="style">{language === "ar" ? "النمط" : "Style"} *</Label>
-                      <Select value={productForm.style} onValueChange={(value) => setProductForm({ ...productForm, style: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={language === "ar" ? "اختر النمط" : "Select style"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Plain">{language === "ar" ? "عادي" : "Plain"}</SelectItem>
-                          <SelectItem value="Graphic">{language === "ar" ? "رسومي" : "Graphic"}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="occasion">{language === "ar" ? "المناسبة" : "Occasion"} *</Label>
-                    <Select value={productForm.occasion} onValueChange={(value) => setProductForm({ ...productForm, occasion: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={language === "ar" ? "اختر المناسبة" : "Select occasion"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Casual">{language === "ar" ? "عادي" : "Casual"}</SelectItem>
-                        <SelectItem value="Formal">{language === "ar" ? "رسمي" : "Formal"}</SelectItem>
-                        <SelectItem value="Sports">{language === "ar" ? "رياضي" : "Sports"}</SelectItem>
-                        <SelectItem value="Wedding">{language === "ar" ? "زفاف" : "Wedding"}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowProductModal(false)}>
-                    {language === "ar" ? "إلغاء" : "Cancel"}
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      if (!productForm.name || !productForm.price || !productForm.image || !productForm.category || !productForm.gender || !productForm.season || !productForm.style || !productForm.occasion) {
-                        toast({
-                          title: "Error",
-                          description: language === "ar" ? "يرجى ملء جميع الحقول المطلوبة (بما في ذلك الصورة الرئيسية)" : "Please fill all required fields (including main image)",
-                          variant: "destructive",
-                        })
-                        return
-                      }
-
-                      try {
-                        if (isEditingProduct && selectedProduct) {
-                          const updateData: Partial<Product> = {
-                            name: productForm.name,
-                            nameAr: productForm.nameAr || undefined,
-                            description: productForm.description || undefined,
-                            descriptionAr: productForm.descriptionAr || undefined,
-                            price: parseFloat(productForm.price) || 0,
-                            image: productForm.image,
-                            images: productForm.images.length > 0 ? productForm.images : undefined,
-                            category: productForm.category,
-                            gender: productForm.gender,
-                            season: productForm.season,
-                            style: productForm.style,
-                            occasion: productForm.occasion,
-                            sizes: productForm.sizes.length > 0 ? productForm.sizes : undefined,
-                            colors: productForm.colors.length > 0 ? productForm.colors : undefined,
-                            stock: parseInt(productForm.stock) || 100,
-                            featured: productForm.featured,
-                            active: productForm.active,
-                          }
-                          await productsAdminApi.updateProduct(selectedProduct._id || selectedProduct.id?.toString() || "", updateData)
-                          toast({
-                            title: language === "ar" ? "تم التحديث" : "Updated",
-                            description: language === "ar" ? "تم تحديث المنتج بنجاح" : "Product updated successfully",
-                          })
-                        } else {
-                          await productsAdminApi.createProduct({
-                            name: productForm.name,
-                            nameAr: productForm.nameAr || undefined,
-                            description: productForm.description || undefined,
-                            descriptionAr: productForm.descriptionAr || undefined,
-                            price: parseFloat(productForm.price),
-                            image: productForm.image,
-                            images: productForm.images.length > 0 ? productForm.images : undefined,
-                            category: productForm.category,
-                            gender: productForm.gender,
-                            season: productForm.season,
-                            style: productForm.style,
-                            occasion: productForm.occasion,
-                            sizes: productForm.sizes.length > 0 ? productForm.sizes : undefined,
-                            colors: productForm.colors.length > 0 ? productForm.colors : undefined,
-                            stock: parseInt(productForm.stock) || 100,
-                            featured: productForm.featured,
-                            active: productForm.active,
-                          })
-                          toast({
-                            title: language === "ar" ? "تمت الإضافة" : "Added",
-                            description: language === "ar" ? "تم إضافة المنتج بنجاح" : "Product added successfully",
-                          })
-                        }
-                        setShowProductModal(false)
-                        loadProducts()
-                      } catch (error: any) {
-                        toast({
-                          title: "Error",
-                          description: error.message || "Failed to save product",
-                          variant: "destructive",
-                        })
-                      }
-                    }}
-                  >
-                    {isEditingProduct ? (language === "ar" ? "تحديث" : "Update") : (language === "ar" ? "إضافة" : "Add")}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
-
         {/* Customers Tab */}
         {activeTab === "customers" && (
           <div className="space-y-6">
@@ -1552,27 +1099,749 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-            {/* Products Tab - Limited access for employees */}
+        {/* Products Tab */}
         {activeTab === "products" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                    <h1 className="text-3xl font-bold mb-2">{t("products", language)}</h1>
-                    <p className="text-muted-foreground">
-                      {language === "ar" ? "عرض وتحديث مخزون المنتجات" : "View and update product inventory"}
-                    </p>
+                <h1 className="text-3xl font-bold mb-2">{t("products", language)}</h1>
+                <p className="text-muted-foreground">
+                  {language === "ar" ? "عرض وتحديث مخزون المنتجات" : "View and update product inventory"}
+                </p>
               </div>
+              <Button
+                onClick={() => {
+                  setIsEditingProduct(false)
+                  setSelectedProduct(null)
+                  setProductForm({
+                    name: "",
+                    nameAr: "",
+                    description: "",
+                    descriptionAr: "",
+                    price: "",
+                    image: "",
+                    images: [],
+                    category: "",
+                    gender: "",
+                    season: "",
+                    style: "",
+                    occasion: "",
+                    sizes: [],
+                    colors: [],
+                    stock: "100",
+                    featured: false,
+                    active: true,
+                    onSale: false,
+                    salePercentage: "0",
+                    newArrival: false,
+                  })
+                  setNewSize("")
+                  setNewColor("")
+                  setMainImageFile(null)
+                  setAdditionalImageFiles([])
+                  setShowProductModal(true)
+                }}
+                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t("add", language)} {t("products", language)}
+              </Button>
             </div>
 
-            <Card>
+            <Card className="border-2 shadow-lg">
               <CardContent className="p-6">
-                    <p className="text-center text-muted-foreground py-8">
-                      {language === "ar" ? "يمكنك عرض المنتجات فقط. لا يمكنك إضافة أو حذف المنتجات." : "You can only view products. You cannot add or delete products."}
-                    </p>
+                {products.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t("name", language)}</TableHead>
+                        <TableHead>{t("category", language)}</TableHead>
+                        <TableHead>{t("price", language)}</TableHead>
+                        <TableHead>{t("stock", language)}</TableHead>
+                        <TableHead>{t("status", language)}</TableHead>
+                        <TableHead className="text-right">{t("actions", language)}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((product) => (
+                        <TableRow key={product._id || product.id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                                <Image
+                                  src={product.image || "/placeholder-logo.png"}
+                                  alt={product.name || "Product"}
+                                  fill
+                                  className="object-cover"
+                                  sizes="64px"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    if (target.src !== "/placeholder-logo.png") {
+                                      target.src = "/placeholder-logo.png";
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <span className="line-clamp-2">
+                                {language === "ar" && product.nameAr ? product.nameAr : product.name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{product.category}</TableCell>
+                          <TableCell>${product.price.toFixed(2)}</TableCell>
+                          <TableCell>{product.stock || 0}</TableCell>
+                          <TableCell>
+                            <Badge variant={product.active !== false ? "default" : "secondary"}>
+                              {product.active !== false ? t("active", language) : t("inactive", language)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedProduct(product)
+                                  setIsEditingProduct(true)
+                                  setProductForm({
+                                    name: product.name || "",
+                                    nameAr: (product as any).nameAr || "",
+                                    description: product.description || "",
+                                    descriptionAr: (product as any).descriptionAr || "",
+                                    price: product.price?.toString() || "",
+                                    image: product.image || "",
+                                    images: product.images || [],
+                                    category: product.category || "",
+                                    gender: product.gender || "",
+                                    season: product.season || "",
+                                    style: product.style || "",
+                                    occasion: product.occasion || "",
+                                    sizes: product.sizes || [],
+                                    colors: product.colors || [],
+                                    stock: product.stock?.toString() || "100",
+                                    featured: product.featured || false,
+                                    active: product.active !== false,
+                                    onSale: (product as any).onSale || false,
+                                    salePercentage: ((product as any).salePercentage?.toString()) || "0",
+                                    newArrival: (product as any).newArrival || false,
+                                  })
+                                  setNewSize("")
+                                  setNewColor("")
+                                  setMainImageFile(null)
+                                  setAdditionalImageFiles([])
+                                  setShowProductModal(true)
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={async () => {
+                                  if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذا المنتج؟" : "Are you sure you want to delete this product?")) {
+                                    try {
+                                      await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "")
+                                      toast({
+                                        title: language === "ar" ? "تم الحذف" : "Deleted",
+                                        description: language === "ar" ? "تم حذف المنتج بنجاح" : "Product deleted successfully",
+                                      })
+                                      loadProducts()
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "Error",
+                                        description: error.message || "Failed to delete product",
+                                        variant: "destructive",
+                                      })
+                                    }
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    {language === "ar" ? "لا توجد منتجات" : "No products yet"}
+                  </p>
+                )}
               </CardContent>
             </Card>
+
+            {/* Add/Edit Product Modal */}
+            <Dialog open={showProductModal} onOpenChange={(open) => {
+              setShowProductModal(open)
+              if (!open) {
+                setMainImageFile(null)
+                setAdditionalImageFiles([])
+              }
+            }}>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-2 shadow-2xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    {isEditingProduct
+                      ? language === "ar" ? "تعديل المنتج" : "Edit Product"
+                      : language === "ar" ? "إضافة منتج جديد" : "Add New Product"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {language === "ar" ? "املأ المعلومات أدناه لإضافة منتج جديد" : "Fill in the information below to add a new product"}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">{language === "ar" ? "الاسم (إنجليزي)" : "Name (English)"} *</Label>
+                      <Input
+                        id="name"
+                        value={productForm.name}
+                        onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                        placeholder={language === "ar" ? "اسم المنتج بالإنجليزية" : "Product name in English"}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nameAr">{language === "ar" ? "الاسم (عربي)" : "Name (Arabic)"}</Label>
+                      <Input
+                        id="nameAr"
+                        value={productForm.nameAr}
+                        onChange={(e) => setProductForm({ ...productForm, nameAr: e.target.value })}
+                        placeholder={language === "ar" ? "اسم المنتج بالعربية" : "Product name in Arabic"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="description">{language === "ar" ? "الوصف (إنجليزي)" : "Description (English)"}</Label>
+                      <Textarea
+                        id="description"
+                        value={productForm.description}
+                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                        placeholder={language === "ar" ? "وصف المنتج بالإنجليزية" : "Product description in English"}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="descriptionAr">{language === "ar" ? "الوصف (عربي)" : "Description (Arabic)"}</Label>
+                      <Textarea
+                        id="descriptionAr"
+                        value={productForm.descriptionAr}
+                        onChange={(e) => setProductForm({ ...productForm, descriptionAr: e.target.value })}
+                        placeholder={language === "ar" ? "وصف المنتج بالعربية" : "Product description in Arabic"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price">{t("price", language)} *</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        value={productForm.price}
+                        onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="stock">{t("stock", language)}</Label>
+                      <Input
+                        id="stock"
+                        type="number"
+                        value={productForm.stock}
+                        onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+                        placeholder="100"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Main Image Upload */}
+                  <div className="space-y-2">
+                    <Label htmlFor="main-image">{language === "ar" ? "الصورة الرئيسية" : "Main Image"} *</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
+                      <Label htmlFor="main-image" className="cursor-pointer">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Upload className="h-8 w-8 text-muted-foreground" />
+                          <p className="text-sm font-medium">
+                            {language === "ar" ? "اضغط لرفع الصورة الرئيسية" : "Click to upload main image"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {language === "ar" ? "PNG, JPG حتى 5 ميجابايت" : "PNG, JPG up to 5MB"}
+                          </p>
+                        </div>
+                      </Label>
+                      <input
+                        id="main-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleMainImageUpload}
+                        className="hidden"
+                      />
+                      {productForm.image && (
+                        <div className="mt-4 relative w-full max-w-xs mx-auto">
+                          <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary">
+                            <img 
+                              src={productForm.image} 
+                              alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => {
+                              setProductForm({ ...productForm, image: "" })
+                              setMainImageFile(null)
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Additional Images Upload (3 images required) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="additional-images">
+                      {language === "ar" ? "الصور الإضافية (3 صور مطلوبة)" : "Additional Images (3 images required)"}
+                    </Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
+                      {productForm.images.length < 3 ? (
+                        <Label htmlFor="additional-images" className="cursor-pointer">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <Upload className="h-6 w-6 text-muted-foreground" />
+                            <p className="text-sm font-medium">
+                              {language === "ar" 
+                                ? `اضغط لرفع ${3 - productForm.images.length} صورة إضافية` 
+                                : `Click to upload ${3 - productForm.images.length} additional image(s)`}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {language === "ar" 
+                                ? `PNG, JPG حتى 5 ميجابايت لكل صورة (${productForm.images.length}/3)` 
+                                : `PNG, JPG up to 5MB per image (${productForm.images.length}/3)`}
+                            </p>
+                          </div>
+                        </Label>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
+                            <Check className="h-4 w-4 text-white" />
+                          </div>
+                          <p className="text-sm font-medium text-green-600">
+                            {language === "ar" ? "تم رفع جميع الصور (3/3)" : "All images uploaded (3/3)"}
+                          </p>
+                        </div>
+                      )}
+                      <input
+                        id="additional-images"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleAdditionalImageUpload}
+                        className="hidden"
+                        disabled={productForm.images.length >= 3}
+                      />
+                      {productForm.images.length > 0 && (
+                        <div className="mt-4 grid grid-cols-3 gap-4">
+                          {Array.from({ length: 3 }).map((_, index) => (
+                            <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-border">
+                              {productForm.images[index] ? (
+                                <>
+                                  <img 
+                                    src={productForm.images[index]} 
+                                    alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    className="absolute top-2 right-2"
+                                    onClick={() => removeAdditionalImage(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-100 border-2 border-dashed border-gray-300">
+                                  <span className="text-xs text-gray-400">
+                                    {language === "ar" ? `صورة ${index + 1}` : `Image ${index + 1}`}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="category">{t("category", language)} *</Label>
+                      <Select value={productForm.category} onValueChange={(value) => setProductForm({ ...productForm, category: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={language === "ar" ? "اختر الفئة" : "Select category"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="T-Shirts">{language === "ar" ? "تي شيرت" : "T-Shirts"}</SelectItem>
+                          <SelectItem value="Tank Tops">{language === "ar" ? "تانك توب" : "Tank Tops"}</SelectItem>
+                          <SelectItem value="Tops">{language === "ar" ? "ترنك" : "Tops"}</SelectItem>
+                          <SelectItem value="Blouses">{language === "ar" ? "بلوزة" : "Blouses"}</SelectItem>
+                          <SelectItem value="Polo Shirts">{language === "ar" ? "بولو" : "Polo Shirts"}</SelectItem>
+                          <SelectItem value="Hoodies">{language === "ar" ? "هودي" : "Hoodies"}</SelectItem>
+                          <SelectItem value="Sweatshirts">{language === "ar" ? "سويشيرت" : "Sweatshirts"}</SelectItem>
+                          <SelectItem value="Pants">{language === "ar" ? "بنطلون" : "Pants"}</SelectItem>
+                          <SelectItem value="Jeans">{language === "ar" ? "جينز" : "Jeans"}</SelectItem>
+                          <SelectItem value="Shorts">{language === "ar" ? "شورت" : "Shorts"}</SelectItem>
+                          <SelectItem value="Jackets">{language === "ar" ? "جاكيت" : "Jackets"}</SelectItem>
+                          <SelectItem value="Dresses">{language === "ar" ? "فستان" : "Dresses"}</SelectItem>
+                          <SelectItem value="Skirts">{language === "ar" ? "تنورة" : "Skirts"}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gender">{language === "ar" ? "الجنس" : "Gender"} *</Label>
+                      <Select value={productForm.gender} onValueChange={(value) => setProductForm({ ...productForm, gender: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={language === "ar" ? "اختر الجنس" : "Select gender"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Men">{language === "ar" ? "رجال" : "Men"}</SelectItem>
+                          <SelectItem value="Women">{language === "ar" ? "نساء" : "Women"}</SelectItem>
+                          <SelectItem value="Unisex">{language === "ar" ? "للجنسين" : "Unisex"}</SelectItem>
+                          <SelectItem value="Kids">{language === "ar" ? "أطفال" : "Kids"}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="season">{language === "ar" ? "الموسم" : "Season"} *</Label>
+                      <Select value={productForm.season} onValueChange={(value) => setProductForm({ ...productForm, season: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={language === "ar" ? "اختر الموسم" : "Select season"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Summer">Summer</SelectItem>
+                          <SelectItem value="Winter">Winter</SelectItem>
+                          <SelectItem value="Spring">Spring</SelectItem>
+                          <SelectItem value="Fall">Fall</SelectItem>
+                          <SelectItem value="All Season">All Season</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="style">{language === "ar" ? "النمط" : "Style"} *</Label>
+                      <Select value={productForm.style} onValueChange={(value) => setProductForm({ ...productForm, style: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={language === "ar" ? "اختر النمط" : "Select style"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Plain">Plain</SelectItem>
+                          <SelectItem value="Graphic">Graphic</SelectItem>
+                          <SelectItem value="Embroidered">Embroidered</SelectItem>
+                          <SelectItem value="Printed">Printed</SelectItem>
+                          <SelectItem value="Vintage">Vintage</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="occasion">{language === "ar" ? "المناسبة" : "Occasion"} *</Label>
+                    <Select value={productForm.occasion} onValueChange={(value) => setProductForm({ ...productForm, occasion: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={language === "ar" ? "اختر المناسبة" : "Select occasion"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Casual">Casual</SelectItem>
+                        <SelectItem value="Formal">Formal</SelectItem>
+                        <SelectItem value="Sport">Sport</SelectItem>
+                        <SelectItem value="Classic">Classic</SelectItem>
+                        <SelectItem value="Streetwear">Streetwear</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="featured"
+                      checked={productForm.featured}
+                      onChange={(e) => setProductForm({ ...productForm, featured: e.target.checked })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="featured" className="cursor-pointer">
+                      {language === "ar" ? "منتج مميز" : "Featured Product"}
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="active"
+                      checked={productForm.active}
+                      onChange={(e) => setProductForm({ ...productForm, active: e.target.checked })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="active" className="cursor-pointer">
+                      {language === "ar" ? "نشط" : "Active"}
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="newArrival"
+                      checked={productForm.newArrival || false}
+                      onChange={(e) => setProductForm({ ...productForm, newArrival: e.target.checked })}
+                      className="rounded"
+                    />
+                    <Label htmlFor="newArrival" className="cursor-pointer">
+                      {language === "ar" ? "وصل جديد (New Arrival)" : "New Arrival"}
+                    </Label>
+                  </div>
+
+                  {/* Sale Options */}
+                  <div className="border-t pt-4 space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="onSale"
+                        checked={productForm.onSale}
+                        onChange={(e) => setProductForm({ ...productForm, onSale: e.target.checked, salePercentage: e.target.checked ? productForm.salePercentage : "0" })}
+                        className="rounded"
+                      />
+                      <Label htmlFor="onSale" className="cursor-pointer font-semibold">
+                        {language === "ar" ? "تفعيل التخفيض (Sale)" : "Enable Sale"}
+                      </Label>
+                    </div>
+                    
+                    {productForm.onSale && (
+                      <div className="space-y-2 pl-6 border-l-2 border-primary">
+                        <Label htmlFor="salePercentage">
+                          {language === "ar" ? "نسبة الخصم (%)" : "Discount Percentage (%)"}
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="salePercentage"
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={productForm.salePercentage}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === "" || (parseFloat(value) >= 0 && parseFloat(value) <= 100)) {
+                                setProductForm({ ...productForm, salePercentage: value })
+                              }
+                            }}
+                            placeholder="0"
+                            className="w-32"
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {productForm.price && productForm.salePercentage ? (
+                              <>
+                                {language === "ar" ? "السعر بعد الخصم:" : "Price after discount:"}{" "}
+                                <span className="font-bold text-primary">
+                                  ${(parseFloat(productForm.price) * (1 - parseFloat(productForm.salePercentage || "0") / 100)).toFixed(2)}
+                                </span>
+                              </>
+                            ) : null}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{language === "ar" ? "الأحجام المتاحة" : "Available Sizes"}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => {
+                            if (productForm.sizes.includes(size)) {
+                              setProductForm({ ...productForm, sizes: productForm.sizes.filter((s) => s !== size) })
+                            } else {
+                              setProductForm({ ...productForm, sizes: [...productForm.sizes, size] })
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                            productForm.sizes.includes(size)
+                              ? "bg-rose-500 text-white border-rose-500 shadow-md"
+                              : "bg-white text-gray-700 border-gray-300 hover:border-rose-300 hover:bg-rose-50"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    {productForm.sizes.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {language === "ar" 
+                          ? `تم اختيار ${productForm.sizes.length} حجم` 
+                          : `${productForm.sizes.length} size(s) selected`}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{language === "ar" ? "الألوان المتاحة" : "Available Colors"}</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {["White", "Black", "Gray", "Navy", "Red", "Blue", "Green", "Yellow", "Pink", "Purple", "Brown", "Beige", "Orange"].map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => {
+                            if (productForm.colors.includes(color)) {
+                              setProductForm({ ...productForm, colors: productForm.colors.filter((c) => c !== color) })
+                            } else {
+                              setProductForm({ ...productForm, colors: [...productForm.colors, color] })
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                            productForm.colors.includes(color)
+                              ? "bg-rose-500 text-white border-rose-500 shadow-md"
+                              : "bg-white text-gray-700 border-gray-300 hover:border-rose-300 hover:bg-rose-50"
+                          }`}
+                        >
+                          {language === "ar" ? (
+                            color === "White" ? "أبيض" :
+                            color === "Black" ? "أسود" :
+                            color === "Gray" ? "رمادي" :
+                            color === "Navy" ? "كحلي" :
+                            color === "Red" ? "أحمر" :
+                            color === "Blue" ? "أزرق" :
+                            color === "Green" ? "أخضر" :
+                            color === "Yellow" ? "أصفر" :
+                            color === "Pink" ? "وردي" :
+                            color === "Purple" ? "بنفسجي" :
+                            color === "Brown" ? "بني" :
+                            color === "Beige" ? "بيج" :
+                            color === "Orange" ? "برتقالي" : color
+                          ) : color}
+                        </button>
+                      ))}
+                    </div>
+                    {productForm.colors.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {language === "ar" 
+                          ? `تم اختيار ${productForm.colors.length} لون` 
+                          : `${productForm.colors.length} color(s) selected`}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowProductModal(false)}>
+                    {t("cancel", language)}
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!productForm.name || !productForm.price || !productForm.image || !productForm.category || !productForm.gender || !productForm.season || !productForm.style || !productForm.occasion) {
+                        toast({
+                          title: "Error",
+                          description: language === "ar" ? "يرجى ملء جميع الحقول المطلوبة" : "Please fill all required fields",
+                          variant: "destructive",
+                        })
+                        return
+                      }
+
+                      // Validate that we have exactly 3 additional images
+                      if (productForm.images.length !== 3) {
+                        toast({
+                          title: "Error",
+                          description: language === "ar" ? "يجب إضافة 3 صور إضافية بالضبط" : "You must add exactly 3 additional images",
+                          variant: "destructive",
+                        })
+                        return
+                      }
+
+                      try {
+                        if (isEditingProduct && selectedProduct) {
+                          const updateData: Partial<Product> = {
+                            name: productForm.name,
+                            nameAr: productForm.nameAr || undefined,
+                            description: productForm.description || undefined,
+                            descriptionAr: productForm.descriptionAr || undefined,
+                            price: parseFloat(productForm.price) || 0,
+                            image: productForm.image,
+                            images: productForm.images.length > 0 ? productForm.images : undefined,
+                            category: productForm.category,
+                            gender: productForm.gender,
+                            season: productForm.season,
+                            style: productForm.style,
+                            occasion: productForm.occasion,
+                            sizes: productForm.sizes.length > 0 ? productForm.sizes : undefined,
+                            colors: productForm.colors.length > 0 ? productForm.colors : undefined,
+                            stock: parseInt(productForm.stock) || 100,
+                            featured: productForm.featured,
+                            active: productForm.active,
+                            onSale: productForm.onSale,
+                            salePercentage: productForm.onSale ? parseFloat(productForm.salePercentage || "0") : undefined,
+                          }
+                          await productsAdminApi.updateProduct(selectedProduct._id || selectedProduct.id?.toString() || "", updateData)
+                          toast({
+                            title: language === "ar" ? "تم التحديث" : "Updated",
+                            description: language === "ar" ? "تم تحديث المنتج بنجاح" : "Product updated successfully",
+                          })
+                        } else {
+                          await productsAdminApi.createProduct({
+                            name: productForm.name,
+                            nameAr: productForm.nameAr || undefined,
+                            description: productForm.description || undefined,
+                            descriptionAr: productForm.descriptionAr || undefined,
+                            price: parseFloat(productForm.price),
+                            image: productForm.image,
+                            images: productForm.images.length > 0 ? productForm.images : undefined,
+                            category: productForm.category,
+                            gender: productForm.gender,
+                            season: productForm.season,
+                            style: productForm.style,
+                            occasion: productForm.occasion,
+                            sizes: productForm.sizes.length > 0 ? productForm.sizes : undefined,
+                            colors: productForm.colors.length > 0 ? productForm.colors : undefined,
+                            stock: parseInt(productForm.stock) || 100,
+                            featured: productForm.featured,
+                            active: productForm.active,
+                            onSale: productForm.onSale,
+                            salePercentage: productForm.onSale ? parseFloat(productForm.salePercentage || "0") : undefined,
+                          })
+                          toast({
+                            title: language === "ar" ? "تمت الإضافة" : "Added",
+                            description: language === "ar" ? "تم إضافة المنتج بنجاح" : "Product added successfully",
+                          })
+                        }
+                        setShowProductModal(false)
+                        loadProducts()
+                      } catch (error: any) {
+                        toast({
+                          title: "Error",
+                          description: error.message || "Failed to save product",
+                          variant: "destructive",
+                        })
+                      }
+                    }}
+                  >
+                    {t("save", language)}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
+
           </>
         )}
 

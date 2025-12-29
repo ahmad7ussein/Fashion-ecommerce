@@ -14,7 +14,7 @@ import { Shield, Lock } from "lucide-react"
 import { Logo } from "@/components/logo"
 
 export default function AdminLoginPage() {
-  const [adminId, setAdminId] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
@@ -25,11 +25,11 @@ export default function AdminLoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Validate admin ID format (8 digits)
-    if (!/^\d{8}$/.test(adminId)) {
+    // Validate email format
+    if (!email || !email.includes("@")) {
       toast({
-        title: "Invalid Admin ID",
-        description: "Admin ID must be 8 digits",
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
         variant: "destructive",
       })
       setIsLoading(false)
@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
     }
 
     try {
-      await login(adminId, password)
+      await login(email, password)
       toast({
         title: "Admin Login Successful",
         description: "Welcome to the admin dashboard!",
@@ -73,24 +73,23 @@ export default function AdminLoginPage() {
           <CardHeader>
             <CardTitle className="text-white">Admin Login</CardTitle>
             <CardDescription className="text-slate-300">
-              Enter your 8-digit admin ID and password
+              Enter your admin email and password
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="adminId" className="text-white">Admin ID</Label>
+                <Label htmlFor="email" className="text-white">Email</Label>
                 <Input
-                  id="adminId"
-                  type="text"
-                  placeholder="12345678"
-                  value={adminId}
-                  onChange={(e) => setAdminId(e.target.value)}
-                  maxLength={8}
+                  id="email"
+                  type="email"
+                  placeholder="admin@fashionhub.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                 />
-                <p className="text-xs text-slate-400 mt-1">8-digit admin identification number</p>
+                <p className="text-xs text-slate-400 mt-1">Enter your admin email address</p>
               </div>
 
               <div>
@@ -131,8 +130,8 @@ export default function AdminLoginPage() {
             </div>
 
             <div className="mt-6 p-3 bg-slate-700/50 rounded-lg">
-              <p className="text-xs text-slate-300 font-semibold mb-1">Demo Credentials:</p>
-              <p className="text-xs text-slate-400">ID: 11941225</p>
+              <p className="text-xs text-slate-300 font-semibold mb-1">Admin Credentials:</p>
+              <p className="text-xs text-slate-400">Email: admin@fashionhub.com</p>
               <p className="text-xs text-slate-400">Password: Admin@123</p>
             </div>
           </CardContent>

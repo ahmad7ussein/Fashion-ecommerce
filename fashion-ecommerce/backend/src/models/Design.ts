@@ -23,10 +23,18 @@ export interface IDesign extends Document {
     color: string;
     size: string;
   };
+  baseProductId?: mongoose.Types.ObjectId;
   elements: IDesignElement[];
   thumbnail?: string;
+  designImageURL?: string;
+  designMetadata?: Record<string, any>;
+  userDescription?: string;
   price: number;
   status: 'draft' | 'published' | 'archived';
+  type: 'manual' | 'ai-enhanced';
+  sourceDesign?: mongoose.Types.ObjectId;
+  aiModelUsed?: string;
+  promptUsed?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +68,10 @@ const designSchema = new Schema<IDesign>(
         default: 'M',
       },
     },
+    baseProductId: {
+      type: Schema.Types.ObjectId,
+      ref: 'StudioProduct',
+    },
     elements: [
       {
         id: { type: String, required: true },
@@ -81,6 +93,9 @@ const designSchema = new Schema<IDesign>(
       },
     ],
     thumbnail: String,
+    designImageURL: String,
+    designMetadata: Schema.Types.Mixed,
+    userDescription: { type: String, trim: true },
     price: {
       type: Number,
       default: 39.99,
@@ -90,6 +105,17 @@ const designSchema = new Schema<IDesign>(
       enum: ['draft', 'published', 'archived'],
       default: 'draft',
     },
+    type: {
+      type: String,
+      enum: ['manual', 'ai-enhanced'],
+      default: 'manual',
+    },
+    sourceDesign: {
+      type: Schema.Types.ObjectId,
+      ref: 'Design',
+    },
+    aiModelUsed: { type: String },
+    promptUsed: { type: String },
   },
   {
     timestamps: true,

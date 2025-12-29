@@ -42,6 +42,19 @@ export type Order = {
   total: number
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled"
   trackingNumber?: string
+  trackingHistory?: Array<{
+    status: string
+    location?: string
+    note?: string
+    updatedBy?: {
+      _id: string
+      firstName: string
+      lastName: string
+    }
+    updatedAt: string
+  }>
+  carrier?: string
+  estimatedDelivery?: string
   notes?: string
   createdAt: string
   updatedAt: string
@@ -87,8 +100,15 @@ export const ordersApi = {
     return await apiClient.get<Order>(`/orders/${id}`)
   },
 
-  async updateOrderStatus(id: string, status: Order["status"], trackingNumber?: string): Promise<Order> {
-    return await apiClient.put(`/orders/${id}/status`, { status, trackingNumber })
+  async updateOrderStatus(id: string, data: {
+    status?: Order["status"]
+    trackingNumber?: string
+    carrier?: string
+    estimatedDelivery?: string
+    location?: string
+    note?: string
+  }): Promise<Order> {
+    return await apiClient.put(`/orders/${id}/status`, data)
   },
 
   async deleteOrder(id: string): Promise<void> {

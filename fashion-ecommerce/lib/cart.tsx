@@ -8,6 +8,8 @@ import logger from "./logger"
 export type CartItem = {
   id: string
   _id?: string
+  product?: string
+  design?: string
   name: string
   price: number
   quantity: number
@@ -34,16 +36,58 @@ type CartContextValue = CartState & {
 
 const CartContext = React.createContext<CartContextValue | null>(null)
 
+const LOCAL_CART_KEY = "fashionhub_local_cart"
+const parseProductIdFromItem = (item: CartItem) => {
+  if (item.product) return item.product
+  const [maybeId] = (item.id || "").split("-")
+  if (/^[0-9a-fA-F]{24}$/.test(maybeId) || /^\d+$/.test(maybeId)) return maybeId
+  return undefined
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = React.useState<CartItem[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const { user, isAuthenticated } = useAuth()
 
-  // Load cart from database (for both authenticated users and guests)
+  const loadGuestCart = React.useCallback(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_CART_KEY)
+      if (!raw) {
+        setItems([])
+        return
+      }
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        setItems(parsed)
+      } else {
+        setItems([])
+      }
+    } catch (error) {
+      logger.warn("Failed to load guest cart from localStorage", error)
+      setItems([])
+    }
+  }, [])
+
+  const persistGuestCart = React.useCallback((next: CartItem[]) => {
+    try {
+      localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(next))
+    } catch (error) {
+      logger.warn("Failed to persist guest cart", error)
+    }
+  }, [])
+
+  // Load cart from database (only for authenticated users)
   const loadCart = React.useCallback(async () => {
+    // Only load cart if user is authenticated
+    if (!isAuthenticated || !user) {
+      setIsLoading(false)
+      loadGuestCart()
+      return
+    }
+    
     setIsLoading(true)
     try {
-      // Always load from database (works for both authenticated and guest users)
+      // Load from database (only for authenticated users)
       const cart = await cartApi.getCart()
       
       // Ensure cart and items exist
@@ -64,6 +108,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const cartItems: CartItem[] = cart.items.map((item: ApiCartItem) => ({
         id: item._id || `${item.product || item.design}-${item.size}-${item.color}`,
         _id: item._id,
+        product: item.product,
+        design: item.design,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
@@ -100,67 +146,66 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setItems([])
       setIsLoading(false)
     }
-  }, [])
+  }, [isAuthenticated, user, loadGuestCart])
 
   // Load cart only when user exists (not when user is null)
   React.useEffect(() => {
-    if (user) {
+    if (isAuthenticated && user) {
       loadCart()
+    } else {
+      loadGuestCart()
     }
-  }, [user, loadCart])
+  }, [user, isAuthenticated, loadCart, loadGuestCart])
 
   const addItem = async (item: CartItem) => {
-    // Check if user is authenticated - require login to add to cart
-    if (!isAuthenticated || !user) {
-      // Throw error that will be caught by the calling component
-      const error = new Error("AUTHENTICATION_REQUIRED")
-      error.name = "AuthenticationRequired"
-      throw error
-    }
-
     try {
-      // Extract product ID from item.id if it's a product (format: "productId-size-color")
-      let productId: string | undefined = undefined
-      if (!item.isCustom && item.id) {
-        const parts = item.id.split("-")
-        // If it's a product ID (numeric or MongoDB ObjectId format)
-        if (parts.length > 0) {
-          // Try to extract product ID (first part before size/color)
-          const possibleId = parts[0]
-          // Check if it's a MongoDB ObjectId format (24 hex chars) or numeric
-          if (/^[0-9a-fA-F]{24}$/.test(possibleId) || /^\d+$/.test(possibleId)) {
-            productId = possibleId
-          }
-        }
+      if (isAuthenticated && user) {
+        // Extract product ID from item.id if it's a product (format: "productId-size-color")
+        const productId = parseProductIdFromItem(item)
+        
+        await cartApi.addItem({
+          product: productId,
+          design: item.design,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          image: item.image,
+          isCustom: item.isCustom || false,
+        })
+        await loadCart()
+        return
       }
-      
-      // Add to database (only for authenticated users now)
-      await cartApi.addItem({
-        product: productId,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        size: item.size,
-        color: item.color,
-        image: item.image,
-        isCustom: item.isCustom || false,
+
+      // Guest cart: update local state and persist
+      setItems((prev) => {
+        const existingIndex = prev.findIndex((i) => i.id === item.id)
+        const productId = parseProductIdFromItem(item)
+        if (existingIndex !== -1) {
+          const copy = [...prev]
+          copy[existingIndex] = { ...copy[existingIndex], quantity: copy[existingIndex].quantity + item.quantity, product: productId || copy[existingIndex].product }
+          persistGuestCart(copy)
+          return copy
+        }
+        const next = [...prev, { ...item, product: productId }]
+        persistGuestCart(next)
+        return next
       })
-      await loadCart()
     } catch (error: any) {
       logger.error("Failed to add item to cart:", error)
-      // Re-throw authentication errors
-      if (error.name === "AuthenticationRequired" || error.message === "AUTHENTICATION_REQUIRED") {
-        throw error
-      }
       // On other errors, update local state optimistically
       setItems((prev) => {
         const idx = prev.findIndex((i) => i.id === item.id)
         if (idx !== -1) {
           const copy = [...prev]
           copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + item.quantity }
+          if (!isAuthenticated) persistGuestCart(copy)
           return copy
         }
-        return [...prev, item]
+        const next = [...prev, item]
+        if (!isAuthenticated) persistGuestCart(next)
+        return next
       })
     }
   }
@@ -168,16 +213,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeItem = async (id: string) => {
     try {
       const item = items.find((i) => i.id === id || i._id === id)
-      if (item?._id) {
-        await cartApi.removeItem(item._id)
-        await loadCart()
-      } else {
-        // If no _id, just remove from local state
-        setItems((prev) => prev.filter((i) => i.id !== id))
+      
+      // If user is authenticated and item has _id, remove from database
+      if (isAuthenticated && item?._id) {
+        try {
+          await cartApi.removeItem(item._id)
+          await loadCart()
+          return
+        } catch (error: any) {
+          // If API call fails (e.g., user not authenticated), fallback to local removal
+          logger.warn("Failed to remove item from database, removing from local state:", error)
+          // Continue to local removal below
+        }
       }
+      
+      // Remove from local state (for guest users or if API call failed)
+      setItems((prev) => {
+        const next = prev.filter((i) => (i.id !== id && i._id !== id))
+        if (!isAuthenticated) persistGuestCart(next)
+        return next
+      })
     } catch (error: any) {
       logger.error("Failed to remove item from cart:", error)
-      setItems((prev) => prev.filter((i) => i.id !== id))
+      // Fallback: remove from local state anyway
+      setItems((prev) => {
+        const next = prev.filter((i) => (i.id !== id && i._id !== id))
+        if (!isAuthenticated) persistGuestCart(next)
+        return next
+      })
     }
   }
 
@@ -185,29 +248,63 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const finalQty = Math.max(1, qty)
     try {
       const item = items.find((i) => i.id === id || i._id === id)
-      if (item?._id) {
-        // Update in database immediately
-        await cartApi.updateItemQuantity(item._id, finalQty)
-        // Update local state immediately for better UX
-        setItems((prev) => prev.map((i) => (i.id === id || i._id === id ? { ...i, quantity: finalQty } : i)))
-        // Reload from database to ensure sync
-        await loadCart()
-      } else {
-        setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: finalQty } : i)))
+      
+      // If user is authenticated and item has _id, update in database
+      if (isAuthenticated && item?._id) {
+        try {
+          // Update in database immediately
+          await cartApi.updateItemQuantity(item._id, finalQty)
+          // Update local state immediately for better UX
+          setItems((prev) => prev.map((i) => (i.id === id || i._id === id ? { ...i, quantity: finalQty } : i)))
+          // Reload from database to ensure sync
+          await loadCart()
+          return
+        } catch (error: any) {
+          // If API call fails (e.g., user not authenticated), fallback to local update
+          logger.warn("Failed to update item in database, updating local state:", error)
+          // Continue to local update below
+        }
       }
+      
+      // Update local state (for guest users or if API call failed)
+      setItems((prev) => {
+        const next = prev.map((i) => (i.id === id || i._id === id ? { ...i, quantity: finalQty } : i))
+        if (!isAuthenticated) persistGuestCart(next)
+        return next
+      })
     } catch (error: any) {
       logger.error("Failed to update cart item:", error)
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: finalQty } : i)))
+      // Fallback: update local state anyway
+      setItems((prev) => {
+        const next = prev.map((i) => (i.id === id || i._id === id ? { ...i, quantity: finalQty } : i))
+        if (!isAuthenticated) persistGuestCart(next)
+        return next
+      })
     }
   }
 
   const clear = async () => {
     try {
-      await cartApi.clearCart()
-      await loadCart()
+      // If user is authenticated, clear from database
+      if (isAuthenticated) {
+        try {
+          await cartApi.clearCart()
+          await loadCart()
+          return
+        } catch (error: any) {
+          // If API call fails, fallback to local clear
+          logger.warn("Failed to clear cart in database, clearing local state:", error)
+        }
+      }
+      
+      // Clear local state (for guest users or if API call failed)
+      setItems([])
+      if (!isAuthenticated) persistGuestCart([])
     } catch (error: any) {
       logger.error("Failed to clear cart:", error)
+      // Fallback: clear local state anyway
       setItems([])
+      if (!isAuthenticated) persistGuestCart([])
     }
   }
 

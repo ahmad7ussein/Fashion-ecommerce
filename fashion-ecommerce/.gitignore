@@ -1,38 +1,22 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Dependencies
+node_modules/
+package-lock.json
 
-# dependencies
-/node_modules
+# Environment variables
+.env
+.env.local
+.env*.local
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# Build outputs
+.next/
+dist/
+build/
 *.tsbuildinfo
-next-env.d.ts
-tsconfig.tsbuildinfo
-
-# archive
-archive-unused/
 
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
@@ -40,26 +24,56 @@ archive-unused/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# logs
-logs/
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# temp files
-tmp/
-temp/
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Android
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+.gradle/
+build/
+local.properties
+proguard/
+.navigation/
+captures/
+*.iml
+.externalNativeBuild
+.cxx/
 
 # Capacitor
-ios/
-android/
-.capacitor/
+capacitor-cordova-android-plugins
+app/src/main/assets/public
+app/src/main/assets/capacitor.config.json
+app/src/main/assets/capacitor.plugins.json
 
-# Backend build
-backend/dist/
-backend/build/
+# Uploads
+uploads/
+public/uploads/
 
-# Android build
-android/app/build/
-android/build/
-android/.gradle/
-android/local.properties
+# Misc
+*.pem
+*.key
+*.cert

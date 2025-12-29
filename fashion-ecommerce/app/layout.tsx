@@ -1,5 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
+import Script from "next/script"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import { CartProvider } from "@/lib/cart"
@@ -16,12 +17,12 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "StyleCraft - Custom Fashion Design Platform",
-  description: "Design, create, and wear your vision with our interactive fashion design studio",
-  generator: "StyleCraft Platform",
-  authors: [{ name: "StyleCraft Team" }],
-  creator: "StyleCraft",
-  publisher: "StyleCraft",
+  title: "FashionHub - Premium Fashion & Clothing Store",
+  description: "Discover the latest fashion trends. Shop premium clothing for men, women, and kids. Quality fashion at your fingertips.",
+  generator: "FashionHub Platform",
+  authors: [{ name: "FashionHub Team" }],
+  creator: "FashionHub",
+  publisher: "FashionHub",
 }
 
 export default function RootLayout({
@@ -30,10 +31,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`font-sans antialiased`} suppressHydrationWarning>
+    <html lang="en" dir="ltr" suppressHydrationWarning>
+      <body className={`font-sans antialiased student-ui`} dir="ltr" suppressHydrationWarning>
         <ErrorBoundaryWrapper>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="theme">
             <LanguageProvider>
               <RegionProvider>
                 <AuthProvider>

@@ -5,7 +5,6 @@ import { Canvas, useFrame } from "@react-three/fiber"
 import { OrbitControls, Sphere, MeshDistortMaterial, Float } from "@react-three/drei"
 import * as THREE from "three"
 
-// Animated 3D Sphere
 function AnimatedSphere() {
   const meshRef = useRef<THREE.Mesh>(null)
 
@@ -32,7 +31,6 @@ function AnimatedSphere() {
   )
 }
 
-// Particle Field
 function ParticleField() {
   const pointsRef = useRef<THREE.Points>(null)
 
@@ -64,7 +62,6 @@ function ParticleField() {
   )
 }
 
-// Multiple Floating Spheres
 function FloatingSpheres() {
   return (
     <>
@@ -95,7 +92,6 @@ function FloatingSpheres() {
   )
 }
 
-// Main 3D Background Component
 export function Background3D() {
   return (
     <div className="fixed inset-0 -z-10 opacity-30">
@@ -104,18 +100,15 @@ export function Background3D() {
         gl={{ alpha: true, antialias: true }}
         dpr={[1, 2]}
       >
-        {/* Lighting */}
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} />
         <pointLight position={[-10, -10, -10]} intensity={0.5} color="#4F46E5" />
         <spotLight position={[0, 10, 0]} angle={0.3} penumbra={1} intensity={1} castShadow />
 
-        {/* 3D Elements */}
         <AnimatedSphere />
         <ParticleField />
         <FloatingSpheres />
 
-        {/* Controls */}
         <OrbitControls
           enableZoom={false}
           enablePan={false}
@@ -129,7 +122,6 @@ export function Background3D() {
   )
 }
 
-// Simpler version for better performance
 export function Background3DSimple() {
   return (
     <div className="fixed inset-0 -z-10 opacity-20">
@@ -155,16 +147,13 @@ export function Background3DSimple() {
   )
 }
 
-// Gradient Mesh Background (Alternative)
 export function GradientMeshBackground() {
   return (
     <div className="fixed inset-0 -z-10">
-      {/* Animated Gradient Blobs */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-blob" />
       <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-blob animation-delay-2000" />
       <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl animate-blob animation-delay-4000" />
       
-      {/* Grid Overlay */}
       <div
         className="absolute inset-0 opacity-[0.03]"
         style={{

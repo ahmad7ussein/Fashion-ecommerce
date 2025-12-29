@@ -23,6 +23,10 @@ export interface IProduct extends Document {
   stock: number;
   featured: boolean;
   active: boolean;
+  onSale?: boolean;
+  salePercentage?: number;
+  newArrival?: boolean;
+  inCollection?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,12 +63,12 @@ const productSchema = new Schema<IProduct>(
     category: {
       type: String,
       required: [true, 'Category is required'],
-      enum: ['T-Shirts', 'Hoodies', 'Sweatshirts', 'Pants', 'Shorts', 'Jackets', 'Tank Tops', 'Polo Shirts'],
+      enum: ['T-Shirts', 'Hoodies', 'Sweatshirts', 'Pants', 'Shorts', 'Jackets', 'Tank Tops', 'Polo Shirts', 'Dresses', 'Blouses', 'Skirts', 'Jeans', 'Tops'],
     },
     gender: {
       type: String,
       required: [true, 'Gender is required'],
-      enum: ['Men', 'Women', 'Unisex'],
+      enum: ['Men', 'Women', 'Unisex', 'Kids'],
     },
     season: {
       type: String,
@@ -102,15 +106,55 @@ const productSchema = new Schema<IProduct>(
       type: Boolean,
       default: true,
     },
+    onSale: {
+      type: Boolean,
+      default: false,
+    },
+    salePercentage: {
+      type: Number,
+      min: [0, 'Sale percentage cannot be negative'],
+      max: [100, 'Sale percentage cannot exceed 100'],
+      default: 0,
+    },
+    newArrival: {
+      type: Boolean,
+      default: false,
+    },
+    inCollection: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Index for search and filtering
-productSchema.index({ name: 'text', description: 'text' });
-productSchema.index({ category: 1, gender: 1, season: 1 });
+/**
+ * MongoDB Indexes for Product Queries
+ * 
+ * Simplified index strategy - only 3 indexes to cover all query patterns:
+ * 1. Default: { active: 1, createdAt: -1 } - All products, sorted by newest
+ * 2. Gender filter: { active: 1, gender: 1, createdAt: -1 } - Gender filtered, sorted by newest
+ * 3. Featured: { active: 1, featured: 1, createdAt: -1 } - Featured products, sorted by newest
+ * 
+ * All queries:
+ * - Filter by active: true
+ * - Sort by createdAt: -1 (newest first)
+ * - Use .limit() and .lean()
+ */
+
+// Index 1: Default listing (all active products, newest first)
+productSchema.index({ active: 1, createdAt: -1 });
+// Usage: GET /api/products (no filters)
+
+// Index 2: Gender filter (active + gender, newest first)
+productSchema.index({ active: 1, gender: 1, createdAt: -1 });
+// Usage: GET /api/products?gender=Men
+
+// Index 3: Featured products (active + featured, newest first)
+productSchema.index({ active: 1, featured: 1, createdAt: -1 });
+// Usage: GET /api/products?featured=true
 
 export default mongoose.model<IProduct>('Product', productSchema);
 

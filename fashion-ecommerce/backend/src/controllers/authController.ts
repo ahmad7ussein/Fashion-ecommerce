@@ -1,9 +1,12 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import env from '../config/env';
 import { logEmployeeActivity } from './employeeActivityController';
+import { sendPasswordResetEmail } from '../utils/emailService';
 
 // Generate JWT Token
 const generateToken = (id: string): string => {
@@ -11,6 +14,9 @@ const generateToken = (id: string): string => {
     expiresIn: env.jwtExpire,
   } as jwt.SignOptions);
 };
+
+// Google OAuth client for token verification
+const googleClient = env.googleClientId ? new OAuth2Client(env.googleClientId) : null;
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -221,3 +227,241 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// @desc    Google OAuth Login/Callback
+// @route   POST /api/auth/google
+// @access  Public
+export const googleAuth = async (req: Request, res: Response) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google ID token is required',
+      });
+    }
+
+    if (!googleClient || !env.googleClientId) {
+      return res.status(503).json({
+        success: false,
+        message: 'Google authentication is not configured',
+      });
+    }
+
+    // Verify token signature, audience, issuer, and expiration via Google
+    let payload: any;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: env.googleClientId,
+      });
+      payload = ticket.getPayload();
+    } catch (error) {
+      console.error('Error verifying Google token:', error);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Google token',
+      });
+    }
+
+    if (!payload || !payload.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to get user information from Google',
+      });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email;
+    const firstName = payload.given_name;
+    const lastName = payload.family_name;
+    const picture = payload.picture;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user exists
+    let user = await User.findOne({
+      $or: [
+        { email: normalizedEmail },
+        { googleId: googleId },
+      ],
+    });
+
+    if (user) {
+      // Update user if they logged in with Google before but email matches
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.provider = 'google';
+        await user.save();
+      }
+    } else {
+      // Create new user
+      user = await User.create({
+        firstName: firstName || 'User',
+        lastName: lastName || '',
+        email: normalizedEmail,
+        googleId: googleId,
+        provider: 'google',
+        role: 'customer',
+      });
+    }
+
+    const token = generateToken((user._id as any).toString());
+
+    // Log employee/admin login activity
+    if (user.role === 'employee' || user.role === 'admin') {
+      await logEmployeeActivity(
+        user._id as any,
+        'login',
+        `User logged in via Google: ${user.firstName} ${user.lastName} (${user.email})`,
+        'User',
+        user._id as any,
+        { loginTime: new Date().toISOString(), provider: 'google' }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Google login successful',
+      data: {
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+          picture: picture,
+        },
+        token,
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Google auth error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error during Google authentication',
+    });
+  }
+};
+
+// @desc    Forgot password - Send reset token
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    // Always return success message (security best practice - don't reveal if email exists)
+    // But only generate token if user exists
+    if (user) {
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      
+      // Hash token and set to resetPasswordToken field
+      user.resetPasswordToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+      
+      // Set expire time (10 minutes)
+      user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
+      
+      await user.save({ validateBeforeSave: false });
+
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+      
+      console.log('🔐 Password reset token generated for:', email);
+      console.log('🔗 Reset URL:', resetUrl);
+      
+      // Send password reset email
+      const emailSent = await sendPasswordResetEmail(
+        email,
+        resetToken,
+        `${user.firstName} ${user.lastName}`
+      );
+
+      if (!emailSent) {
+        // If email fails, log it for development
+        console.warn('⚠️ Failed to send email. Token (dev only):', resetToken);
+        console.warn('⚠️ Reset URL (dev only):', resetUrl);
+      } else {
+        console.log('✅ Password reset email sent successfully to:', email);
+      }
+    }
+
+    // Always return success (security best practice)
+    res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error',
+    });
+  }
+};
+
+// @desc    Reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    // Use newPassword if provided, otherwise fallback to password for backward compatibility
+    const password = newPassword || req.body.password;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required and must be at least 6 characters',
+      });
+    }
+
+    // Hash token to compare with stored token
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    // Find user with matching token and not expired
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token',
+      });
+    }
+
+    // Set new password
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password reset successful',
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error',
+    });
+  }
+};

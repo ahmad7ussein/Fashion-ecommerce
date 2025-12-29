@@ -51,6 +51,13 @@ export default function CheckoutPage() {
   const { formatPrice } = useRegion()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const extractProductId = (item: (typeof items)[number]) => {
+    if (item.product) return item.product
+    const [maybeId] = (item.id || "").split("-")
+    if (/^[0-9a-fA-F]{24}$/.test(maybeId)) return maybeId
+    return undefined
+  }
+
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(CheckoutSchema),
     defaultValues: {
@@ -86,8 +93,25 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true)
     try {
+      const normalizedItems = items.map((item) => ({
+        ...item,
+        product: extractProductId(item),
+      }))
+
+      const missingProductItems = normalizedItems.filter((i) => !i.product && !i.isCustom)
+      if (missingProductItems.length > 0) {
+        setIsSubmitting(false)
+        toast({
+          title: "Product validation failed",
+          description: "One or more items are invalid or missing product IDs. Please refresh your cart.",
+          variant: "destructive",
+        })
+        return
+      }
+
       const orderData = {
-        items: items.map(item => ({
+        items: normalizedItems.map(item => ({
+          product: item.product,
           name: item.name,
           price: item.price,
           quantity: item.quantity,
@@ -137,13 +161,13 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black pt-24">
+    <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
       <div className="container mx-auto px-6 md:px-12 lg:px-24 py-12">
         <div className="max-w-6xl mx-auto">
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-6xl font-bold mb-12 text-white"
+            className="text-5xl md:text-6xl font-bold mb-12 text-gray-900"
           >
             Checkout
           </motion.h1>
@@ -263,7 +287,7 @@ export default function CheckoutPage() {
                         <div key={item.id} className="flex gap-3 pb-3 border-b border-border">
                           <div className="w-16 h-16 rounded bg-muted flex-shrink-0 overflow-hidden relative">
                             <Image
-                              src={item.image || "/placeholder.svg"}
+                              src={item.image || "/placeholder-logo.png"}
                               alt={item.name}
                               fill
                               className="object-cover"
@@ -272,7 +296,7 @@ export default function CheckoutPage() {
                         </div>
                         <div className="flex-1">
                             <p className="text-sm font-medium">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">Size: {item.size} • Qty: {item.quantity}</p>
+                            <p className="text-xs text-muted-foreground">Size: {item.size} - Qty: {item.quantity}</p>
                             <p className="text-sm font-semibold mt-1">{formatPrice(item.price * item.quantity)}</p>
                       </div>
                         </div>

@@ -8,6 +8,7 @@ export type Design = {
     color: string
     size: string
   }
+  baseProductId?: string
   user: string | {
     _id: string
     firstName: string
@@ -29,6 +30,13 @@ export type Design = {
     fontWeight?: string
   }>
   thumbnail?: string
+  designImageURL?: string
+  designMetadata?: Record<string, any>
+  userDescription?: string
+  type?: "manual" | "ai-enhanced"
+  sourceDesign?: string
+  aiModelUsed?: string
+  promptUsed?: string
   price: number
   status: "draft" | "published" | "archived"
   createdAt: string
@@ -51,21 +59,22 @@ export const designsApi = {
     return await apiClient.get<Design>(`/designs/${id}`)
   },
 
-  async createDesign(designData: {
+  async createDesign(designData: Partial<Design> & {
     name: string
     baseProduct: {
       type: string
       color: string
       size: string
     }
+    baseProductId?: string
     elements: Array<{
       id: string
       type: "text" | "image"
       content: string
       x: number
       y: number
-      width: number
-      height: number
+      width?: number
+      height?: number
       rotation?: number
       fontSize?: number
       fontFamily?: string
@@ -73,6 +82,8 @@ export const designsApi = {
       fontWeight?: string
     }>
     thumbnail?: string
+    designImageURL?: string
+    designMetadata?: Record<string, any>
     price?: number
     status?: "draft" | "published" | "archived"
   }): Promise<Design> {
@@ -91,4 +102,3 @@ export const designsApi = {
     return await apiClient.put<Design>(`/designs/${id}/publish`, {})
   },
 }
-

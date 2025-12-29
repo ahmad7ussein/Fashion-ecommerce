@@ -1,15 +1,19 @@
-"use client"
+﻿"use client"
 
-import type React from "react"
-
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import "./studio.css"
+import { ColorPicker } from "@/components/ColorPicker"
+import { ImageUploader } from "@/components/ImageUploader"
+import { PositionSelector } from "@/components/PositionSelector"
+import { QuantitySelector } from "@/components/QuantitySelector"
+import { SizeSelector } from "@/components/SizeSelector"
+import { TextEditor } from "@/components/TextEditor"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
   ShoppingBag,
@@ -58,9 +62,9 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/lib/cart"
-import { ProductPreview } from "./components/ProductPreview"
 import { getProductImagePath } from "./utils/productImages"
 import { designsApi, type Design } from "@/lib/api/designs"
+import { studioProductsApi, type StudioProduct } from "@/lib/api/studioProducts"
 import { useAuth } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
@@ -96,35 +100,13 @@ type DesignElement = {
   visible?: boolean
 }
 
-const productTemplates = {
-  tshirt: { name: "Classic T-Shirt", image: "/white-t-shirt.png", price: 29.99, category: "Clothing" },
-  hoodie: { name: "Pullover Hoodie", image: "/black-hoodie.png", price: 59.99, category: "Clothing" },
-  sweatshirt: { name: "Crew Sweatshirt", image: "/gray-sweatshirt.png", price: 49.99, category: "Clothing" },
-  "tank-top": { name: "Tank Top", image: "/white-tank-top.png", price: 24.99, category: "Clothing" },
-  "long-sleeve": { name: "Long Sleeve Tee", image: "/white-long-sleeve-shirt.jpg", price: 34.99, category: "Clothing" },
-  polo: { name: "Polo Shirt", image: "/white-polo-shirt.png", price: 39.99, category: "Clothing" },
-  "crop-top": { name: "Crop Top", image: "/white-crop-top.jpg", price: 27.99, category: "Clothing" },
-  "zip-hoodie": { name: "Zip-Up Hoodie", image: "/white-zip-hoodie.jpg", price: 64.99, category: "Clothing" },
+const defaultProductTemplates = {
+  // Intentionally empty: Studio uses DB-driven products only.
 }
 
-// Enhanced clipart library
-const clipartLibrary = [
-  { id: "1", url: "/christmas-wreath.jpg", name: "Christmas Wreath", category: "Holiday" },
-  { id: "2", url: "/merry-christmas-heart.jpg", name: "Christmas Heart", category: "Holiday" },
-  { id: "3", url: "/merry-christmas-badge.jpg", name: "Christmas Badge", category: "Holiday" },
-  { id: "4", url: "/merry-christmas-circle.jpg", name: "Christmas Circle", category: "Holiday" },
-  { id: "5", url: "/star-icon.png", name: "Star", category: "Shapes" },
-  { id: "6", url: "/heart-icon.png", name: "Heart", category: "Shapes" },
-  { id: "7", url: "/simple-flower-icon.png", name: "Flower", category: "Nature" },
-  { id: "8", url: "/abstract-geometric-pattern.png", name: "Geometric", category: "Abstract" },
-]
-
-const backgroundPatterns = [
-  { id: "1", url: "/dots-pattern.png", name: "Dots" },
-  { id: "2", url: "/stripes-pattern.jpg", name: "Stripes" },
-  { id: "3", url: "/abstract-geometric-pattern.png", name: "Geometric" },
-  { id: "4", url: "/floral-pattern.png", name: "Floral" },
-]
+// Removed built-in templates/assets to avoid broken local images.
+const clipartLibrary: Array<{ id: string; url: string; name: string; category: string }> = []
+const backgroundPatterns: Array<{ id: string; url: string; name: string }> = []
 
 // Enhanced font families
 const fontFamilies = [
@@ -143,33 +125,65 @@ const fontFamilies = [
 ]
 
 // Design templates
-const designTemplates = [
-  {
-    id: "1",
-    name: "Minimalist Text",
-    thumbnail: "/bold-typography-design-on-white-tshirt.jpg",
-    elements: [
-      { type: "text", content: "MINIMAL", x: 200, y: 300, fontSize: 48, color: "#000000", fontFamily: "Arial", fontWeight: "bold" },
-    ],
-  },
-  {
-    id: "2",
-    name: "Graphic Design",
-    thumbnail: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-    elements: [
-      { type: "text", content: "DESIGN", x: 200, y: 280, fontSize: 40, color: "#FF0000", fontFamily: "Impact" },
-      { type: "image", content: "/star-icon.png", x: 150, y: 350, width: 100, height: 100 },
-    ],
-  },
-  {
-    id: "3",
-    name: "Artistic Style",
-    thumbnail: "/artistic-colorful-design-on-white-tshirt.jpg",
-    elements: [
-      { type: "text", content: "ART", x: 200, y: 300, fontSize: 56, color: "#FF6B6B", fontFamily: "Georgia", fontStyle: "italic" },
-    ],
-  },
-]
+const designTemplates: Array<{
+  id: string
+  name: string
+  thumbnail: string
+  elements: any[]
+}> = []
+
+const getOptimizedCloudinaryUrl = (url: string, width = 1600) => {
+  if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url
+  if (url.includes("/upload/f_auto") || url.includes("/upload/q_auto") || url.includes("/upload/w_")) return url
+  const [prefix, rest] = url.split("/upload/")
+  return `${prefix}/upload/f_auto,q_auto,dpr_auto,w_${width}/${rest}`
+}
+
+const colorNameToHex: Record<string, string> = {
+  white: "#ffffff",
+  black: "#111111",
+  navy: "#1f2a44",
+  gray: "#b6b6b6",
+  blue: "#5aa7e0",
+  charcoal: "#4a4a4a",
+  green: "#4fa884",
+  peach: "#f2b6a0",
+  pink: "#f2a8c7",
+  burgundy: "#722F37",
+  olive: "#556B2F",
+  cream: "#FFFDD0",
+  lavender: "#E6E6FA",
+  beige: "#f5f5dc",
+  brown: "#8b5e3c",
+  red: "#ef4444",
+  yellow: "#facc15",
+  orange: "#f97316",
+  purple: "#8b5cf6",
+  teal: "#14b8a6",
+  cyan: "#06b6d4",
+}
+
+const isColorValue = (value: string) =>
+  value.startsWith("#") || value.startsWith("rgb") || value.startsWith("hsl")
+
+const resolveColorHex = (color: string) => {
+  const normalized = color.trim().toLowerCase()
+  if (!normalized) return "#ffffff"
+  if (isColorValue(normalized)) return color
+  return colorNameToHex[normalized] || color
+}
+
+const resolveColorKey = (selectedColor: string, availableColors: string[]) => {
+  if (!availableColors.length) return ""
+  const normalizedSelected = selectedColor.trim().toLowerCase()
+  if (normalizedSelected && !isColorValue(normalizedSelected)) {
+    const direct = availableColors.find((c) => c.trim().toLowerCase() === normalizedSelected)
+    if (direct) return direct.trim().toLowerCase()
+  }
+  const selectedHex = resolveColorHex(selectedColor).toLowerCase()
+  const match = availableColors.find((c) => resolveColorHex(c).toLowerCase() === selectedHex)
+  return match ? match.trim().toLowerCase() : ""
+}
 
 type AIVariation = {
   id: string
@@ -182,8 +196,18 @@ export default function DesignStudioPage() {
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
   const [selectedProduct, setSelectedProduct] = useState<ProductType>("tshirt")
-  const [productColor, setProductColor] = useState("#FFFFFF")
+  const [productColor, setProductColor] = useState("#ffffff")
   const [productSize, setProductSize] = useState("M")
+  const [productQuantity, setProductQuantity] = useState(1)
+  const [selectedPosition, setSelectedPosition] = useState<"front" | "back" | "chest">("front")
+  const [textValue, setTextValue] = useState("")
+  const [textFontSize, setTextFontSize] = useState(32)
+  const [textAlign, setTextAlign] = useState<"right" | "center" | "left">("center")
+  const [textColor, setTextColor] = useState("#000000")
+  const [textFontFamily, setTextFontFamily] = useState("Tajawal")
+  const [activeTextId, setActiveTextId] = useState<string | null>(null)
+  const [imageSize, setImageSize] = useState(120)
+  const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [currentSide, setCurrentSide] = useState<DesignSide>("front")
   const [designElements, setDesignElements] = useState<DesignElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
@@ -193,20 +217,32 @@ export default function DesignStudioPage() {
   const [aiVariations, setAiVariations] = useState<AIVariation[]>([])
   const [showAIResults, setShowAIResults] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
+  const activeTab = "all"
   const { toast } = useToast()
   const [zoom, setZoom] = useState(100)
   const [showGrid, setShowGrid] = useState(false)
   const [snapToGrid, setSnapToGrid] = useState(false)
-  const [leftSidebarTab, setLeftSidebarTab] = useState("product")
   const [canvasBackground, setCanvasBackground] = useState<string | null>(null)
   const { addItem } = useCart()
   const [isSaving, setIsSaving] = useState(false)
   const [designName, setDesignName] = useState("")
   const [savedDesigns, setSavedDesigns] = useState<Design[]>([])
+  const [studioProducts, setStudioProducts] = useState<StudioProduct[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const [showLoadDialog, setShowLoadDialog] = useState(false)
   const [showTemplatesDialog, setShowTemplatesDialog] = useState(false)
   const [gridSize, setGridSize] = useState(10)
+  const [dragState, setDragState] = useState<{
+    id: string
+    mode: "move" | "resize" | "rotate"
+    startX: number
+    startY: number
+    initX: number
+    initY: number
+    initW: number
+    initH: number
+    initRotation: number
+  } | null>(null)
 
   // Get elements for current side
   const currentSideElements = designElements.filter((el) => (el.side || "front") === currentSide && (el.visible !== false))
@@ -217,6 +253,101 @@ export default function DesignStudioPage() {
       designsApi.getMyDesigns().then(setSavedDesigns).catch(() => {})
     }
   }, [user])
+
+  useEffect(() => {
+    setIsLoadingProducts(true)
+    studioProductsApi
+      .getActive()
+      .then((data) => setStudioProducts(data))
+      .catch(() => setStudioProducts([]))
+      .finally(() => setIsLoadingProducts(false))
+  }, [])
+
+  const resolvedProductTemplates = useMemo(() => {
+    const map: Record<string, { name: string; image: string; price: number; category: string }> = {}
+    studioProducts.forEach((p) => {
+      map[p.type] = { name: p.name, image: p.baseMockupUrl, price: p.price, category: "Studio" }
+    })
+    return map
+  }, [studioProducts])
+
+  const currentStudioProduct = useMemo(() => studioProducts.find((p) => p.type === selectedProduct), [studioProducts, selectedProduct])
+  const currentProduct = resolvedProductTemplates[selectedProduct]
+  const activeStudioProduct = currentStudioProduct || studioProducts[0]
+  const activeProduct = activeStudioProduct ? resolvedProductTemplates[activeStudioProduct.type] : undefined
+  const availableColors = useMemo(
+    () => (activeStudioProduct?.colors || []).map((color) => color.trim()).filter(Boolean),
+    [activeStudioProduct],
+  )
+  const selectedColorKey = resolveColorKey(productColor, availableColors)
+  const productColorHex = resolveColorHex(selectedColorKey || productColor)
+  const colorMockupUrl = selectedColorKey ? activeStudioProduct?.colorMockups?.[selectedColorKey] : undefined
+  const rawMockupUrl = colorMockupUrl || activeStudioProduct?.baseMockupUrl || activeProduct?.image || "/placeholder-logo.png"
+  const mockupUrl = getOptimizedCloudinaryUrl(rawMockupUrl)
+  // Ensure selected product is always a real StudioProduct (no local defaults)
+  useEffect(() => {
+    if (studioProducts.length === 0) return
+    const allowed = new Set(studioProducts.map((p) => p.type))
+    if (!allowed.has(selectedProduct)) {
+      setSelectedProduct(studioProducts[0].type as ProductType)
+    }
+  }, [studioProducts, selectedProduct])
+
+  useEffect(() => {
+    if (!availableColors.length) return
+    const match = resolveColorKey(productColor, availableColors)
+    if (!match) {
+      setProductColor(resolveColorHex(availableColors[0]))
+    }
+  }, [availableColors, productColor])
+
+  useEffect(() => {
+    const desiredSide = selectedPosition === "back" ? "back" : "front"
+    if (currentSide !== desiredSide) {
+      setCurrentSide(desiredSide)
+    }
+  }, [currentSide, selectedPosition])
+
+  useEffect(() => {
+    if (currentSide === "back" && selectedPosition !== "back") {
+      setSelectedPosition("back")
+      return
+    }
+    if (currentSide !== "back" && selectedPosition === "back") {
+      setSelectedPosition("front")
+    }
+  }, [currentSide, selectedPosition])
+  const getSafeArea = useCallback(() => {
+    const sa = (currentStudioProduct || studioProducts[0])?.safeArea
+    if (sa && sa.width && sa.height) return sa
+    return { x: 60, y: 80, width: 280, height: 300 }
+  }, [currentStudioProduct, studioProducts])
+
+  const clampElementToSafeArea = useCallback((element: DesignElement) => {
+    const safe = getSafeArea()
+    const baseWidth = element.width || (element.type === "text" ? 180 : 200)
+    const baseHeight = element.height || (element.type === "text" ? 60 : 200)
+    const width = Math.min(Math.max(baseWidth, 20), safe.width)
+    const height = Math.min(Math.max(baseHeight, 20), safe.height)
+    const x = Math.min(Math.max(element.x, safe.x), safe.x + safe.width - width)
+    const y = Math.min(Math.max(element.y, safe.y), safe.y + safe.height - height)
+    return { ...element, x, y, width, height }
+  }, [getSafeArea])
+
+  const snapPosition = useCallback((value: number, axis: "x" | "y", size: number) => {
+    const safe = getSafeArea()
+    const threshold = 8
+    const grid = snapToGrid ? gridSize : 0
+    let snapped = value
+    if (grid > 0) {
+      snapped = Math.round(snapped / grid) * grid
+    }
+    const start = axis === "x" ? safe.x : safe.y
+    const end = (axis === "x" ? safe.x + safe.width : safe.y + safe.height) - size
+    if (Math.abs(snapped - start) < threshold) snapped = start
+    if (Math.abs(snapped - end) < threshold) snapped = end
+    return snapped
+  }, [getSafeArea, gridSize, snapToGrid])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -262,7 +393,7 @@ export default function DesignStudioPage() {
               name,
               baseProduct: {
                 type: selectedProduct,
-                color: productColor,
+                color: selectedColorKey || productColor,
                 size: productSize,
               },
               elements: designElements.map(el => ({
@@ -280,7 +411,7 @@ export default function DesignStudioPage() {
                 fontWeight: el.fontWeight,
               })),
               thumbnail: undefined,
-              price: productTemplates[selectedProduct].price,
+              price: activeProduct?.price || activeStudioProduct?.price || 0,
               status: "draft" as const,
             }).then(() => {
               toast({
@@ -343,8 +474,8 @@ export default function DesignStudioPage() {
   const generateAIVariations = async () => {
     if (designElements.length === 0) {
       toast({
-        title: "لا يوجد تصميم لتحسينه",
-        description: "الرجاء إضافة عناصر للتصميم أولاً",
+        title: "┘ä╪º ┘è┘ê╪¼╪» ╪¬╪╡┘à┘è┘à ┘ä╪¬╪¡╪│┘è┘å┘ç",
+        description: "╪º┘ä╪▒╪¼╪º╪í ╪Ñ╪╢╪º┘ü╪⌐ ╪╣┘å╪º╪╡╪▒ ┘ä┘ä╪¬╪╡┘à┘è┘à ╪ú┘ê┘ä╪º┘ï",
         variant: "destructive",
       })
       return
@@ -358,8 +489,8 @@ export default function DesignStudioPage() {
     const textContent = designElements.filter((el) => el.type === "text").map((el) => el.content).join(" ")
 
     toast({
-      title: "🎨 جاري تحسين التصميم...",
-      description: "الذكاء الاصطناعي يقوم بإنشاء تنسيقات أفضل لتصميمك",
+      title: "≡ƒÄ¿ ╪¼╪º╪▒┘è ╪¬╪¡╪│┘è┘å ╪º┘ä╪¬╪╡┘à┘è┘à...",
+      description: "╪º┘ä╪░┘â╪º╪í ╪º┘ä╪º╪╡╪╖┘å╪º╪╣┘è ┘è┘é┘ê┘à ╪¿╪Ñ┘å╪┤╪º╪í ╪¬┘å╪│┘è┘é╪º╪¬ ╪ú┘ü╪╢┘ä ┘ä╪¬╪╡┘à┘è┘à┘â",
     })
 
     setTimeout(() => {
@@ -370,25 +501,25 @@ export default function DesignStudioPage() {
           {
             id: "1",
             imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-            prompt: "تنسيق عصري متوازن - نفس المحتوى بتصميم أنيق",
+            prompt: "╪¬┘å╪│┘è┘é ╪╣╪╡╪▒┘è ┘à╪¬┘ê╪º╪▓┘å - ┘å┘ü╪│ ╪º┘ä┘à╪¡╪¬┘ê┘ë ╪¿╪¬╪╡┘à┘è┘à ╪ú┘å┘è┘é",
             selected: false,
           },
           {
             id: "2",
             imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-            prompt: "تنسيق فني ملون - نفس العناصر بألوان متناسقة",
+            prompt: "╪¬┘å╪│┘è┘é ┘ü┘å┘è ┘à┘ä┘ê┘å - ┘å┘ü╪│ ╪º┘ä╪╣┘å╪º╪╡╪▒ ╪¿╪ú┘ä┘ê╪º┘å ┘à╪¬┘å╪º╪│┘é╪⌐",
             selected: false,
           },
           {
             id: "3",
             imageUrl: "/bold-typography-design-on-white-tshirt.jpg",
-            prompt: "تنسيق جريء - نفس النص بخط أقوى وأوضح",
+            prompt: "╪¬┘å╪│┘è┘é ╪¼╪▒┘è╪í - ┘å┘ü╪│ ╪º┘ä┘å╪╡ ╪¿╪«╪╖ ╪ú┘é┘ê┘ë ┘ê╪ú┘ê╪╢╪¡",
             selected: false,
           },
           {
             id: "4",
             imageUrl: "/abstract-geometric-design-on-white-tshirt.jpg",
-            prompt: "تنسيق هندسي - نفس التصميم بترتيب احترافي",
+            prompt: "╪¬┘å╪│┘è┘é ┘ç┘å╪»╪│┘è - ┘å┘ü╪│ ╪º┘ä╪¬╪╡┘à┘è┘à ╪¿╪¬╪▒╪¬┘è╪¿ ╪º╪¡╪¬╪▒╪º┘ü┘è",
             selected: false,
           }
         )
@@ -397,19 +528,19 @@ export default function DesignStudioPage() {
           {
             id: "1",
             imageUrl: "/bold-typography-design-on-white-tshirt.jpg",
-            prompt: `"${textContent}" - خط عريض احترافي`,
+            prompt: `"${textContent}" - ╪«╪╖ ╪╣╪▒┘è╪╢ ╪º╪¡╪¬╪▒╪º┘ü┘è`,
             selected: false,
           },
           {
             id: "2",
             imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-            prompt: `"${textContent}" - تنسيق عصري أنيق`,
+            prompt: `"${textContent}" - ╪¬┘å╪│┘è┘é ╪╣╪╡╪▒┘è ╪ú┘å┘è┘é`,
             selected: false,
           },
           {
             id: "3",
             imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-            prompt: `"${textContent}" - ألوان متدرجة جميلة`,
+            prompt: `"${textContent}" - ╪ú┘ä┘ê╪º┘å ┘à╪¬╪»╪▒╪¼╪⌐ ╪¼┘à┘è┘ä╪⌐`,
             selected: false,
           }
         )
@@ -418,13 +549,13 @@ export default function DesignStudioPage() {
           {
             id: "1",
             imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-            prompt: "نفس الصورة - موضعة احترافية",
+            prompt: "┘å┘ü╪│ ╪º┘ä╪╡┘ê╪▒╪⌐ - ┘à┘ê╪╢╪╣╪⌐ ╪º╪¡╪¬╪▒╪º┘ü┘è╪⌐",
             selected: false,
           },
           {
             id: "2",
             imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-            prompt: "نفس الصورة - تأثيرات فنية",
+            prompt: "┘å┘ü╪│ ╪º┘ä╪╡┘ê╪▒╪⌐ - ╪¬╪ú╪½┘è╪▒╪º╪¬ ┘ü┘å┘è╪⌐",
             selected: false,
           }
         )
@@ -433,8 +564,8 @@ export default function DesignStudioPage() {
       setAiVariations(variations)
       setIsGeneratingAI(false)
       toast({
-        title: "✨ تم إنشاء التصاميم المحسّنة!",
-        description: `${variations.length} تنسيق احترافي لنفس تصميمك - اختر المفضل لديك`,
+        title: "Γ£¿ ╪¬┘à ╪Ñ┘å╪┤╪º╪í ╪º┘ä╪¬╪╡╪º┘à┘è┘à ╪º┘ä┘à╪¡╪│┘æ┘å╪⌐!",
+        description: `${variations.length} ╪¬┘å╪│┘è┘é ╪º╪¡╪¬╪▒╪º┘ü┘è ┘ä┘å┘ü╪│ ╪¬╪╡┘à┘è┘à┘â - ╪º╪«╪¬╪▒ ╪º┘ä┘à┘ü╪╢┘ä ┘ä╪»┘è┘â`,
       })
     }, 3000)
   }
@@ -443,7 +574,7 @@ export default function DesignStudioPage() {
     setAiVariations(aiVariations.map((v) => ({ ...v, selected: v.id === id })))
   }
 
-  const addAIDesignToCart = () => {
+  const addAIDesignToCart = async () => {
     const selected = aiVariations.find((v) => v.selected)
     if (!selected) {
       toast({
@@ -454,101 +585,263 @@ export default function DesignStudioPage() {
       return
     }
 
-    const product = productTemplates[selectedProduct]
-    addItem({
-      id: `ai-${Date.now()}-${selected.id}`,
-      name: `AI Enhanced ${product.name}`,
-      price: product.price,
-      quantity: 1,
-      size: productSize,
-      color: productColor,
-      image: selected.imageUrl,
-      isCustom: true,
-    })
-
-    toast({
-      title: "AI Design added to cart",
-      description: `Custom ${product.name} (${selected.prompt}) - $${product.price}`,
-    })
-
-    setShowAIResults(false)
-    setAiVariations([])
-  }
-
-  const addTextElement = () => {
-    const newElement: DesignElement = {
-      id: Date.now().toString(),
-      type: "text",
-      content: "Your Text Here",
-      x: 200,
-      y: 200,
-      fontSize: 32,
-      color: "#000000",
-      fontFamily: "Arial",
-      fontWeight: "normal",
-      fontStyle: "normal",
-      textDecoration: "none",
-      textAlign: "left",
-      rotation: 0,
-      opacity: 1,
-      layer: designElements.length,
-      side: currentSide,
-      visible: true,
-      locked: false,
+    // Check if user is authenticated
+    if (!user || !isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in or create an account to add designs to your cart",
+        variant: "default",
+      })
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        router.push("/login")
+      }, 1500)
+      return
     }
-    const newElements = [...designElements, newElement]
-    setDesignElements(newElements)
-    saveToHistory(newElements)
-    setSelectedElement(newElement.id)
-  }
 
-  const addImageElement = (imageUrl: string) => {
-    const newElement: DesignElement = {
-      id: Date.now().toString(),
-      type: "image",
-      content: imageUrl,
-      x: 200,
-      y: 200,
-      width: 200,
-      height: 200,
-      rotation: 0,
-      opacity: 1,
-      layer: designElements.length,
-      side: currentSide,
-      visible: true,
-      locked: false,
-    }
-    const newElements = [...designElements, newElement]
-    setDesignElements(newElements)
-    saveToHistory(newElements)
-    setSelectedElement(newElement.id)
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
+    try {
+      const product = activeProduct
+      if (!product) {
         toast({
-          title: "File too large",
-          description: "Please upload an image smaller than 10MB",
+          title: "No studio product",
+          description: "No active studio products are available.",
           variant: "destructive",
         })
         return
       }
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const imageUrl = event.target?.result as string
-        addImageElement(imageUrl)
+      await addItem({
+        id: `ai-${Date.now()}-${selected.id}`,
+        name: `AI Enhanced ${product.name}`,
+        price: product.price,
+        quantity: 1,
+        size: productSize,
+        color: selectedColorKey || productColor,
+        image: selected.imageUrl,
+        isCustom: true,
+      })
+
+      toast({
+        title: "AI Design added to cart",
+        description: `Custom ${product.name} (${selected.prompt}) - $${product.price}`,
+      })
+
+      setShowAIResults(false)
+      setAiVariations([])
+    } catch (error: any) {
+      if (error.name === "AuthenticationRequired" || error.message === "AUTHENTICATION_REQUIRED") {
+        toast({
+          title: "Sign in required",
+          description: "Please sign in or create an account to add designs to your cart",
+          variant: "default",
+        })
+        setTimeout(() => {
+          router.push("/login")
+        }, 1500)
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add design to cart. Please try again.",
+          variant: "destructive",
+        })
       }
-      reader.readAsDataURL(file)
     }
   }
 
-  const updateElement = (id: string, updates: Partial<DesignElement>) => {
-    const newElements = designElements.map((el) => (el.id === id ? { ...el, ...updates } : el))
+  const addTextElement = (content?: string) => {
+    const safe = getSafeArea()
+    const defaultWidth = 180
+    const defaultHeight = 60
+    const newElement: DesignElement = {
+      id: Date.now().toString(),
+      type: "text",
+      content: content?.trim() ? content : "Your Text Here",
+      x: safe.x + safe.width / 2 - defaultWidth / 2,
+      y: safe.y + safe.height / 2 - defaultHeight / 2,
+      fontSize: textFontSize,
+      color: textColor,
+      fontFamily: textFontFamily,
+      fontWeight: "normal",
+      fontStyle: "normal",
+      textDecoration: "none",
+      textAlign,
+      rotation: 0,
+      opacity: 1,
+      layer: designElements.length,
+      side: currentSide,
+      visible: true,
+      locked: false,
+      width: defaultWidth,
+      height: defaultHeight,
+    }
+    const newElements = [...designElements, clampElementToSafeArea(newElement)]
+    setDesignElements(newElements)
+    saveToHistory(newElements)
+    setSelectedElement(newElement.id)
+    setActiveTextId(newElement.id)
+    return newElement.id
+  }
+
+  const addImageElement = (imageUrl: string) => {
+    const safe = getSafeArea()
+    const defaultWidth = Math.min(200, safe.width)
+    const defaultHeight = Math.min(200, safe.height)
+    const newElement: DesignElement = {
+      id: Date.now().toString(),
+      type: "image",
+      content: imageUrl,
+      x: safe.x + safe.width / 2 - defaultWidth / 2,
+      y: safe.y + safe.height / 2 - defaultHeight / 2,
+      width: defaultWidth,
+      height: defaultHeight,
+      rotation: 0,
+      opacity: 1,
+      layer: designElements.length,
+      side: currentSide,
+      visible: true,
+      locked: false,
+    }
+    const newElements = [...designElements, clampElementToSafeArea(newElement)]
+    setDesignElements(newElements)
+    saveToHistory(newElements)
+    setSelectedElement(newElement.id)
+    setActiveImageId(newElement.id)
+    return newElement.id
+  }
+
+  const handleImageUpload = (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 10MB",
+        variant: "destructive",
+      })
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string
+      addImageElement(imageUrl)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function updateElement(id: string, updates: Partial<DesignElement>) {
+    const newElements = designElements.map((el) => {
+      if (el.id !== id) return el
+      const merged = { ...el, ...updates }
+      const safeClamped = clampElementToSafeArea(merged)
+      return {
+        ...safeClamped,
+        x: snapPosition(safeClamped.x, "x", safeClamped.width || 0),
+        y: snapPosition(safeClamped.y, "y", safeClamped.height || 0),
+      }
+    })
     setDesignElements(newElements)
     saveToHistory(newElements)
   }
+
+  const getActiveTextElement = () => {
+    const selected = designElements.find((el) => el.id === selectedElement && el.type === "text")
+    if (selected) return selected
+    if (!activeTextId) return null
+    return designElements.find((el) => el.id === activeTextId && el.type === "text") || null
+  }
+
+  const getActiveImageElement = () => {
+    const selected = designElements.find((el) => el.id === selectedElement && el.type === "image")
+    if (selected) return selected
+    if (!activeImageId) return null
+    return designElements.find((el) => el.id === activeImageId && el.type === "image") || null
+  }
+
+  const handleTextChange = (value: string) => {
+    setTextValue(value)
+    const target = getActiveTextElement()
+    if (!target) {
+      if (value.trim()) {
+        addTextElement(value)
+      }
+      return
+    }
+    updateElement(target.id, { content: value })
+  }
+
+  const handleFontSizeChange = (size: number) => {
+    setTextFontSize(size)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { fontSize: size })
+  }
+
+  const handleTextAlignChange = (align: "right" | "center" | "left") => {
+    setTextAlign(align)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { textAlign: align })
+  }
+
+  const handleTextColorChange = (color: string) => {
+    setTextColor(color)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { color })
+  }
+
+  const handleFontFamilyChange = (font: string) => {
+    setTextFontFamily(font)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { fontFamily: font })
+  }
+
+  const handleImageSizeChange = (size: number) => {
+    setImageSize(size)
+    const target = getActiveImageElement()
+    if (!target) return
+    updateElement(target.id, { width: size, height: size })
+  }
+
+  useEffect(() => {
+    const handleMove = (e: PointerEvent) => {
+      if (!dragState) return
+      e.preventDefault()
+      const deltaX = e.clientX - dragState.startX
+      const deltaY = e.clientY - dragState.startY
+
+      const target = designElements.find((el) => el.id === dragState.id)
+      if (!target) return
+
+      if (dragState.mode === "move") {
+        updateElement(dragState.id, {
+          x: dragState.initX + deltaX,
+          y: dragState.initY + deltaY,
+        })
+      } else if (dragState.mode === "resize") {
+        const newW = Math.max(20, dragState.initW + deltaX)
+        const newH = Math.max(20, dragState.initH + deltaY)
+        updateElement(dragState.id, {
+          width: newW,
+          height: newH,
+        })
+      } else if (dragState.mode === "rotate") {
+        const rotationDelta = deltaX * 0.3
+        updateElement(dragState.id, {
+          rotation: (dragState.initRotation || 0) + rotationDelta,
+        })
+      }
+    }
+
+    const handleUp = () => setDragState(null)
+
+    if (dragState) {
+      window.addEventListener("pointermove", handleMove)
+      window.addEventListener("pointerup", handleUp, { once: true })
+    }
+    return () => {
+      window.removeEventListener("pointermove", handleMove)
+      window.removeEventListener("pointerup", handleUp)
+    }
+  }, [dragState, designElements, updateElement])
 
   const deleteElement = (id: string) => {
     const newElements = designElements.filter((el) => el.id !== id)
@@ -787,15 +1080,23 @@ export default function DesignStudioPage() {
     }
 
     try {
-      const product = productTemplates[selectedProduct]
+      const product = activeProduct
+      if (!product) {
+        toast({
+          title: "No studio product",
+          description: "No active studio products are available.",
+          variant: "destructive",
+        })
+        return
+      }
       await addItem({
         id: `custom-${Date.now()}-${selectedProduct}-${productSize}`,
         name: `Custom ${product.name}`,
         price: product.price,
-        quantity: 1,
+        quantity: productQuantity,
         size: productSize,
-        color: productColor,
-        image: product.image,
+        color: selectedColorKey || productColor,
+        image: rawMockupUrl,
         isCustom: true,
       })
       toast({
@@ -822,6 +1123,82 @@ export default function DesignStudioPage() {
     }
   }
 
+  const loadImage = (src: string) =>
+    new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => resolve(img)
+      img.onerror = (err) => reject(err)
+      img.src = src
+    })
+
+  const generateNormalizedPreview = async () => {
+    const baseUrl = mockupUrl
+    const baseImg = await loadImage(baseUrl)
+    const canvas = document.createElement("canvas")
+    const baseWidth = baseImg.naturalWidth || 1000
+    const baseHeight = baseImg.naturalHeight || 1200
+    canvas.width = baseWidth
+    canvas.height = baseHeight
+    const ctx = canvas.getContext("2d")
+    if (!ctx) throw new Error("Canvas context unavailable")
+
+    ctx.drawImage(baseImg, 0, 0, baseWidth, baseHeight)
+
+    const editBaseWidth = 400 // preview uses 400px width
+    const scaleX = baseWidth / editBaseWidth
+    const scaleY = baseHeight / editBaseWidth
+    const safe = getSafeArea()
+    const safeScaled = {
+      x: safe.x * scaleX,
+      y: safe.y * scaleY,
+      width: safe.width * scaleX,
+      height: safe.height * scaleY,
+    }
+
+    const elementsToRender = designElements
+      .filter((el) => (el.side || "front") === currentSide && el.visible !== false)
+      .map((el) => clampElementToSafeArea(el))
+
+    for (const el of elementsToRender) {
+      const width = (el.width || (el.type === "text" ? 180 : 200)) * scaleX
+      const height = (el.height || (el.type === "text" ? 60 : 200)) * scaleY
+      const x = el.x * scaleX
+      const y = el.y * scaleY
+
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(safeScaled.x, safeScaled.y, safeScaled.width, safeScaled.height)
+      ctx.clip()
+      ctx.globalAlpha = el.opacity ?? 0.92
+      ctx.translate(x + width / 2, y + height / 2)
+      if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180)
+
+      if (el.type === "image") {
+        try {
+          const img = await loadImage(el.content)
+          ctx.drawImage(img, -width / 2, -height / 2, width, height)
+        } catch {
+          // skip failed image
+        }
+      } else if (el.type === "text") {
+        ctx.font = `${el.fontWeight || "600"} ${(el.fontSize || 32) * scaleX}px ${el.fontFamily || "Arial"}`
+        ctx.fillStyle = el.color || "#111111"
+        ctx.textAlign = (el.textAlign as CanvasTextAlign) || "center"
+        ctx.textBaseline = "middle"
+        ctx.shadowColor = "rgba(0,0,0,0.12)"
+        ctx.shadowBlur = 6
+        ctx.shadowOffsetX = 1
+        ctx.shadowOffsetY = 1
+        ctx.fillText(el.content, 0, 0)
+      }
+
+      ctx.restore()
+    }
+
+    return canvas.toDataURL("image/png")
+  }
+
   const saveDesign = async () => {
     if (!user) {
       toast({
@@ -842,37 +1219,47 @@ export default function DesignStudioPage() {
       return
     }
 
+    if (!activeStudioProduct?._id) {
+      toast({
+        title: "Missing studio product",
+        description: "Please select a studio product before saving.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const name = designName.trim() || `My Design ${new Date().toLocaleDateString()}`
 
     setIsSaving(true)
     try {
+      const normalizedPreview = await generateNormalizedPreview()
+      const safe = getSafeArea()
+
       const designData = {
         name,
         baseProduct: {
           type: selectedProduct,
-          color: productColor,
+          color: selectedColorKey || productColor,
           size: productSize,
         },
-        elements: designElements.map(el => ({
-          id: el.id,
-          type: el.type,
-          content: el.content,
-          x: el.x,
-          y: el.y,
-          width: el.width || 100,
-          height: el.height || 100,
-          rotation: el.rotation || 0,
-          fontSize: el.fontSize,
-          fontFamily: el.fontFamily,
-          color: el.color,
-          fontWeight: el.fontWeight,
-        })),
-        thumbnail: undefined,
-        price: productTemplates[selectedProduct].price,
+        baseProductId: activeStudioProduct._id,
+        elements: designElements.map((el) => clampElementToSafeArea(el)),
+        thumbnail: normalizedPreview,
+        designImageURL: normalizedPreview,
+        designMetadata: {
+          safeArea: safe,
+          elements: designElements.map((el) => clampElementToSafeArea(el)),
+          productType: selectedProduct,
+          productColor: selectedColorKey || productColor,
+          productSize,
+          side: currentSide,
+          mockup: rawMockupUrl,
+        },
+        price: activeProduct?.price || activeStudioProduct?.price || 0,
         status: "draft" as const,
       }
 
-      const savedDesign = await designsApi.createDesign(designData)
+      const savedDesign = await designsApi.createDesign(designData as any)
       logger.log("Design saved successfully:", savedDesign)
 
       toast({
@@ -882,7 +1269,7 @@ export default function DesignStudioPage() {
 
       setTimeout(() => {
         router.push("/my-designs")
-      }, 1500)
+      }, 1200)
     } catch (error: any) {
       logger.error("Failed to save design:", error)
       toast({
@@ -922,7 +1309,7 @@ export default function DesignStudioPage() {
       }
 
       // Draw background
-      ctx.fillStyle = productColor
+      ctx.fillStyle = productColorHex
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // Draw elements - we need to load images first
@@ -991,15 +1378,35 @@ export default function DesignStudioPage() {
         variant: "destructive",
       })
     }
-  }, [currentSideElements, productColor, designName, toast])
+  }, [currentSideElements, productColorHex, designName, toast])
 
   const selectedElementData = designElements.find((el) => el.id === selectedElement)
 
-  const filteredProducts = Object.entries(productTemplates).filter(([key, product]) => {
+  const filteredProducts = Object.entries(resolvedProductTemplates).filter(([key, product]) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesTab = activeTab === "all" || product.category.toLowerCase() === activeTab.toLowerCase()
     return matchesSearch && matchesTab
   })
+
+  useEffect(() => {
+    if (!selectedElementData) return
+
+    if (selectedElementData.type === "text") {
+      setActiveTextId(selectedElementData.id)
+      setTextValue(selectedElementData.content || "")
+      setTextFontSize(selectedElementData.fontSize || 32)
+      setTextAlign((selectedElementData.textAlign as "right" | "center" | "left") || "center")
+      setTextColor(selectedElementData.color || "#000000")
+      setTextFontFamily(selectedElementData.fontFamily || "Tajawal")
+    }
+
+    if (selectedElementData.type === "image") {
+      setActiveImageId(selectedElementData.id)
+      if (selectedElementData.width) {
+        setImageSize(selectedElementData.width)
+      }
+    }
+  }, [selectedElementData])
 
   // Snap to grid helper
   const snapValue = (value: number) => {
@@ -1007,485 +1414,104 @@ export default function DesignStudioPage() {
     return Math.round(value / gridSize) * gridSize
   }
 
+  // DB-driven studio only: if there are no active studio products, show a clear empty state.
+  if (!isLoadingProducts && studioProducts.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
+        <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-20">
+          <Card className="max-w-2xl mx-auto p-8 bg-white border border-gray-200 shadow-xl text-center space-y-4">
+            <h1 className="text-2xl font-bold text-gray-900">Studio is not available</h1>
+            <p className="text-gray-600">
+              No active studio products found. Please create and activate Studio Products in the admin dashboard.
+            </p>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Button variant="outline" onClick={() => router.push("/")}>
+                Back Home
+              </Button>
+              <Button onClick={() => router.push("/admin")}>Go to Admin</Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-950 to-black flex flex-col pt-20">
+    <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar */}
-        <div className="w-80 border-r border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden flex flex-col shadow-2xl flex-shrink-0">
-          <Tabs value={leftSidebarTab} onValueChange={setLeftSidebarTab} className="flex-1 flex flex-col">
-            <TabsList className="w-full grid grid-cols-5 rounded-none border-b border-white/10 bg-white/5 h-[48px]">
-              <TabsTrigger value="product" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <ShoppingBag className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Product</span>
-              </TabsTrigger>
-              <TabsTrigger value="gallery" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <ImageIcon className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Gallery</span>
-              </TabsTrigger>
-              <TabsTrigger value="text" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <Type className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Text</span>
-              </TabsTrigger>
-              <TabsTrigger value="background" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <Palette className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Bg</span>
-              </TabsTrigger>
-              <TabsTrigger value="layer" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <Layers className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Layer</span>
-              </TabsTrigger>
-            </TabsList>
+        <div className="w-80 border-r border-gray-200 bg-white overflow-hidden flex flex-col shadow-xl flex-shrink-0">
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 studio-theme font-tajawal">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">المنتجات</h3>
+                <span className="text-xs text-muted-foreground">{filteredProducts.length}</span>
+              </div>
 
-            <div className="flex-1 overflow-y-auto">
-              <TabsContent value="product" className="p-4 space-y-4 mt-0">
-                <div className="flex items-center gap-2 text-sm">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="ابحث عن المنتج..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary/40"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {filteredProducts.map(([key, product]) => (
                   <button
-                    onClick={() => setActiveTab("all")}
-                    className={`px-3 py-1.5 rounded-lg transition-colors ${activeTab === "all" ? "bg-white text-black" : "text-gray-400 hover:bg-white/10 hover:text-white"}`}
+                    key={key}
+                    onClick={() => setSelectedProduct(key as ProductType)}
+                    className={`aspect-square rounded-xl border-2 overflow-hidden transition-all hover:scale-105 ${
+                      selectedProduct === key
+                        ? "border-primary ring-2 ring-primary/20 shadow-card"
+                        : "border-border hover:border-primary/50"
+                    }`}
                   >
-                    All
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={product.image || "/placeholder-logo.png"}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                      />
+                    </div>
                   </button>
-                </div>
-
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  <Input
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:bg-white/10 focus:border-white/20"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-white">Products</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {filteredProducts.map(([key, product]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedProduct(key as ProductType)}
-                        className={`aspect-square rounded-xl border-2 overflow-hidden transition-all hover:scale-105 ${
-                          selectedProduct === key
-                            ? "border-white ring-2 ring-white/30 shadow-lg"
-                            : "border-white/20 hover:border-white/50"
-                        }`}
-                      >
-                        <div className="relative w-full h-full">
-                          <Image
-                            src={product.image || "/placeholder.svg"}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                          />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="gallery" className="p-4 space-y-4 mt-0">
-                <div>
-                  <Label htmlFor="image-upload" className="cursor-pointer">
-                    <div className="border-2 border-dashed border-white/20 rounded-lg p-6 hover:border-white/40 transition-colors text-center bg-white/5">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm font-medium text-white">Upload Image</p>
-                      <p className="text-xs text-gray-400 mt-1">PNG, JPG up to 10MB</p>
-                    </div>
-                  </Label>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </div>
-
-                <Dialog open={showTemplatesDialog} onOpenChange={setShowTemplatesDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full" variant="outline">
-                      <FileText className="mr-2 h-4 w-4" />
-                      Design Templates
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Design Templates</DialogTitle>
-                      <DialogDescription>Choose a template to get started quickly</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      {designTemplates.map((template) => (
-                        <button
-                          key={template.id}
-                          onClick={() => loadTemplate(template)}
-                          className="relative aspect-square rounded-lg border-2 border-border hover:border-primary overflow-hidden transition-all hover:scale-105"
-                        >
-                          <Image
-                            src={template.thumbnail}
-                            alt={template.name}
-                            fill
-                            className="object-cover"
-                          />
-                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                            <p className="text-sm font-medium text-white">{template.name}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-white">Clipart Library</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {clipartLibrary.map((clipart) => (
-                      <button
-                        key={clipart.id}
-                        onClick={() => addImageElement(clipart.url)}
-                        className="aspect-square rounded-lg border-2 border-white/20 hover:border-white/50 overflow-hidden transition-all hover:scale-105 bg-white/5"
-                      >
-                        <img
-                          src={clipart.url || "/placeholder.svg"}
-                          alt={clipart.name}
-                          className="w-full h-full object-contain p-2"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="text" className="p-4 space-y-4 mt-0">
-                <Button className="w-full" onClick={addTextElement}>
-                  <Type className="mr-2 h-4 w-4" />
-                  Add Text Element
-                </Button>
-
-                {selectedElementData?.type === "text" && (
-                  <Card className="p-4 space-y-4 bg-white/5 border-white/10">
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-white">Text Content</Label>
-                      <Input
-                        value={selectedElementData.content}
-                        onChange={(e) => updateElement(selectedElement!, { content: e.target.value })}
-                        className="bg-white/5 border-white/10 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-white">Font Family</Label>
-                      <Select
-                        value={selectedElementData.fontFamily}
-                        onValueChange={(value) => updateElement(selectedElement!, { fontFamily: value })}
-                      >
-                        <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fontFamilies.map((font) => (
-                            <SelectItem key={font.value} value={font.value}>
-                              {font.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-white">Font Size: {selectedElementData.fontSize}px</Label>
-                      <Slider
-                        value={[selectedElementData.fontSize || 24]}
-                        onValueChange={([value]) => updateElement(selectedElement!, { fontSize: value })}
-                        min={12}
-                        max={120}
-                        step={1}
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-white">Text Color</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="color"
-                          value={selectedElementData.color}
-                          onChange={(e) => updateElement(selectedElement!, { color: e.target.value })}
-                          className="w-12 p-1 bg-white/5 border-white/10"
-                        />
-                        <Input
-                          type="text"
-                          value={selectedElementData.color}
-                          onChange={(e) => updateElement(selectedElement!, { color: e.target.value })}
-                          className="flex-1 bg-white/5 border-white/10 text-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-white">Text Style</Label>
-                      <div className="flex gap-2">
-                        <Button
-                          variant={selectedElementData.fontWeight === "bold" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() =>
-                            updateElement(selectedElement!, {
-                              fontWeight: selectedElementData.fontWeight === "bold" ? "normal" : "bold",
-                            })
-                          }
-                        >
-                          <Bold className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.fontStyle === "italic" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() =>
-                            updateElement(selectedElement!, {
-                              fontStyle: selectedElementData.fontStyle === "italic" ? "normal" : "italic",
-                            })
-                          }
-                        >
-                          <Italic className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.textDecoration === "underline" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() =>
-                            updateElement(selectedElement!, {
-                              textDecoration: selectedElementData.textDecoration === "underline" ? "none" : "underline",
-                            })
-                          }
-                        >
-                          <Underline className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-white">Text Alignment</Label>
-                      <div className="flex gap-2">
-                        <Button
-                          variant={selectedElementData.textAlign === "left" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() => updateElement(selectedElement!, { textAlign: "left" })}
-                        >
-                          <AlignLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.textAlign === "center" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() => updateElement(selectedElement!, { textAlign: "center" })}
-                        >
-                          <AlignCenter className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.textAlign === "right" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() => updateElement(selectedElement!, { textAlign: "right" })}
-                        >
-                          <AlignRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="background" className="p-4 space-y-4 mt-0">
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-white">Solid Colors</h3>
-                  <div className="grid grid-cols-6 gap-2">
-                    {[
-                      "#FFFFFF", "#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00",
-                      "#FF00FF", "#00FFFF", "#FFA500", "#800080", "#FFC0CB", "#A52A2A",
-                    ].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setProductColor(color)}
-                        className={`aspect-square rounded-lg border-2 transition-transform hover:scale-110 ${
-                          productColor === color ? "border-white ring-2 ring-white/30" : "border-white/20"
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-white">Patterns</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {backgroundPatterns.map((pattern) => (
-                      <button
-                        key={pattern.id}
-                        onClick={() => setCanvasBackground(pattern.url)}
-                        className="aspect-square rounded-lg border-2 border-white/20 hover:border-white/50 overflow-hidden transition-all hover:scale-105"
-                      >
-                        <img
-                          src={pattern.url || "/placeholder.svg"}
-                          alt={pattern.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-xs mb-1.5 block text-white">Custom Color</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="color"
-                      value={productColor}
-                      onChange={(e) => setProductColor(e.target.value)}
-                      className="w-12 p-1 bg-white/5 border-white/10"
-                    />
-                    <Input
-                      type="text"
-                      value={productColor}
-                      onChange={(e) => setProductColor(e.target.value)}
-                      className="flex-1 bg-white/5 border-white/10 text-white"
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="layer" className="p-4 space-y-2 mt-0">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-white">Layers ({currentSideElements.length})</h3>
-                  {currentSideElements.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => {
-                        const allVisible = currentSideElements.every((el) => el.visible !== false)
-                        currentSideElements.forEach((el) => {
-                          updateElement(el.id, { visible: !allVisible })
-                        })
-                      }}
-                      title="Toggle All Visibility"
-                    >
-                      {currentSideElements.every((el) => el.visible !== false) ? (
-                        <Eye className="h-4 w-4" />
-                      ) : (
-                        <EyeOff className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                </div>
-                {currentSideElements.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-sm">
-                    <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No layers yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {[...currentSideElements].reverse().map((element, index) => (
-                      <Card
-                        key={element.id}
-                        className={`p-3 cursor-pointer transition-all bg-white/5 border-white/10 ${
-                          selectedElement === element.id ? "ring-2 ring-primary" : ""
-                        }`}
-                        onClick={() => setSelectedElement(element.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {element.visible === false ? (
-                              <EyeOff className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              element.type === "text" ? <Type className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />
-                            )}
-                            <span className="text-sm font-medium truncate text-white">
-                              {element.type === "text"
-                                ? element.content.substring(0, 20)
-                                : `Image ${currentSideElements.length - index}`}
-                            </span>
-                            {element.locked && <Lock className="h-3 w-3 text-gray-500" />}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                updateElement(element.id, { visible: element.visible === false ? true : false })
-                              }}
-                              title={element.visible === false ? "Show" : "Hide"}
-                            >
-                              {element.visible === false ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                updateElement(element.id, { locked: !element.locked })
-                              }}
-                              title={element.locked ? "Unlock" : "Lock"}
-                            >
-                              {element.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                duplicateElement(element.id)
-                              }}
-                              title="Duplicate"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                moveLayerUp(element.id)
-                              }}
-                              title="Move Up"
-                            >
-                              ↑
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                moveLayerDown(element.id)
-                              }}
-                              title="Move Down"
-                            >
-                              ↓
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteElement(element.id)
-                              }}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
+                ))}
+              </div>
             </div>
-          </Tabs>
-        </div>
 
+            <SizeSelector selectedSize={productSize} onSizeChange={setProductSize} />
+
+            <QuantitySelector quantity={productQuantity} onQuantityChange={setProductQuantity} />
+
+            <PositionSelector selectedPosition={selectedPosition} onPositionChange={setSelectedPosition} />
+
+            <ColorPicker selectedColor={productColor} onColorChange={setProductColor} colors={availableColors} />
+
+            <ImageUploader
+              onImageUpload={handleImageUpload}
+              uploadedImage={getActiveImageElement()?.content || null}
+              imageSize={imageSize}
+              onImageSizeChange={handleImageSizeChange}
+            />
+
+            <TextEditor
+              text={textValue}
+              onTextChange={handleTextChange}
+              fontSize={textFontSize}
+              onFontSizeChange={handleFontSizeChange}
+              textAlign={textAlign}
+              onTextAlignChange={handleTextAlignChange}
+              textColor={textColor}
+              onTextColorChange={handleTextColorChange}
+              fontFamily={textFontFamily}
+              onFontFamilyChange={handleFontFamilyChange}
+            />
+          </div>
+        </div>
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden">
           <div className="bg-background/95 backdrop-blur-sm border-b border-border px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-sm flex-shrink-0 gap-4 h-[48px]">
@@ -1617,7 +1643,7 @@ export default function DesignStudioPage() {
                 size="sm"
                 onClick={generateAIVariations}
                 disabled={isGeneratingAI || designElements.length === 0}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all text-xs h-8 px-3 font-medium"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-gray-900 shadow-lg hover:shadow-xl transition-all text-xs h-8 px-3 font-medium"
               >
                 {isGeneratingAI ? (
                   <>
@@ -1664,102 +1690,147 @@ export default function DesignStudioPage() {
                   <div
                     className="relative w-full h-full rounded-lg overflow-hidden"
                     style={{
-                      backgroundColor: productColor,
+                      backgroundColor: productColorHex,
                       backgroundImage: canvasBackground ? `url(${canvasBackground})` : undefined,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                     }}
                   >
                     <img
-                      src={getProductImagePath(selectedProduct, currentSide)}
-                      alt={`${productTemplates[selectedProduct].name} ${currentSide}`}
+                      src={mockupUrl}
+                      alt={`${activeProduct?.name || "Studio Product"} ${currentSide}`}
                       className="w-full h-full object-contain"
                       style={{
-                        filter: productColor !== "#FFFFFF" ? "brightness(0.95)" : undefined,
+                        filter: productColorHex.toLowerCase() !== "#ffffff" ? "brightness(0.95)" : undefined,
                       }}
                       onError={(e) => {
-                        ;(e.target as HTMLImageElement).src = productTemplates[selectedProduct].image || "/white-t-shirt.png"
+                        ;(e.target as HTMLImageElement).src = "/placeholder-logo.png"
                       }}
                     />
 
                     <div className="absolute inset-0">
-                      {currentSideElements.map((element) => (
-                        <div
-                          key={element.id}
-                          className={`absolute cursor-move select-none transition-all ${
-                            selectedElement === element.id 
-                              ? "ring-2 ring-primary ring-offset-2 shadow-lg z-10" 
-                              : "hover:ring-2 hover:ring-primary/50 hover:ring-offset-1"
-                          } ${element.locked ? "cursor-not-allowed opacity-50" : ""}`}
-                          style={{
-                            left: `${snapValue(element.x)}px`,
-                            top: `${snapValue(element.y)}px`,
-                            fontSize: element.fontSize ? `${element.fontSize}px` : undefined,
-                            color: element.color,
-                            fontFamily: element.fontFamily,
-                            fontWeight: element.fontWeight,
-                            fontStyle: element.fontStyle,
-                            textDecoration: element.textDecoration,
-                            textAlign: element.textAlign as any,
-                            transform: `rotate(${element.rotation || 0}deg)`,
-                            opacity: element.opacity || 1,
-                            transformOrigin: "center",
-                            textShadow: element.textShadow,
-                            WebkitTextStroke: element.textOutline,
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (!element.locked) setSelectedElement(element.id)
-                          }}
-                          onMouseDown={(e) => {
-                            if (element.locked) return
-                            e.stopPropagation()
-                            const rect = e.currentTarget.parentElement!.getBoundingClientRect()
-                            const startX = e.clientX - rect.left - element.x
-                            const startY = e.clientY - rect.top - element.y
+                      {/* Safe area overlay to visualize constraints */}
+                      <div
+                        className="absolute border-2 border-dashed border-primary/60 bg-primary/5 pointer-events-none"
+                        style={{
+                          left: getSafeArea().x,
+                          top: getSafeArea().y,
+                          width: getSafeArea().width,
+                          height: getSafeArea().height,
+                        }}
+                      />
 
-                            const handleMouseMove = (moveEvent: MouseEvent) => {
-                              let newX = moveEvent.clientX - rect.left - startX
-                              let newY = moveEvent.clientY - rect.top - startY
-                              
-                              if (snapToGrid) {
-                                newX = snapValue(newX)
-                                newY = snapValue(newY)
-                              }
-                              
-                              const maxX = rect.width - (element.type === "text" ? 100 : (element.width || 200))
-                              const maxY = rect.height - (element.type === "text" ? 50 : (element.height || 200))
-                              updateElement(element.id, { 
-                                x: Math.max(0, Math.min(newX, maxX)), 
-                                y: Math.max(0, Math.min(newY, maxY))
+                      {currentSideElements.map((element) => {
+                        const width = element.width || (element.type === "text" ? 180 : 200)
+                        const height = element.height || (element.type === "text" ? 60 : 200)
+                        return (
+                          <div
+                            key={element.id}
+                            className={`absolute select-none transition-all group ${
+                              selectedElement === element.id
+                                ? "ring-2 ring-primary ring-offset-2 shadow-lg z-20"
+                                : "hover:ring-2 hover:ring-primary/50 hover:ring-offset-1"
+                            } ${element.locked ? "cursor-not-allowed opacity-50" : "cursor-move"}`}
+                            style={{
+                              left: `${snapValue(element.x)}px`,
+                              top: `${snapValue(element.y)}px`,
+                              width,
+                              height,
+                              transform: `rotate(${element.rotation || 0}deg)`,
+                              transformOrigin: "center",
+                              opacity: element.opacity || 1,
+                            }}
+                            onPointerDown={(e) => {
+                              if (element.locked) return
+                              e.stopPropagation()
+                              setSelectedElement(element.id)
+                              setDragState({
+                                id: element.id,
+                                mode: "move",
+                                startX: e.clientX,
+                                startY: e.clientY,
+                                initX: element.x,
+                                initY: element.y,
+                                initW: width,
+                                initH: height,
+                                initRotation: element.rotation || 0,
                               })
-                            }
-
-                            const handleMouseUp = () => {
-                              document.removeEventListener("mousemove", handleMouseMove)
-                              document.removeEventListener("mouseup", handleMouseUp)
-                            }
-
-                            document.addEventListener("mousemove", handleMouseMove)
-                            document.addEventListener("mouseup", handleMouseUp)
-                          }}
-                        >
-                          {element.type === "text" ? (
-                            <span className="whitespace-nowrap">{element.content}</span>
-                          ) : (
-                            <img
-                              src={element.content || "/placeholder.svg"}
-                              alt="Design element"
-                              className="max-w-[200px] max-h-[200px] object-contain pointer-events-none"
-                              draggable={false}
+                            }}
+                          >
+                            <div
+                              className="w-full h-full flex items-center justify-center pointer-events-none"
                               style={{
-                                width: element.width || 200,
-                                height: element.height || 200,
+                                fontSize: element.fontSize ? `${element.fontSize}px` : undefined,
+                                color: element.color,
+                                fontFamily: element.fontFamily,
+                                fontWeight: element.fontWeight,
+                                fontStyle: element.fontStyle,
+                                textDecoration: element.textDecoration,
+                                textAlign: element.textAlign as any,
+                                textShadow: element.textShadow,
+                                WebkitTextStroke: element.textOutline,
                               }}
-                            />
-                          )}
-                        </div>
-                      ))}
+                            >
+                              {element.type === "text" ? (
+                                <span className="whitespace-nowrap">{element.content}</span>
+                              ) : (
+                                <img
+                                  src={element.content || "/placeholder-logo.png"}
+                                  alt="Design element"
+                                  className="max-w-full max-h-full object-contain pointer-events-none"
+                                  draggable={false}
+                                  style={{
+                                    width,
+                                    height,
+                                  }}
+                                />
+                              )}
+                            </div>
+
+                            {/* Resize handle (bottom-right) */}
+                            {!element.locked && (
+                              <div
+                                className="absolute -bottom-2 -right-2 h-4 w-4 bg-white border border-primary rounded-sm shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-se-resize"
+                                onPointerDown={(e) => {
+                                  e.stopPropagation()
+                                  setDragState({
+                                    id: element.id,
+                                    mode: "resize",
+                                    startX: e.clientX,
+                                    startY: e.clientY,
+                                    initX: element.x,
+                                    initY: element.y,
+                                    initW: width,
+                                    initH: height,
+                                    initRotation: element.rotation || 0,
+                                  })
+                                }}
+                              />
+                            )}
+
+                            {/* Rotation handle (top-center) */}
+                            {!element.locked && (
+                              <div
+                                className="absolute -top-6 left-1/2 -translate-x-1/2 h-3 w-3 bg-primary rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-alias"
+                                onPointerDown={(e) => {
+                                  e.stopPropagation()
+                                  setDragState({
+                                    id: element.id,
+                                    mode: "rotate",
+                                    startX: e.clientX,
+                                    startY: e.clientY,
+                                    initX: element.x,
+                                    initY: element.y,
+                                    initW: width,
+                                    initH: height,
+                                    initRotation: element.rotation || 0,
+                                  })
+                                }}
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1799,7 +1870,7 @@ export default function DesignStudioPage() {
                           >
                             <div className="relative w-full h-full">
                               <Image
-                                src={variation.imageUrl || "/placeholder.svg"}
+                                src={variation.imageUrl || "/placeholder-logo.png"}
                                 alt={variation.prompt}
                                 fill
                                 className="object-cover"
@@ -1812,7 +1883,7 @@ export default function DesignStudioPage() {
                               </div>
                             )}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                              <p className="text-xs text-white font-medium">{variation.prompt}</p>
+                              <p className="text-xs text-gray-900 font-medium">{variation.prompt}</p>
                             </div>
                           </button>
                         ))}
@@ -1833,19 +1904,10 @@ export default function DesignStudioPage() {
           </div>
         </div>
 
-        {/* Right Panel - Product Preview & Settings */}
+        {/* Right Panel - Settings */}
         <div className="w-96 border-l border-border bg-background overflow-hidden flex flex-col shadow-sm flex-shrink-0">
-          <ProductPreview
-            productType={selectedProduct}
-            productColor={productColor}
-            currentSide={currentSide}
-            onSideChange={setCurrentSide}
-            designElements={designElements}
-            zoom={zoom}
-          />
-          
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="p-4 space-y-4 border-t border-border overflow-y-auto bg-muted/20 flex-1 min-h-0">
+            <div className="p-4 space-y-4 overflow-y-auto bg-muted/20 flex-1 min-h-0">
             <Card className="p-4 bg-background shadow-sm">
               <h3 className="font-semibold mb-4 text-sm flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
@@ -1854,7 +1916,7 @@ export default function DesignStudioPage() {
               <div className="space-y-4">
                 <div>
                   <Label className="text-xs mb-2 block text-muted-foreground font-medium">Product</Label>
-                  <p className="text-sm font-semibold">{productTemplates[selectedProduct].name}</p>
+                  <p className="text-sm font-semibold">{activeProduct?.name || "Studio Product"}</p>
                 </div>
 
                 <div>
@@ -1876,7 +1938,7 @@ export default function DesignStudioPage() {
 
                 <div className="pt-2 border-t">
                   <Label className="text-xs mb-2 block text-muted-foreground font-medium">Price</Label>
-                  <p className="text-3xl font-bold text-primary">${productTemplates[selectedProduct].price}</p>
+                  <p className="text-3xl font-bold text-primary">${activeProduct?.price ?? 0}</p>
                 </div>
               </div>
             </Card>
@@ -1914,7 +1976,7 @@ export default function DesignStudioPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <Label className="text-xs font-medium text-muted-foreground">Rotation</Label>
-                      <span className="text-xs font-semibold">{selectedElementData.rotation || 0}°</span>
+                      <span className="text-xs font-semibold">{selectedElementData.rotation || 0}┬░</span>
                     </div>
                     <Slider
                       value={[selectedElementData.rotation || 0]}
@@ -2015,7 +2077,7 @@ export default function DesignStudioPage() {
                           </div>
                         )}
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                          <p className="text-sm font-medium text-white">{design.name}</p>
+                          <p className="text-sm font-medium text-gray-900">{design.name}</p>
                           <p className="text-xs text-gray-300">{new Date(design.createdAt).toLocaleDateString()}</p>
                         </div>
                       </button>
@@ -2031,11 +2093,11 @@ export default function DesignStudioPage() {
               </Dialog>
 
               <Button 
-                className="w-full h-12 text-base font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98]" 
+                className="w-full h-12 text-base font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-gray-900 shadow-xl hover:shadow-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98]" 
                 onClick={handleAddToCart}
               >
                 <ShoppingBag className="mr-2 h-5 w-5" />
-                Add to Cart - ${productTemplates[selectedProduct].price}
+                Add to Cart x{productQuantity} - ${activeProduct?.price ?? 0}
               </Button>
               <Button 
                 variant="outline" 
@@ -2062,3 +2124,4 @@ export default function DesignStudioPage() {
     </div>
   )
 }
+

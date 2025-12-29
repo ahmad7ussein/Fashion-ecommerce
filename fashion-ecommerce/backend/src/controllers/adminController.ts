@@ -34,6 +34,7 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
     // Recent orders
     const recentOrders = await Order.find()
       .sort({ createdAt: -1 })
+      .allowDiskUse(true)
       .limit(5)
       .populate('user', 'firstName lastName email');
 
@@ -116,6 +117,7 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
     const users = await User.find(query)
       .select('-password')
       .sort({ createdAt: -1 })
+      .allowDiskUse(true)
       .skip(skip)
       .limit(limitNum);
 
@@ -168,10 +170,10 @@ export const getUser = async (req: AuthRequest, res: Response) => {
     }
 
     // Get user's orders
-    const orders = await Order.find({ user: user._id }).sort({ createdAt: -1 }).limit(10);
+    const orders = await Order.find({ user: user._id }).sort({ createdAt: -1 }).allowDiskUse(true).limit(10);
 
     // Get user's designs
-    const designs = await Design.find({ user: user._id }).sort({ createdAt: -1 }).limit(10);
+    const designs = await Design.find({ user: user._id }).sort({ createdAt: -1 }).allowDiskUse(true).limit(10);
 
     res.status(200).json({
       success: true,

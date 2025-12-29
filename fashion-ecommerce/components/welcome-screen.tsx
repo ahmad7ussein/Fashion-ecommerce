@@ -5,52 +5,35 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
-import { Sparkles, ShoppingBag, LogIn, UserPlus, ArrowRight } from "lucide-react"
+import { ShoppingBag, LogIn, UserPlus, ArrowRight } from "lucide-react"
 
-// Helper function to detect mobile/tablet devices (including virtual devices/emulators)
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false
   
   const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera || ""
   const ua = userAgent.toLowerCase()
   
-  // Primary detection: Check for mobile/tablet user agents (including emulators)
   const mobileDevices = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet|kindle|silk|playbook/i
   const isMobileUA = mobileDevices.test(ua)
-  
-  // Check for emulator/simulator indicators
   const isEmulator = /emulator|simulator|genymotion|bluestacks/i.test(ua)
-  
-  // Exclude desktop operating systems (unless they're mobile devices or emulators)
   const desktopOS = /windows nt|macintosh|linux|ubuntu|fedora|debian/i
   const isDesktopOS = desktopOS.test(ua) && !isMobileUA && !isEmulator
   
-  // If it's clearly a desktop OS without mobile indicators, return false
   if (isDesktopOS) return false
   
-  // Secondary detection: Screen size + touch capability
   const width = window.innerWidth
   const height = window.innerHeight
   const isSmallScreen = width < 768
   const isTabletSize = width >= 768 && width < 1024 && height < 1366
-  
-  // Check touch capability (emulators usually have this)
   const hasTouch = "ontouchstart" in window || 
                    navigator.maxTouchPoints > 0 || 
                    (navigator as any).msMaxTouchPoints > 0
-  
-  // Check for mouse (desktop indicator) - but emulators might have this too
   const hasMouse = window.matchMedia("(pointer: fine)").matches
   
-  // For emulators, prioritize screen size over mouse detection
   if (isEmulator) {
     return isSmallScreen || isTabletSize
   }
   
-  // Return true if:
-  // 1. User agent clearly indicates mobile/tablet, OR
-  // 2. (Small screen AND touch AND no fine pointer), OR  
-  // 3. (Tablet size AND touch AND no fine pointer AND mobile user agent pattern)
   return isMobileUA || 
          (isSmallScreen && hasTouch && !hasMouse) ||
          (isTabletSize && hasTouch && !hasMouse && isMobileUA)
@@ -62,36 +45,26 @@ export function WelcomeScreen() {
   const router = useRouter()
 
   useEffect(() => {
-    // Small delay to ensure window is fully loaded
     const checkDevice = () => {
-      // Check if it's a mobile device (including emulators)
       const isMobile = isMobileDevice()
       setIsMobileDeviceState(isMobile)
-      
-      // Check if user has seen welcome screen before
       const seen = localStorage.getItem("welcomeScreenSeen")
       
-      // Only show on mobile/tablet devices and if not seen before
       if (isMobile && !seen) {
-        // Small delay to ensure smooth animation
         setTimeout(() => {
           setShowWelcome(true)
         }, 100)
       }
     }
     
-    // Check immediately
     checkDevice()
     
-    // Also check on resize (for responsive testing and emulators)
     const handleResize = () => {
       checkDevice()
     }
     
     window.addEventListener('resize', handleResize)
     
-    // For development: Add keyboard shortcut to reset welcome screen
-    // Press Ctrl+Shift+W to reset (only in development)
     if (process.env.NODE_ENV === 'development') {
       const handleKeyPress = (e: KeyboardEvent) => {
         if (e.ctrlKey && e.shiftKey && e.key === 'W') {
@@ -135,10 +108,6 @@ export function WelcomeScreen() {
     router.push("/products")
   }
 
-  // Don't render if:
-  // 1. Still checking device type (null)
-  // 2. Not a mobile device (false)
-  // 3. Not showing welcome screen
   if (isMobileDeviceState === null || !isMobileDeviceState || !showWelcome) {
     return null
   }
@@ -153,9 +122,7 @@ export function WelcomeScreen() {
           transition={{ duration: 0.3 }}
           className="fixed inset-0 z-[9999] bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden"
         >
-          {/* Animated Background */}
           <div className="absolute inset-0 overflow-hidden">
-            {/* Gradient Orbs */}
             <motion.div
               className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"
               animate={{
@@ -183,7 +150,6 @@ export function WelcomeScreen() {
               }}
             />
             
-            {/* Grid Pattern */}
             <div className="absolute inset-0 opacity-[0.03]">
               <div
                 className="absolute inset-0"
@@ -195,9 +161,7 @@ export function WelcomeScreen() {
             </div>
           </div>
 
-          {/* Content */}
           <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 py-12">
-            {/* Logo Section */}
             <motion.div
               initial={{ opacity: 0, y: -30, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -217,7 +181,6 @@ export function WelcomeScreen() {
                   }}
                   className="relative"
                 >
-                  {/* Glow effect around logo */}
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-500/50 via-pink-500/50 to-cyan-500/50 rounded-full blur-2xl scale-150 animate-pulse" />
                   <div className="relative">
                     <Logo className="scale-[1.8]" />
@@ -225,7 +188,6 @@ export function WelcomeScreen() {
                 </motion.div>
               </div>
               
-              {/* Welcome Text */}
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -245,7 +207,7 @@ export function WelcomeScreen() {
                   }}
                   className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto]"
                 >
-                  StyleCraft
+                  FashionHub
                 </motion.span>
               </motion.h1>
               
@@ -259,14 +221,12 @@ export function WelcomeScreen() {
               </motion.p>
             </motion.div>
 
-            {/* Action Buttons */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
               className="w-full max-w-sm space-y-4 px-4"
             >
-              {/* Sign In Button */}
               <motion.div
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
@@ -288,7 +248,6 @@ export function WelcomeScreen() {
                 </Button>
               </motion.div>
 
-              {/* Sign Up Button */}
               <motion.div
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
@@ -310,7 +269,6 @@ export function WelcomeScreen() {
                 </Button>
               </motion.div>
 
-              {/* Browse Button */}
               <motion.div
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
@@ -333,16 +291,13 @@ export function WelcomeScreen() {
               </motion.div>
             </motion.div>
 
-            {/* Decorative Elements */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.8 }}
               className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-gray-500 text-sm"
             >
-              <Sparkles className="h-4 w-4" />
               <span>Start Your Fashion Journey</span>
-              <Sparkles className="h-4 w-4" />
             </motion.div>
           </div>
         </motion.div>
