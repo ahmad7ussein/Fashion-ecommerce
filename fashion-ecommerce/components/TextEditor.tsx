@@ -12,10 +12,7 @@ interface TextEditorProps {
   onFontSizeChange: (size: number) => void
   textAlign: "right" | "center" | "left"
   onTextAlignChange: (align: "right" | "center" | "left") => void
-  textColor: string
-  onTextColorChange: (color: string) => void
   fontFamily: string
-  onFontFamilyChange: (font: string) => void
 }
 
 const textColors = [
@@ -49,10 +46,7 @@ export const TextEditor: FC<TextEditorProps> = ({
   onFontSizeChange,
   textAlign,
   onTextAlignChange,
-  textColor,
-  onTextColorChange,
   fontFamily,
-  onFontFamilyChange,
 }) => {
   return (
     <div className="space-y-4">
@@ -118,8 +112,27 @@ export const TextEditor: FC<TextEditorProps> = ({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-foreground text-center">الخط</h3>
+    </div>
+  )
+}
+
+interface TextStyleControlsProps {
+  fontFamily: string
+  onFontFamilyChange: (font: string) => void
+  textColor: string
+  onTextColorChange: (color: string) => void
+}
+
+export const TextStyleControls: FC<TextStyleControlsProps> = ({
+  fontFamily,
+  onFontFamilyChange,
+  textColor,
+  onTextColorChange,
+}) => {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="space-y-3 min-w-0">
+        <h3 className="text-sm font-medium text-foreground text-center">????</h3>
         <Select value={fontFamily} onValueChange={onFontFamilyChange}>
           <SelectTrigger className="w-full bg-background">
             <SelectValue />
@@ -139,8 +152,8 @@ export const TextEditor: FC<TextEditorProps> = ({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-medium text-foreground text-center">لون الخط</h3>
+      <div className="space-y-2 min-w-0">
+        <h3 className="text-sm font-medium text-foreground text-center">??? ????</h3>
         <Select value={textColor} onValueChange={onTextColorChange}>
           <SelectTrigger className="w-full bg-background">
             <SelectValue />
