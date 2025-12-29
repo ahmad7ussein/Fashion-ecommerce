@@ -62,6 +62,32 @@ const getStatusColor = (status: Order["status"]) => {
   }
 }
 
+const COLOR_OPTIONS = [
+  { id: "white", value: "#ffffff", label: { en: "White", ar: "أبيض" }, needsBorder: true },
+  { id: "black", value: "#111111", label: { en: "Black", ar: "أسود" } },
+  { id: "navy", value: "#1f2a44", label: { en: "Navy", ar: "كحلي" } },
+  { id: "gray", value: "#b6b6b6", label: { en: "Gray", ar: "رمادي" } },
+  { id: "blue", value: "#5aa7e0", label: { en: "Blue", ar: "أزرق" } },
+  { id: "charcoal", value: "#4a4a4a", label: { en: "Charcoal", ar: "فحمي" } },
+  { id: "green", value: "#4fa884", label: { en: "Green", ar: "أخضر" } },
+  { id: "peach", value: "#f2b6a0", label: { en: "Peach", ar: "خوخي" } },
+  { id: "pink", value: "#f2a8c7", label: { en: "Pink", ar: "وردي" } },
+  { id: "burgundy", value: "#722F37", label: { en: "Burgundy", ar: "عنابي" } },
+  { id: "olive", value: "#556B2F", label: { en: "Olive", ar: "زيتي" } },
+  { id: "cream", value: "#FFFDD0", label: { en: "Cream", ar: "كريمي" }, needsBorder: true },
+  { id: "lavender", value: "#E6E6FA", label: { en: "Lavender", ar: "لافندر" }, needsBorder: true },
+  { id: "beige", value: "#f5f5dc", label: { en: "Beige", ar: "بيج" }, needsBorder: true },
+  { id: "brown", value: "#8b5e3c", label: { en: "Brown", ar: "بني" } },
+  { id: "red", value: "#ef4444", label: { en: "Red", ar: "أحمر" } },
+  { id: "yellow", value: "#facc15", label: { en: "Yellow", ar: "أصفر" } },
+  { id: "orange", value: "#f97316", label: { en: "Orange", ar: "برتقالي" } },
+  { id: "purple", value: "#8b5cf6", label: { en: "Purple", ar: "بنفسجي" } },
+  { id: "teal", value: "#14b8a6", label: { en: "Teal", ar: "تركوازي" } },
+  { id: "cyan", value: "#06b6d4", label: { en: "Cyan", ar: "سماوي" } },
+]
+
+const normalizeColorKey = (value: string) => value.trim().toLowerCase()
+
 export default function EmployeeDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [orders, setOrders] = useState<Order[]>([])
@@ -104,6 +130,7 @@ export default function EmployeeDashboard() {
   const { language, setLanguage } = useLanguage()
   const { toast } = useToast()
   const router = useRouter()
+  const productColorSet = new Set(productForm.colors.map(normalizeColorKey))
 
   // Redirect if not employee - use router for faster navigation
   useEffect(() => {
@@ -1697,41 +1724,42 @@ export default function EmployeeDashboard() {
 
                   <div className="space-y-2">
                     <Label>{language === "ar" ? "الألوان المتاحة" : "Available Colors"}</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {["White", "Black", "Gray", "Navy", "Red", "Blue", "Green", "Yellow", "Pink", "Purple", "Brown", "Beige", "Orange"].map((color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => {
-                            if (productForm.colors.includes(color)) {
-                              setProductForm({ ...productForm, colors: productForm.colors.filter((c) => c !== color) })
-                            } else {
-                              setProductForm({ ...productForm, colors: [...productForm.colors, color] })
-                            }
-                          }}
-                          className={`px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                            productForm.colors.includes(color)
-                              ? "bg-rose-500 text-white border-rose-500 shadow-md"
-                              : "bg-white text-gray-700 border-gray-300 hover:border-rose-300 hover:bg-rose-50"
-                          }`}
-                        >
-                          {language === "ar" ? (
-                            color === "White" ? "أبيض" :
-                            color === "Black" ? "أسود" :
-                            color === "Gray" ? "رمادي" :
-                            color === "Navy" ? "كحلي" :
-                            color === "Red" ? "أحمر" :
-                            color === "Blue" ? "أزرق" :
-                            color === "Green" ? "أخضر" :
-                            color === "Yellow" ? "أصفر" :
-                            color === "Pink" ? "وردي" :
-                            color === "Purple" ? "بنفسجي" :
-                            color === "Brown" ? "بني" :
-                            color === "Beige" ? "بيج" :
-                            color === "Orange" ? "برتقالي" : color
-                          ) : color}
-                        </button>
-                      ))}
+                    <div className="flex flex-wrap gap-3">
+                      {COLOR_OPTIONS.map((option) => {
+                        const isSelected = productColorSet.has(option.id)
+                        const label = language === "ar" ? option.label.ar : option.label.en
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                setProductForm({
+                                  ...productForm,
+                                  colors: productForm.colors.filter((color) => normalizeColorKey(color) !== option.id),
+                                })
+                              } else {
+                                setProductForm({ ...productForm, colors: [...productForm.colors, option.id] })
+                              }
+                            }}
+                            className="flex flex-col items-center gap-1 text-xs"
+                            title={label}
+                            aria-label={label}
+                          >
+                            <span
+                              className={`h-8 w-8 rounded-full border transition-all ${
+                                option.needsBorder ? "border-border" : "border-transparent"
+                              } ${
+                                isSelected
+                                  ? "ring-2 ring-black ring-offset-2 ring-offset-background"
+                                  : "hover:scale-105"
+                              }`}
+                              style={{ backgroundColor: option.value }}
+                            />
+                            <span className={isSelected ? "font-semibold text-foreground" : "text-muted-foreground"}>{label}</span>
+                          </button>
+                        )
+                      })}
                     </div>
                     {productForm.colors.length > 0 && (
                       <p className="text-sm text-muted-foreground">

@@ -7,7 +7,7 @@ import { ImageUploader } from "@/components/ImageUploader"
 import { PositionSelector } from "@/components/PositionSelector"
 import { QuantitySelector } from "@/components/QuantitySelector"
 import { SizeSelector } from "@/components/SizeSelector"
-import { TextEditor } from "@/components/TextEditor"
+import { TextEditor, TextStyleControls } from "@/components/TextEditor"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -132,6 +132,11 @@ const designTemplates: Array<{
   elements: any[]
 }> = []
 
+const SAFE_AREA_INSET = 60
+const MIN_SAFE_AREA_SIZE = 40
+const SAFE_AREA_OFFSET_X = 30
+const SAFE_AREA_OFFSET_Y = 80
+
 const getOptimizedCloudinaryUrl = (url: string, width = 1600) => {
   if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url
   if (url.includes("/upload/f_auto") || url.includes("/upload/q_auto") || url.includes("/upload/w_")) return url
@@ -197,6 +202,7 @@ export default function DesignStudioPage() {
   const router = useRouter()
   const [selectedProduct, setSelectedProduct] = useState<ProductType>("tshirt")
   const [productColor, setProductColor] = useState("#ffffff")
+  const [hasPickedColor, setHasPickedColor] = useState(false)
   const [productSize, setProductSize] = useState("M")
   const [productQuantity, setProductQuantity] = useState(1)
   const [selectedPosition, setSelectedPosition] = useState<"front" | "back" | "chest">("front")
@@ -279,6 +285,21 @@ export default function DesignStudioPage() {
     () => (activeStudioProduct?.colors || []).map((color) => color.trim()).filter(Boolean),
     [activeStudioProduct],
   )
+  const colorOptions = useMemo(() => {
+    const palette = Object.keys(colorNameToHex)
+    if (!availableColors.length) return palette
+    const seen = new Set<string>()
+    const merged: string[] = []
+    const addColor = (color: string) => {
+      const key = color.trim().toLowerCase()
+      if (!key || seen.has(key)) return
+      seen.add(key)
+      merged.push(color)
+    }
+    availableColors.forEach(addColor)
+    palette.forEach(addColor)
+    return merged
+  }, [availableColors])
   const selectedColorKey = resolveColorKey(productColor, availableColors)
   const productColorHex = resolveColorHex(selectedColorKey || productColor)
   const colorMockupUrl = selectedColorKey ? activeStudioProduct?.colorMockups?.[selectedColorKey] : undefined
@@ -295,11 +316,12 @@ export default function DesignStudioPage() {
 
   useEffect(() => {
     if (!availableColors.length) return
+    if (hasPickedColor) return
     const match = resolveColorKey(productColor, availableColors)
     if (!match) {
       setProductColor(resolveColorHex(availableColors[0]))
     }
-  }, [availableColors, productColor])
+  }, [availableColors, productColor, hasPickedColor])
 
   useEffect(() => {
     const desiredSide = selectedPosition === "back" ? "back" : "front"
@@ -319,8 +341,17 @@ export default function DesignStudioPage() {
   }, [currentSide, selectedPosition])
   const getSafeArea = useCallback(() => {
     const sa = (currentStudioProduct || studioProducts[0])?.safeArea
-    if (sa && sa.width && sa.height) return sa
-    return { x: 60, y: 80, width: 280, height: 300 }
+    const base = sa && sa.width && sa.height ? sa : { x: 60, y: 80, width: 280, height: 300 }
+    const width = Math.max(MIN_SAFE_AREA_SIZE, base.height - SAFE_AREA_INSET * 2)
+    const height = Math.max(MIN_SAFE_AREA_SIZE, base.width - SAFE_AREA_INSET * 2)
+    const offsetX = Math.max(0, (base.width - width) / 2)
+    const offsetY = Math.max(0, (base.height - height) / 2)
+    return {
+      x: base.x + offsetX + SAFE_AREA_OFFSET_X,
+      y: base.y + offsetY + SAFE_AREA_OFFSET_Y,
+      width,
+      height,
+    }
   }, [currentStudioProduct, studioProducts])
 
   const clampElementToSafeArea = useCallback((element: DesignElement) => {
@@ -1489,7 +1520,14 @@ export default function DesignStudioPage() {
 
             <PositionSelector selectedPosition={selectedPosition} onPositionChange={setSelectedPosition} />
 
-            <ColorPicker selectedColor={productColor} onColorChange={setProductColor} colors={availableColors} />
+            <ColorPicker
+              selectedColor={productColor}
+              onColorChange={(color) => {
+                setProductColor(color)
+                setHasPickedColor(true)
+              }}
+              colors={colorOptions}
+            />
 
             <ImageUploader
               onImageUpload={handleImageUpload}
@@ -1505,10 +1543,7 @@ export default function DesignStudioPage() {
               onFontSizeChange={handleFontSizeChange}
               textAlign={textAlign}
               onTextAlignChange={handleTextAlignChange}
-              textColor={textColor}
-              onTextColorChange={handleTextColorChange}
               fontFamily={textFontFamily}
-              onFontFamilyChange={handleFontFamilyChange}
             />
           </div>
         </div>
@@ -1832,12 +1867,21 @@ export default function DesignStudioPage() {
                         )
                       })}
                     </div>
-                  </div>
                 </div>
               </div>
+            </div>
 
-              {/* AI Results Modal */}
-              {showAIResults && (
+            <div className="mt-4 w-full max-w-3xl mx-auto">
+              <TextStyleControls
+                fontFamily={textFontFamily}
+                onFontFamilyChange={handleFontFamilyChange}
+                textColor={textColor}
+                onTextColorChange={handleTextColorChange}
+              />
+            </div>
+
+            {/* AI Results Modal */}
+            {showAIResults && (
                 <div className="mt-6 bg-background border border-border rounded-lg p-6 shadow-lg">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold flex items-center gap-2">
