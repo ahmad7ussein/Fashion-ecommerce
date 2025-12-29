@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingBag, Heart, Sparkles } from "lucide-react"
+import { ShoppingBag, Heart } from "lucide-react"
 import { listProducts, type Product } from "@/lib/api/products"
 import { useRegion } from "@/lib/region"
 import { useLanguage } from "@/lib/language"
@@ -17,6 +17,13 @@ import { useToast } from "@/hooks/use-toast"
 import { favoritesApi } from "@/lib/api/favorites"
 import { useCart } from "@/lib/cart"
 import { useRouter } from "next/navigation"
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
 
 export default function CollectionPage() {
   const { formatPrice } = useRegion()
@@ -29,8 +36,20 @@ export default function CollectionPage() {
   const [menProducts, setMenProducts] = useState<Product[]>([])
   const [womenProducts, setWomenProducts] = useState<Product[]>([])
   const [kidsProducts, setKidsProducts] = useState<Product[]>([])
+  const [collectionProducts, setCollectionProducts] = useState<Product[]>([])
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
+
+  const sliderProducts = useMemo(() => {
+    const map = new Map<string, Product>()
+    collectionProducts.forEach((product) => {
+      const id = product._id || product.id?.toString()
+      if (id && !map.has(id)) {
+        map.set(id, product)
+      }
+    })
+    return Array.from(map.values()).slice(0, 8)
+  }, [collectionProducts])
 
   useEffect(() => {
     const loadCollection = async () => {
@@ -45,6 +64,14 @@ export default function CollectionPage() {
         setMenProducts(men.slice(0, 5))
         setWomenProducts(women.slice(0, 5))
         setKidsProducts(kids.slice(0, 5))
+
+        try {
+          const collection = await listProducts({ inCollection: true, active: true, sortBy: "newest", limit: 12 })
+          setCollectionProducts(collection)
+        } catch (collectionError) {
+          console.error("Failed to load collection slider:", collectionError)
+          setCollectionProducts([])
+        }
       } catch (error) {
         console.error("Failed to load collection:", error)
       } finally {
@@ -62,7 +89,7 @@ export default function CollectionPage() {
       return
     }
 
-    const allProducts = [...menProducts, ...womenProducts, ...kidsProducts]
+    const allProducts = [...menProducts, ...womenProducts, ...kidsProducts, ...collectionProducts]
     if (allProducts.length === 0) return
 
     const loadFavorites = async () => {
@@ -95,7 +122,7 @@ export default function CollectionPage() {
     }
 
     loadFavorites()
-  }, [menProducts, womenProducts, kidsProducts, isAuthenticated, user])
+  }, [menProducts, womenProducts, kidsProducts, collectionProducts, isAuthenticated, user])
 
   // Handle favorite toggle
   const handleToggleFavorite = async (product: Product, e: React.MouseEvent) => {
@@ -317,7 +344,6 @@ export default function CollectionPage() {
           className="text-center mb-8 sm:mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-rose-500" />
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900">
               {language === "ar" ? (
                 <>
@@ -331,7 +357,6 @@ export default function CollectionPage() {
                 </>
               )}
             </h1>
-            <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-rose-500" />
           </div>
           <p className="text-gray-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto">
             {language === "ar" 
@@ -339,6 +364,44 @@ export default function CollectionPage() {
               : "Discover our carefully curated collection of premium products"}
           </p>
         </motion.div>
+
+        {/* Collection Hero Slider */}
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-12 sm:mb-16"
+        >
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
+              {language === "ar" ? "أبرز قطع الكولكشن" : "Collection Highlights"}
+            </h2>
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href="/products">
+                {language === "ar" ? "عرض الكل" : "View All"}
+              </Link>
+            </Button>
+          </div>
+
+          {isLoading ? (
+            <ProductGridSkeleton count={4} />
+          ) : sliderProducts.length > 0 ? (
+            <Carousel opts={{ align: "start", loop: true }} className="relative">
+              <CarouselContent className="-ml-3 sm:-ml-4 lg:-ml-6">
+                {sliderProducts.map((product, index) => (
+                  <CarouselItem
+                    key={product._id || product.id || `slider-${index}`}
+                    className="pl-3 sm:pl-4 lg:pl-6 basis-full sm:basis-1/2 lg:basis-1/4"
+                  >
+                    <ProductCard product={product} index={index} />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="left-2 sm:left-4 bg-white/90 hover:bg-white border border-rose-200 shadow" />
+              <CarouselNext className="right-2 sm:right-4 bg-white/90 hover:bg-white border border-rose-200 shadow" />
+            </Carousel>
+          ) : null}
+        </motion.section>
 
         {/* Men's Collection */}
         <motion.section

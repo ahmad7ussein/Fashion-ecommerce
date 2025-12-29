@@ -1,7 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import type { DesignElement, DesignSide, ProductType } from "../types"
 import { getProductImagePath } from "../utils/productImages"
 
@@ -16,88 +14,24 @@ type ProductPreviewProps = {
   mockupUrl?: string
 }
 
-const availableSides: Record<ProductType, DesignSide[]> = {
-  tshirt: ["front", "back", "left-sleeve", "right-sleeve"],
-  hoodie: ["front", "back", "left-sleeve", "right-sleeve", "hood"],
-  sweatshirt: ["front", "back", "left-sleeve", "right-sleeve"],
-  "tank-top": ["front", "back"],
-  "long-sleeve": ["front", "back", "left-sleeve", "right-sleeve"],
-  polo: ["front", "back", "left-sleeve", "right-sleeve"],
-  "crop-top": ["front", "back"],
-  "zip-hoodie": ["front", "back", "left-sleeve", "right-sleeve"],
-}
-
-const sideLabels: Record<DesignSide, string> = {
-  front: "Front",
-  back: "Back",
-  "left-sleeve": "Left Sleeve",
-  "right-sleeve": "Right Sleeve",
-  hood: "Hood",
-  pocket: "Pocket",
-}
-
 export function ProductPreview({
   productType,
   productColor,
   currentSide,
-  onSideChange,
+  onSideChange: _onSideChange,
   designElements,
   zoom = 100,
   safeArea,
   mockupUrl,
 }: ProductPreviewProps) {
-  const sides = availableSides[productType] || ["front"]
-  const currentIndex = sides.indexOf(currentSide)
   const currentImage = mockupUrl || getProductImagePath(productType, currentSide)
 
   const currentSideElements = designElements.filter((el) => (el.side || "front") === currentSide)
 
-  const nextSide = () => {
-    const nextIndex = (currentIndex + 1) % sides.length
-    onSideChange(sides[nextIndex])
-  }
-
-  const prevSide = () => {
-    const prevIndex = (currentIndex - 1 + sides.length) % sides.length
-    onSideChange(sides[prevIndex])
-  }
+  const isWhite = productColor.toLowerCase() === "#ffffff"
 
   return (
     <div className="flex flex-col h-full bg-muted/30">
-      {/* Side Navigation */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-background h-[48px]">
-        <Button variant="ghost" size="icon" onClick={prevSide}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1 text-center">
-          <p className="text-sm font-medium">{sideLabels[currentSide]}</p>
-          <p className="text-xs text-muted-foreground">
-            {currentIndex + 1} / {sides.length}
-          </p>
-        </div>
-        <Button variant="ghost" size="icon" onClick={nextSide}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Side Buttons */}
-      <div className="p-3 border-b border-border bg-background space-y-2 max-h-[200px] overflow-y-auto">
-        <p className="text-xs font-semibold text-muted-foreground mb-2 px-2">Switch View</p>
-        <div className="grid grid-cols-2 gap-2">
-          {sides.map((side) => (
-            <Button
-              key={side}
-              variant={currentSide === side ? "default" : "outline"}
-              size="sm"
-              onClick={() => onSideChange(side)}
-              className="text-xs"
-            >
-              {sideLabels[side]}
-            </Button>
-          ))}
-        </div>
-      </div>
-
       {/* Product Preview */}
       <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
         <div
@@ -111,7 +45,7 @@ export function ProductPreview({
           <div
             className="relative"
             style={{
-              filter: productColor !== "#FFFFFF" ? `hue-rotate(0deg) saturate(1.5) brightness(1.1)` : undefined,
+              filter: !isWhite ? `hue-rotate(0deg) saturate(1.5) brightness(1.1)` : undefined,
             }}
           >
             <img
@@ -119,7 +53,7 @@ export function ProductPreview({
               alt={`${productType} ${currentSide}`}
               className="w-[400px] h-auto object-contain"
               style={{
-                filter: productColor !== "#FFFFFF" ? "brightness(0.9)" : undefined,
+                filter: !isWhite ? "brightness(0.9)" : undefined,
               }}
               onError={(e) => {
                 ;(e.target as HTMLImageElement).src = mockupUrl || "/placeholder-logo.png"

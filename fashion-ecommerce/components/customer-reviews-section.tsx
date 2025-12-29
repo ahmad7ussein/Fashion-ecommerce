@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Star, Quote, Heart, Sparkles } from "lucide-react"
+import { Star, Quote, Heart } from "lucide-react"
 import { reviewsApi, Review } from "@/lib/api/reviews"
 import { useLanguage } from "@/lib/language"
 
@@ -153,8 +153,7 @@ export function CustomerReviewsSection() {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-bold text-gray-900">{userName}</p>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Sparkles className="h-3 w-3 text-rose-500" />
+                          <div className="flex items-center mt-1">
                             <span className="text-xs text-gray-500">
                               {isArabic ? "عميل موثوق" : "Verified Customer"}
                             </span>

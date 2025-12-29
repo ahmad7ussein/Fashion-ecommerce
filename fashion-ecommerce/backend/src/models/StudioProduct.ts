@@ -5,6 +5,7 @@ export interface IStudioProduct extends Document {
   type: 't-shirt' | 'hoodie' | 'blouse' | string;
   description?: string;
   baseMockupUrl: string;
+  colorMockups?: Record<string, string>;
   safeArea?: {
     x: number;
     y: number;
@@ -27,6 +28,7 @@ const studioProductSchema = new Schema<IStudioProduct>(
     type: { type: String, required: true, default: 't-shirt' },
     description: { type: String },
     baseMockupUrl: { type: String, required: true },
+    colorMockups: { type: Map, of: String, default: {} },
     safeArea: {
       x: { type: Number, default: 0 },
       y: { type: Number, default: 0 },

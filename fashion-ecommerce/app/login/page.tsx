@@ -24,7 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Eye, EyeOff, Mail, Lock, User, Loader2, Sparkles } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
 const loginSchema = z.object({
@@ -798,7 +798,6 @@ export default function LoginPage() {
 
                   {/* Submit Button */}
                   <Button type="submit" className="w-full h-11 text-base font-semibold">
-                    <Sparkles className="mr-2 h-4 w-4" />
                     Create Account
                   </Button>
                 </form>

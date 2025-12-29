@@ -7,7 +7,7 @@ import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingBag, Sparkles, Palette, TrendingUp, Camera, Video, ArrowRight, ChevronDown, Star, ChevronLeft, ChevronRight } from "lucide-react"
+import { ShoppingBag, Palette, TrendingUp, Camera, Video, ArrowRight, ChevronDown, Star, ChevronLeft, ChevronRight } from "lucide-react"
 import { Logo } from "@/components/logo"
 import {
   AnimatedFeatureCard,
@@ -344,8 +344,8 @@ export default function HomePage() {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ duration: 0.6, delay: 0.3 }}
                     >
-                      <div className="inline-flex items-center px-6 py-3 bg-white/85 backdrop-blur-md rounded-full border border-white/70 shadow-lg hover:shadow-xl transition-all">
-                        <Logo className="h-12 md:h-16 mix-blend-multiply" />
+                      <div className="inline-flex items-center px-3 py-2 rounded-full">
+                        <Logo className="h-20 md:h-28 mix-blend-multiply dark:mix-blend-normal" />
                       </div>
                     </motion.div>
 
@@ -629,7 +629,7 @@ export default function HomePage() {
                   {[
                     { icon: Video, title: "Instant Preview", desc: "See the item on you instantly before you place the order." },
                     { icon: Camera, title: "Try Multiple Items", desc: "Swap colors and sizes quickly to find the perfect match." },
-                    { icon: Sparkles, title: "Precise AR Tech", desc: "Realistic AI-assisted fitting with accurate detail." },
+                    { icon: TrendingUp, title: "Precise AR Tech", desc: "Realistic AI-assisted fitting with accurate detail." },
                   ].map((feature, index) => (
                     <motion.div
                       key={index}
@@ -730,7 +730,6 @@ export default function HomePage() {
                       </div>
 
                       <div className="flex items-center gap-3 bg-white/75 backdrop-blur border border-white/70 rounded-xl px-4 py-3 shadow">
-                        <Sparkles className="h-4 w-4 text-rose-600" />
                         <div className="flex-1 h-2 bg-rose-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-400 rounded-full"
@@ -954,7 +953,6 @@ export default function HomePage() {
             >
               <div className="max-w-3xl space-y-4">
                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 border border-rose-100 text-sm font-semibold text-rose-600 shadow-sm">
-                  <Sparkles className="h-4 w-4" />
                   Why choose us?
                 </div>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900">
@@ -1162,7 +1160,6 @@ export default function HomePage() {
                 size="lg"
                 className="bg-white text-black hover:bg-gray-100 px-8 sm:px-10 md:px-12 py-6 sm:py-7 md:py-8 text-base sm:text-lg md:text-xl rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl group"
               >
-                <Sparkles className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 group-hover:rotate-12 transition-transform" />
                 Get Started Now
                 <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6 group-hover:translate-x-1 transition-transform" />
               </Button>

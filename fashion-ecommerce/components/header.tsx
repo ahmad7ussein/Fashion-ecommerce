@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ShoppingBag, Menu, X, ChevronDown, User, UserCircle2, Package, Settings, LogOut, Sparkles, Languages, Moon, Sun } from "lucide-react"
+import { ShoppingBag, Menu, X, ChevronDown, User, UserCircle2, Package, Settings, LogOut, Languages, Moon, Sun } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { useCart } from "@/lib/cart"
 import { useAuth } from "@/lib/auth"
@@ -181,7 +181,6 @@ export function Header() {
                 <NavigationMenuItem>
                   <Link href="/new-arrival">
                     <Button variant="ghost" className="text-sm font-semibold group relative overflow-hidden transition-all hover:scale-105">
-                      <Sparkles className="mr-1.5 h-4 w-4 relative z-10 group-hover:animate-pulse" />
                       <span className="relative z-10">{language === "ar" ? "وصل جديد" : "New Arrival"}</span>
                       <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
                     </Button>
@@ -191,7 +190,6 @@ export function Header() {
                 <NavigationMenuItem>
                   <Link href="/collection">
                     <Button variant="ghost" className="text-sm font-semibold group relative overflow-hidden transition-all hover:scale-105">
-                      <Sparkles className="mr-1.5 h-4 w-4 relative z-10 group-hover:rotate-180 transition-transform duration-500" />
                       <span className="relative z-10">{language === "ar" ? "المجموعة" : "Collection"}</span>
                       <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
                     </Button>
@@ -201,7 +199,6 @@ export function Header() {
                 <NavigationMenuItem>
                   <Link href="/studio">
                     <Button variant="ghost" className="text-sm font-semibold group relative overflow-hidden transition-all hover:scale-105">
-                      <Sparkles className="mr-1.5 h-4 w-4 relative z-10 group-hover:animate-spin" />
                       <span className="relative z-10">{t("designStudio")}</span>
                       <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
                     </Button>
@@ -446,7 +443,6 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-2 px-3 py-3 text-sm font-semibold rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 hover:shadow-md"
                     >
-                      <Sparkles className="h-4 w-4" />
                       {language === "ar" ? "وصل جديد" : "New Arrival"}
                     </Link>
                     <Link
@@ -454,7 +450,6 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-2 px-3 py-3 text-sm font-semibold rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 hover:shadow-md"
                     >
-                      <Sparkles className="h-4 w-4" />
                       {language === "ar" ? "المجموعة" : "Collection"}
                     </Link>
                     <Link
@@ -462,7 +457,6 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-2 px-3 py-3 text-sm font-semibold rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105 hover:shadow-md"
                     >
-                      <Sparkles className="h-4 w-4" />
                       {t("designStudio")}
                     </Link>
                   </div>

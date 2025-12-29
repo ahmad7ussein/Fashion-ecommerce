@@ -1,14 +1,13 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Sparkles, Users, Award, Heart, Zap, Shield } from "lucide-react"
+import { Users, Award, Heart, Zap, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 export default function AboutPage() {
   const features = [
     {
-      icon: <Sparkles className="h-8 w-8" />,
       title: "Premium Quality",
       description: "We use only the finest materials to ensure your designs look and feel amazing."
     },
@@ -131,9 +130,11 @@ export default function AboutPage() {
                 transition={{ delay: 0.7 + index * 0.1 }}
                 className="bg-white/90 backdrop-blur-sm border-2 border-rose-100 rounded-2xl p-8 hover:bg-white hover:border-rose-300 hover:shadow-xl transition-all group"
               >
-                <div className="text-rose-500 mb-4 group-hover:scale-110 group-hover:text-rose-600 transition-all">
-                  {feature.icon}
-                </div>
+                {feature.icon && (
+                  <div className="text-rose-500 mb-4 group-hover:scale-110 group-hover:text-rose-600 transition-all">
+                    {feature.icon}
+                  </div>
+                )}
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">
                   {feature.title}
                 </h3>
@@ -177,4 +178,3 @@ export default function AboutPage() {
     </div>
   )
 }
-

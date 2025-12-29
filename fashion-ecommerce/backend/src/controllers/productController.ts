@@ -5,6 +5,21 @@ import { logEmployeeActivity } from './employeeActivityController';
 import mongoose from 'mongoose';
 import { uploadToCloudinary, deleteFromCloudinary } from '../config/cloudinary';
 
+const normalizeImageString = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    const candidate = (value as { url?: unknown; secure_url?: unknown; path?: unknown }).url
+      || (value as { url?: unknown; secure_url?: unknown; path?: unknown }).secure_url
+      || (value as { url?: unknown; secure_url?: unknown; path?: unknown }).path;
+    if (typeof candidate === 'string') {
+      return candidate;
+    }
+  }
+  return null;
+};
+
 // @desc    Get all products with filters
 // @route   GET /api/products
 // @access  Public
@@ -395,11 +410,18 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
         });
       }
     } else if (req.body.image) {
+      const bodyImage = normalizeImageString(req.body.image);
+      if (!bodyImage) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid image format',
+        });
+      }
       // If image is provided as URL (already uploaded or external), use it directly
       // If it's a base64 string (legacy support), upload it
-      if (req.body.image.startsWith('data:image/')) {
+      if (bodyImage.startsWith('data:image/')) {
         try {
-          const imageUrl = await uploadToCloudinary(req.body.image, 'stylecraft/products');
+          const imageUrl = await uploadToCloudinary(bodyImage, 'stylecraft/products');
           productData.image = imageUrl;
         } catch (uploadError: any) {
           return res.status(400).json({
@@ -409,7 +431,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
         }
       } else {
         // Already a URL, use it directly
-        productData.image = req.body.image;
+        productData.image = bodyImage;
       }
     } else {
       return res.status(400).json({
@@ -436,7 +458,11 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
     } else if (req.body.images && Array.isArray(req.body.images)) {
       // Handle images array from request body (for base64 or URLs)
       const processedImages: string[] = [];
-      for (const img of req.body.images) {
+      for (const rawImg of req.body.images) {
+        const img = normalizeImageString(rawImg);
+        if (!img) {
+          continue;
+        }
         if (img.startsWith('data:image/')) {
           // Base64 image, upload it
           try {
@@ -542,15 +568,22 @@ export const updateProduct = async (req: AuthRequest, res: Response) => {
         });
       }
     } else if (req.body.image) {
+      const bodyImage = normalizeImageString(req.body.image);
+      if (!bodyImage) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid image format',
+        });
+      }
       // If image is provided as URL (already uploaded or external), use it directly
       // If it's a base64 string (legacy support), upload it
-      if (req.body.image.startsWith('data:image/')) {
+      if (bodyImage.startsWith('data:image/')) {
         try {
           // Delete old image from Cloudinary if it's a Cloudinary URL
           if (oldProduct.image && oldProduct.image.includes('cloudinary.com')) {
             await deleteFromCloudinary(oldProduct.image);
           }
-          const imageUrl = await uploadToCloudinary(req.body.image, 'stylecraft/products');
+          const imageUrl = await uploadToCloudinary(bodyImage, 'stylecraft/products');
           productData.image = imageUrl;
         } catch (uploadError: any) {
           return res.status(400).json({
@@ -558,12 +591,12 @@ export const updateProduct = async (req: AuthRequest, res: Response) => {
             message: `Failed to upload main image: ${uploadError.message}`,
           });
         }
-      } else if (req.body.image !== oldProduct.image) {
+      } else if (bodyImage !== oldProduct.image) {
         // New URL provided, delete old Cloudinary image if applicable
         if (oldProduct.image && oldProduct.image.includes('cloudinary.com')) {
           await deleteFromCloudinary(oldProduct.image);
         }
-        productData.image = req.body.image;
+        productData.image = bodyImage;
       }
       // If image hasn't changed, don't update it
     }
@@ -597,7 +630,11 @@ export const updateProduct = async (req: AuthRequest, res: Response) => {
       const processedImages: string[] = [];
       const oldCloudinaryImages = (oldProduct.images || []).filter(img => img.includes('cloudinary.com'));
       
-      for (const img of req.body.images) {
+      for (const rawImg of req.body.images) {
+        const img = normalizeImageString(rawImg);
+        if (!img) {
+          continue;
+        }
         if (img.startsWith('data:image/')) {
           // Base64 image, upload it
           try {

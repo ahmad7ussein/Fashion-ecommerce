@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { Logo } from "@/components/logo"
-import { Eye, EyeOff, Mail, Lock, User, Sparkles, Loader2 } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 
 export default function SignupPage() {
@@ -461,7 +461,6 @@ export default function SignupPage() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
                     Create Account
                   </>
                 )}

@@ -9,7 +9,6 @@ import {
   Menu,
   X,
   User,
-  Sparkles,
   Palette,
   Package,
   LogOut,
@@ -29,8 +28,7 @@ import {
   Sun,
   Tag,
   Star,
-  Sparkle,
-  Gift,
+    Gift,
   Phone,
   Mail
 } from "lucide-react"
@@ -64,7 +62,7 @@ const categories = [
     nameAr: "رجال",
     href: "/products?gender=Men",
     subcategories: [
-      { name: "Summer", nameAr: "الصيف", href: "/products?gender=Men&season=Summer", icon: <Sparkles className="h-4 w-4" /> },
+      { name: "Summer", nameAr: "الصيف", href: "/products?gender=Men&season=Summer", icon: null },
       { name: "Winter", nameAr: "الشتاء", href: "/products?gender=Men&season=Winter", icon: <Snowflake className="h-4 w-4" /> },
     ]
   },
@@ -73,7 +71,7 @@ const categories = [
     nameAr: "نساء",
     href: "/products?gender=Women",
     subcategories: [
-      { name: "Summer", nameAr: "الصيف", href: "/products?gender=Women&season=Summer", icon: <Sparkles className="h-4 w-4" /> },
+      { name: "Summer", nameAr: "الصيف", href: "/products?gender=Women&season=Summer", icon: null },
       { name: "Winter", nameAr: "الشتاء", href: "/products?gender=Women&season=Winter", icon: <Snowflake className="h-4 w-4" /> },
     ]
   },
@@ -82,7 +80,7 @@ const categories = [
     nameAr: "أطفال",
     href: "/products?gender=Kids",
     subcategories: [
-      { name: "Summer", nameAr: "الصيف", href: "/products?gender=Kids&season=Summer", icon: <Sparkles className="h-4 w-4" /> },
+      { name: "Summer", nameAr: "الصيف", href: "/products?gender=Kids&season=Summer", icon: null },
       { name: "Winter", nameAr: "الشتاء", href: "/products?gender=Kids&season=Winter", icon: <Snowflake className="h-4 w-4" /> },
     ]
   },
@@ -129,7 +127,7 @@ export function ProfessionalNavbar() {
     { 
       name: language === "ar" ? "جديد" : "New Arrivals", 
       href: "/products?featured=true&sort=newest", 
-      icon: <Sparkle className="h-4 w-4" />,
+      icon: null,
       highlight: true
     },
     { 
@@ -180,7 +178,7 @@ export function ProfessionalNavbar() {
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.2 }}
               >
-                <Logo className="h-18 md:h-24 mix-blend-multiply" />
+                <Logo className="h-18 md:h-24 mix-blend-multiply dark:mix-blend-normal" />
               </motion.div>
             </Link>
 
@@ -290,7 +288,7 @@ export function ProfessionalNavbar() {
                                           language === "ar" ? "flex-row-reverse" : ""
                                         }`}
                                       >
-                                        <span className="text-muted-foreground">{sub.icon}</span>
+                                        {sub.icon && <span className="text-muted-foreground">{sub.icon}</span>}
                                         <span className="font-medium">{language === "ar" ? sub.nameAr : sub.name}</span>
                                       </motion.div>
                                     </Link>
@@ -556,7 +554,6 @@ export function ProfessionalNavbar() {
                           </Link>
                           <Link href="/my-designs">
                             <button className={`w-full flex items-center ${language === "ar" ? "flex-row-reverse" : ""} gap-3 px-3 py-2 text-sm text-foreground hover:text-primary hover:bg-accent rounded-md transition-all`}>
-                              <Sparkles className="h-4 w-4" />
                               {language === "ar" ? "تصاميمي" : "My Designs"}
                             </button>
                           </Link>
@@ -686,7 +683,7 @@ export function ProfessionalNavbar() {
                                 language === "ar" ? "flex-row-reverse" : ""
                               }`}
                             >
-                              <span className={language === "ar" ? "ml-2" : "mr-2"}>{sub.icon}</span>
+                              {sub.icon && <span className={language === "ar" ? "ml-2" : "mr-2"}>{sub.icon}</span>}
                               {language === "ar" ? sub.nameAr : sub.name}
                             </Button>
                           </Link>

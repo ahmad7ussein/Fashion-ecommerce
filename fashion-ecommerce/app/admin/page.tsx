@@ -3,11 +3,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
-  LayoutDashboard,
   Package,
   ShoppingCart,
   Users,
@@ -15,13 +14,10 @@ import {
   Eye,
   Edit,
   Trash2,
-  Settings,
   BarChart3,
   FileText,
   UserCog,
-  Shield,
   Database,
-  Palette as PaletteIcon,
   Bell,
   Download,
   Plus,
@@ -30,14 +26,9 @@ import {
   XCircle,
   TrendingUp,
   TrendingDown,
-  Moon,
-  Sun,
-  Languages,
   X,
   UserPlus,
-  LogOut,
   Menu,
-  ChevronLeft,
   Activity,
   MessageSquare,
   Mail,
@@ -56,7 +47,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Logo } from "@/components/logo"
 import { productsAdminApi } from "@/lib/api/productsAdmin"
 import { studioProductsApi, type StudioProduct } from "@/lib/api/studioProducts"
 import type { Product } from "@/lib/api/products"
@@ -70,6 +60,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/lib/language"
 import { t } from "@/lib/i18n"
+import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import {
   LineChart,
   Line,
@@ -85,9 +76,6 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts"
-
-// Icon alias to avoid runtime reference issues when name changes
-const Palette = PaletteIcon
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8']
 
@@ -172,6 +160,7 @@ export default function AdminDashboard() {
     type: "",
     description: "",
     baseMockupUrl: "",
+    colorMockups: {} as Record<string, string>,
     price: "",
     colors: "",
     sizes: "",
@@ -179,7 +168,6 @@ export default function AdminDashboard() {
     aiEnhanceEnabled: false,
     safeArea: { x: 60, y: 80, width: 280, height: 300 },
   })
-  const [isViewingAsGuest, setIsViewingAsGuest] = useState(false)
   const [showEmployeeModal, setShowEmployeeModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [sidebarHovered, setSidebarHovered] = useState(false)
@@ -214,6 +202,8 @@ export default function AdminDashboard() {
   const { language, setLanguage } = useLanguage()
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab")
 
   // Convert file to base64 string
   const fileToBase64 = (file: File): Promise<string> => {
@@ -392,7 +382,7 @@ export default function AdminDashboard() {
       const preferences = await userPreferencesApi.getPreferences()
       if (preferences) {
         // FIXED: Validate and restore active tab with safe defaults
-        if (preferences.dashboardPreferences?.activeTab) {
+        if (!tabParam && preferences.dashboardPreferences?.activeTab) {
           setActiveTab(preferences.dashboardPreferences.activeTab)
         }
         // FIXED: Validate and restore sidebar state
@@ -640,6 +630,96 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleStudioMockupUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Error",
+        description: "File must be an image",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size must be less than 5MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const base64 = await fileToBase64(file)
+      setStudioForm({ ...studioForm, baseMockupUrl: base64 })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load mockup image",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleStudioColorMockupUpload = async (colorKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Error",
+        description: "File must be an image",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size must be less than 5MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const base64 = await fileToBase64(file)
+      setStudioForm((prev) => ({
+        ...prev,
+        colorMockups: {
+          ...(prev.colorMockups || {}),
+          [colorKey]: base64,
+        },
+      }))
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load mockup image",
+        variant: "destructive",
+      })
+    }
+  }
+
+  useEffect(() => {
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam, activeTab])
+
+  const handleSidebarToggle = () => {
+    const newState = !sidebarOpen
+    setSidebarOpen(newState)
+    setSidebarHovered(false)
+    setSidebarManuallyClosed(!newState)
+    if (sidebarTimeoutRef.current) {
+      clearTimeout(sidebarTimeoutRef.current)
+    }
+  }
+
   const loadProducts = useCallback(async () => {
     try {
       setProductsLoading(true)
@@ -757,6 +837,7 @@ export default function AdminDashboard() {
       type: "",
       description: "",
       baseMockupUrl: "",
+      colorMockups: {},
       price: "",
       colors: "",
       sizes: "",
@@ -791,6 +872,7 @@ export default function AdminDashboard() {
       type: product.type,
       description: product.description || "",
       baseMockupUrl: product.baseMockupUrl || "",
+      colorMockups: product.colorMockups || {},
       price: product.price.toString(),
       colors: (product.colors || []).join(", "),
       sizes: (product.sizes || []).join(", "),
@@ -818,16 +900,28 @@ export default function AdminDashboard() {
 
   const handleSaveStudioProduct = async () => {
     try {
+      const colorList = studioForm.colors.split(",").map((c) => c.trim()).filter(Boolean)
+      const normalizedColorMockups: Record<string, string> = {}
+      Object.entries(studioForm.colorMockups || {}).forEach(([colorKey, url]) => {
+        const normalizedKey = colorKey.trim().toLowerCase()
+        if (!normalizedKey || !url) return
+        if (colorList.length > 0 && !colorList.some((c) => c.trim().toLowerCase() === normalizedKey)) {
+          return
+        }
+        normalizedColorMockups[normalizedKey] = url
+      })
+
       const payload = {
         name: studioForm.name.trim(),
         type: studioForm.type.trim(),
         description: studioForm.description.trim(),
         baseMockupUrl: studioForm.baseMockupUrl.trim(),
         price: Number(studioForm.price) || 0,
-        colors: studioForm.colors.split(",").map((c) => c.trim()).filter(Boolean),
+        colors: colorList,
         sizes: studioForm.sizes.split(",").map((s) => s.trim()).filter(Boolean),
         active: studioForm.active,
         aiEnhanceEnabled: studioForm.aiEnhanceEnabled,
+        colorMockups: normalizedColorMockups,
         safeArea: {
           x: Number(studioForm.safeArea.x) || 0,
           y: Number(studioForm.safeArea.y) || 0,
@@ -1267,284 +1361,13 @@ export default function AdminDashboard() {
         onMouseEnter={handleSidebarMouseEnter}
         onMouseLeave={handleSidebarMouseLeave}
       >
-        {/* Header Section */}
-        <div className="p-4 lg:p-6 border-b border-border/50 flex-shrink-0">
-          <div className="flex items-center justify-between mb-4">
-            <Link href="/" className="block">
-              <Logo />
-            </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden h-8 w-8"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Badge variant="destructive" className="text-xs font-semibold shadow-sm flex items-center">
-                <Shield className="h-3 w-3 mr-1" />
-                ADMIN
-              </Badge>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden lg:flex h-8 w-8"
-              onClick={(e) => {
-                e.stopPropagation()
-                const newState = !sidebarOpen
-                setSidebarOpen(newState)
-                setSidebarHovered(false)
-                setSidebarManuallyClosed(!newState) // Mark as manually closed if closing
-                // Clear any pending timeouts
-                if (sidebarTimeoutRef.current) {
-                  clearTimeout(sidebarTimeoutRef.current)
-                }
-              }}
-              title={sidebarOpen ? (language === "ar" ? "إغلاق القائمة" : "Close Menu") : (language === "ar" ? "فتح القائمة" : "Open Menu")}
-            >
-              <ChevronLeft className={`h-4 w-4 transition-transform duration-300 ${sidebarOpen ? "" : "rotate-180"}`} />
-            </Button>
-          </div>
-          <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
-            <p className="text-sm font-medium text-foreground">{user.firstName} {user.lastName}</p>
-            <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p>
-          </div>
-        </div>
-
-        {/* Navigation Section - Scrollable */}
-        <nav className="px-3 lg:px-4 space-y-1.5 pt-4 pb-4 flex-1 overflow-y-auto">
-          <button
-            onClick={() => {
-              setActiveTab("overview")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 group ${
-              activeTab === "overview" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <LayoutDashboard className={`h-5 w-5 flex-shrink-0 ${activeTab === "overview" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("overview", language)}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("orders")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "orders" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <ShoppingCart className={`h-5 w-5 flex-shrink-0 ${activeTab === "orders" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("orders", language)}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("products")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "products" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <Package className={`h-5 w-5 flex-shrink-0 ${activeTab === "products" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("products", language)}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("studioProducts")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "studioProducts" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <PaletteIcon className={`h-5 w-5 flex-shrink-0 ${activeTab === "studioProducts" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">Studio Products</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("customers")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "customers" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <Users className={`h-5 w-5 flex-shrink-0 ${activeTab === "customers" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("customers", language)}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("reviews")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 relative ${
-              activeTab === "reviews" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <Star className={`h-5 w-5 flex-shrink-0 ${activeTab === "reviews" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{language === "ar" ? "الآراء" : "Reviews"}</span>
-            {reviews.filter(r => r.status === "pending").length > 0 && (
-              <Badge className="ml-auto bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {reviews.filter(r => r.status === "pending").length}
-              </Badge>
-            )}
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("analytics")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "analytics" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <BarChart3 className={`h-5 w-5 flex-shrink-0 ${activeTab === "analytics" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("analytics", language)}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("staff")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "staff" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <UserCog className={`h-5 w-5 flex-shrink-0 ${activeTab === "staff" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("staff", language)}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("tracking")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "tracking" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <Truck className={`h-5 w-5 flex-shrink-0 ${activeTab === "tracking" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{language === "ar" ? "تتبع الطلبات" : "Order Tracking"}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("reports")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "reports" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <FileText className={`h-5 w-5 flex-shrink-0 ${activeTab === "reports" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("reports", language)}</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("settings")
-              if (window.innerWidth < 1024) setSidebarOpen(false)
-            }}
-            className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 ${
-              activeTab === "settings" 
-                ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md shadow-primary/20" 
-                : "hover:bg-muted/50 hover:translate-x-1"
-            }`}
-          >
-            <Settings className={`h-5 w-5 flex-shrink-0 ${activeTab === "settings" ? "scale-110" : ""} transition-transform`} />
-            <span className="font-medium text-sm lg:text-base truncate">{t("settings", language)}</span>
-          </button>
-        </nav>
-
-        {/* Footer Section - Fixed at bottom */}
-        <div className="p-3 lg:p-4 space-y-2.5 border-t border-border/50 bg-background/95 backdrop-blur-sm flex-shrink-0">
-          {/* Theme and Language Toggle */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex-1 hover:bg-primary/10 hover:border-primary/20 transition-all h-9"
-              title={theme === "dark" ? (language === "ar" ? "الوضع الفاتح" : "Light Mode") : (language === "ar" ? "الوضع الداكن" : "Dark Mode")}
-            >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-              className="flex-1 hover:bg-primary/10 hover:border-primary/20 transition-all h-9"
-              title={language === "ar" ? "English" : "العربية"}
-            >
-              <Languages className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Navigation Links */}
-          <div className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full bg-transparent hover:bg-primary/10 hover:border-primary/20 transition-all text-sm h-10 justify-start flex items-center font-medium"
-              onClick={() => {
-                setIsViewingAsGuest(true)
-                window.open("/", "_blank")
-              }}
-            >
-              <Eye className="h-4 w-4 flex-shrink-0 mr-2" />
-              <span className="truncate">{language === "ar" ? "عرض كزائر" : "View as Guest"}</span>
-            </Button>
-
-            <Link href="/" className="block">
-              <Button 
-                variant="outline" 
-                className="w-full bg-transparent hover:bg-primary/10 hover:border-primary/20 transition-all text-sm h-10 justify-start font-medium"
-              >
-                <span className="truncate">{language === "ar" ? "العودة للمتجر" : "Back to Store"}</span>
-              </Button>
-            </Link>
-
-            <Button 
-              variant="outline" 
-              className="w-full bg-transparent hover:bg-destructive/10 hover:border-destructive/20 hover:text-destructive transition-all text-sm h-10 justify-start flex items-center font-medium"
-              onClick={logout}
-            >
-              <LogOut className="h-4 w-4 flex-shrink-0 mr-2" />
-              <span className="truncate">{t("logout", language)}</span>
-            </Button>
-          </div>
-        </div>
+        <AdminSidebar
+          activeTab={activeTab}
+          pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}
+          sidebarOpen={sidebarOpen}
+          onToggleCollapse={handleSidebarToggle}
+          onMobileClose={() => setSidebarOpen(false)}
+        />
       </div>
 
       {/* Main Content */}
@@ -1623,6 +1446,113 @@ export default function AdminDashboard() {
                       <p className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">{stats.overview.totalUsers}</p>
                     </CardContent>
                   </Card>
+                </div>
+
+                {/* New Modules */}
+                <div className="space-y-3">
+                  <h2 className="text-xl font-semibold">
+                    {language === "ar" ? "موديولات جديدة" : "New Modules"}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <Link href="/admin/suppliers" className="block">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {language === "ar" ? "إدارة الموردين" : "Supplier Management"}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === "ar"
+                              ? "إدارة الموردين والموافقة على منتجاتهم."
+                              : "Manage suppliers and approve supplier products."}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </Link>
+                    <Link href="/admin/partners" className="block">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {language === "ar" ? "متاجر الشركاء" : "Partner Stores"}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === "ar"
+                              ? "إضافة متاجر الشركاء والموافقة على منتجاتهم."
+                              : "Add partner stores and approve partner products."}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </Link>
+                    <Link href="/admin/similar-products" className="block">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {language === "ar" ? "المنتجات المشابهة" : "Similar Products Control"}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === "ar"
+                              ? "إعداد ميزة المنتجات المشابهة."
+                              : "Configure the similar products feature."}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </Link>
+                    <Link href="/admin/virtual-experience" className="block">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {language === "ar" ? "التجربة الافتراضية" : "Virtual Experience Control"}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === "ar"
+                              ? "إدارة المنتجات المدعومة وإحصاءات الاستخدام."
+                              : "Manage supported products and usage stats."}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </Link>
+                    <Link href="/admin/custom-design" className="block">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {language === "ar" ? "التصميم المخصص" : "Custom Design Control"}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === "ar"
+                              ? "إدارة الخطوط ومناطق الطباعة والموافقات."
+                              : "Manage fonts, print areas, and approvals."}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </Link>
+                    <Link href="/admin/vendor-approvals" className="block">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {language === "ar" ? "اعتمادات البائعين" : "Vendor Product Approvals"}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === "ar"
+                              ? "قبول أو رفض طلبات البائعين."
+                              : "Approve or reject vendor submissions."}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </Link>
+                    <Link href="/admin/role-assignments" className="block">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">
+                            {language === "ar" ? "إدارة الأدوار" : "Role Assignments"}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === "ar"
+                              ? "تعيين أدوار البائعين والشركاء."
+                              : "Assign vendor and partner roles."}
+                          </CardDescription>
+                        </CardHeader>
+                      </Card>
+                    </Link>
+                  </div>
                 </div>
 
                 {/* Charts Row */}
@@ -2785,20 +2715,140 @@ export default function AdminDashboard() {
                   <div className="space-y-3">
                     <Label>Name</Label>
                     <Input value={studioForm.name} onChange={(e) => setStudioForm({ ...studioForm, name: e.target.value })} placeholder="Hoodie Pro" />
+                    <datalist id="studio-name-list">
+                      <option value="Hoodie Pro" />
+                      <option value="Classic Tee" />
+                      <option value="Essential Blouse" />
+                      <option value="Crew Sweatshirt" />
+                      <option value="Street Hoodie" />
+                    </datalist>
                     <Label>Type</Label>
-                    <Input value={studioForm.type} onChange={(e) => setStudioForm({ ...studioForm, type: e.target.value })} placeholder="hoodie" />
+                    <Input value={studioForm.type} onChange={(e) => setStudioForm({ ...studioForm, type: e.target.value })} placeholder="hoodie" list="studio-type-list" />
+                    <datalist id="studio-type-list">
+                      <option value="t-shirt" />
+                      <option value="hoodie" />
+                      <option value="blouse" />
+                      <option value="sweatshirt" />
+                      <option value="crewneck" />
+                    </datalist>
                     <Label>Description</Label>
                     <Textarea value={studioForm.description} onChange={(e) => setStudioForm({ ...studioForm, description: e.target.value })} placeholder="Premium hoodie..." />
-                    <Label>Mockup URL</Label>
-                    <Input value={studioForm.baseMockupUrl} onChange={(e) => setStudioForm({ ...studioForm, baseMockupUrl: e.target.value })} placeholder="https://..." />
+                    <Label htmlFor="studio-mockup">Mockup Image</Label>
+                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
+                      <Label htmlFor="studio-mockup" className="cursor-pointer">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Upload className="h-6 w-6 text-muted-foreground" />
+                          <p className="text-sm font-medium">Click to upload mockup image</p>
+                          <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
+                        </div>
+                      </Label>
+                      <input
+                        id="studio-mockup"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleStudioMockupUpload}
+                        className="hidden"
+                      />
+                      {studioForm.baseMockupUrl && (
+                        <div className="mt-4 relative w-full max-w-xs mx-auto">
+                          <div className="relative aspect-[4/5] rounded-lg overflow-hidden border-2 border-primary">
+                            <img
+                              src={studioForm.baseMockupUrl}
+                              alt="Mockup preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => setStudioForm({ ...studioForm, baseMockupUrl: "" })}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                     <Label>Price</Label>
                     <Input type="number" value={studioForm.price} onChange={(e) => setStudioForm({ ...studioForm, price: e.target.value })} />
                   </div>
                   <div className="space-y-3">
                     <Label>Colors (comma separated)</Label>
-                    <Input value={studioForm.colors} onChange={(e) => setStudioForm({ ...studioForm, colors: e.target.value })} placeholder="white, black, navy" />
+                    <Input value={studioForm.colors} onChange={(e) => setStudioForm({ ...studioForm, colors: e.target.value })} placeholder="white, black, navy" list="studio-colors-list" />
+                    <datalist id="studio-colors-list">
+                      <option value="white" />
+                      <option value="black" />
+                      <option value="navy" />
+                      <option value="gray" />
+                      <option value="beige" />
+                      <option value="pink" />
+                    </datalist>
+                    {studioForm.colors.trim() && (
+                      <div className="space-y-3">
+                        <Label>Color Mockups</Label>
+                        <div className="space-y-3">
+                          {studioForm.colors
+                            .split(",")
+                            .map((color) => color.trim())
+                            .filter(Boolean)
+                            .map((color) => {
+                              const colorKey = color.toLowerCase()
+                              const previewUrl = studioForm.colorMockups?.[colorKey]
+                              return (
+                                <div key={colorKey} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                                  <span className="text-sm font-medium">{color}</span>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      id={`studio-color-${colorKey}`}
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => handleStudioColorMockupUpload(colorKey, e)}
+                                      className="hidden"
+                                    />
+                                    <Label
+                                      htmlFor={`studio-color-${colorKey}`}
+                                      className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted"
+                                    >
+                                      <Upload className="h-4 w-4" />
+                                      Upload
+                                    </Label>
+                                    {previewUrl && (
+                                      <>
+                                        <div className="relative h-12 w-12 overflow-hidden rounded-md border border-border">
+                                          <img src={previewUrl} alt={`${color} mockup`} className="h-full w-full object-cover" />
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() =>
+                                            setStudioForm((prev) => {
+                                              const nextMockups = { ...(prev.colorMockups || {}) }
+                                              delete nextMockups[colorKey]
+                                              return { ...prev, colorMockups: nextMockups }
+                                            })
+                                          }
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                        </div>
+                      </div>
+                    )}
                     <Label>Sizes (comma separated)</Label>
-                    <Input value={studioForm.sizes} onChange={(e) => setStudioForm({ ...studioForm, sizes: e.target.value })} placeholder="S, M, L" />
+                    <Input value={studioForm.sizes} onChange={(e) => setStudioForm({ ...studioForm, sizes: e.target.value })} placeholder="S, M, L" list="studio-sizes-list" />
+                    <datalist id="studio-sizes-list">
+                      <option value="XS, S, M, L, XL" />
+                      <option value="S, M, L" />
+                      <option value="M, L, XL" />
+                      <option value="One Size" />
+                    </datalist>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label>Safe X</Label>
@@ -4366,3 +4416,5 @@ export default function AdminDashboard() {
     </div>
   )
 }
+
+

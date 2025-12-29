@@ -499,7 +499,7 @@ export default function EmployeeDashboard() {
       <div className="fixed left-0 top-0 h-full w-64 bg-background border-r border-border overflow-y-auto z-50">
         <div className="p-6">
           <Link href="/">
-            <Logo />
+            <Logo className="h-20 w-auto" />
           </Link>
           <div className="flex items-center gap-2 mt-2">
             <Badge variant="secondary" className="text-xs">
@@ -516,7 +516,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("overview")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "overview" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "overview" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <LayoutDashboard className="h-5 w-5" />
@@ -526,7 +526,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("orders")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "orders" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "orders" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <ShoppingCart className="h-5 w-5" />
@@ -541,7 +541,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("progress")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "progress" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "progress" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <Printer className="h-5 w-5" />
@@ -551,7 +551,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("products")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "products" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "products" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <Package className="h-5 w-5" />
@@ -561,7 +561,7 @@ export default function EmployeeDashboard() {
           <button
             onClick={() => setActiveTab("customers")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === "customers" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              activeTab === "customers" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"
             }`}
           >
             <Users className="h-5 w-5" />

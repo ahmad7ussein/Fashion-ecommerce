@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/logo"
-import { Sparkles, ShoppingBag, LogIn, UserPlus, ArrowRight } from "lucide-react"
+import { ShoppingBag, LogIn, UserPlus, ArrowRight } from "lucide-react"
 
 function isMobileDevice(): boolean {
   if (typeof window === "undefined") return false
@@ -297,9 +297,7 @@ export function WelcomeScreen() {
               transition={{ duration: 1, delay: 0.8 }}
               className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-2 text-gray-500 text-sm"
             >
-              <Sparkles className="h-4 w-4" />
               <span>Start Your Fashion Journey</span>
-              <Sparkles className="h-4 w-4" />
             </motion.div>
           </div>
         </motion.div>

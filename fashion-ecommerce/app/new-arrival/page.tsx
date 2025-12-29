@@ -7,7 +7,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, ShoppingBag, Heart } from "lucide-react"
+import { ShoppingBag, Heart } from "lucide-react"
 import { listProducts, type Product } from "@/lib/api/products"
 import { useRegion } from "@/lib/region"
 import { useLanguage } from "@/lib/language"
@@ -217,7 +217,6 @@ export default function NewArrivalPage() {
           className="text-center mb-8 sm:mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-rose-500 animate-pulse" />
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900">
               {language === "ar" ? (
                 <>
@@ -231,7 +230,6 @@ export default function NewArrivalPage() {
                 </>
               )}
             </h1>
-            <Sparkles className="h-8 w-8 sm:h-10 sm:w-10 text-rose-500 animate-pulse" />
           </div>
           <p className="text-gray-600 text-base sm:text-lg md:text-xl max-w-2xl mx-auto">
             {language === "ar" 
@@ -249,7 +247,6 @@ export default function NewArrivalPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center py-20"
           >
-            <Sparkles className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h3 className="text-xl font-semibold mb-2 text-gray-900">
               {language === "ar" ? "لا توجد منتجات جديدة حالياً" : "No new arrivals at the moment"}
             </h3>

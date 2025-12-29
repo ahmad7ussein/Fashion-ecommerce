@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { motion, useScroll, useTransform, type Variants } from "framer-motion"
+import { AnimatePresence, motion, useScroll, useTransform, type Variants } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingBag, Heart, Sparkles, Star, ArrowRight, Zap } from "lucide-react"
+import { ShoppingBag, Heart, Star, ArrowRight, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 import { listProducts, type Product } from "@/lib/api/products"
 import { useRegion } from "@/lib/region"
 import { useLanguage } from "@/lib/language"
@@ -29,9 +29,27 @@ export default function CollectionsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
   const { scrollYProgress } = useScroll()
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0])
   const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95])
+  const sliderProducts = useMemo(() => products.slice(0, 12), [products])
+  const heroSlides = useMemo(() => sliderProducts.slice(0, 5), [sliderProducts])
+
+  useEffect(() => {
+    if (heroSlides.length <= 1 || isPaused) return
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
+    }, 6000)
+    return () => clearInterval(interval)
+  }, [heroSlides.length, isPaused])
+
+  useEffect(() => {
+    if (currentSlide >= heroSlides.length) {
+      setCurrentSlide(0)
+    }
+  }, [currentSlide, heroSlides.length])
 
   useEffect(() => {
     const loadCollection = async () => {
@@ -284,45 +302,188 @@ export default function CollectionsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
-      {/* Hero Section with Parallax */}
-      <motion.div
-        style={{ opacity, scale }}
-        className="relative overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-rose-600 text-white py-16 sm:py-24 md:py-32"
-      >
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-        <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center max-w-4xl mx-auto"
+      {/* Hero Slider */}
+      <section className="relative overflow-hidden min-h-screen flex items-center">
+        <div
+          className="relative w-full h-screen"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setIsPaused(false)}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {heroSlides.length > 0 && (
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute inset-0 flex items-center overflow-hidden"
+                style={{ background: "linear-gradient(135deg, #fdeef4 0%, #fff6fb 45%, #fde0ea 100%)" }}
+              >
+                {/* Blurred Background Image */}
+                <div className="absolute inset-0 opacity-[0.45]">
+                  <div
+                    className="absolute inset-0 bg-center bg-no-repeat"
+                    style={{
+                      backgroundImage: `url(${heroSlides[currentSlide].image})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      filter: "blur(18px) brightness(1.05)",
+                      transform: "scale(1.1)",
+                    }}
+                  />
+                </div>
+
+                {/* Soft Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/50 to-white/80" />
+
+                {/* Content */}
+                <div className="relative z-20 mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-10 lg:px-12">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+                    <motion.div
+                      key={`content-${currentSlide}`}
+                      initial={{ opacity: 0, x: -50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 50 }}
+                      transition={{ duration: 0.8, delay: 0.2 }}
+                      className="text-center lg:text-left space-y-6"
+                    >
+                      <div className="flex items-center justify-center lg:justify-start gap-3">
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900">
+                          {language === "ar" ? "المجموعات المميزة" : "Featured Collections"}
+                        </h1>
+                        <Star className="h-10 w-10 sm:h-12 sm:w-12 text-rose-500 animate-pulse" />
+                      </div>
+                      <p className="text-lg sm:text-xl md:text-2xl text-rose-600/80 max-w-2xl mx-auto lg:mx-0">
+                        {language === "ar"
+                          ? "اكتشف مجموعتنا المختارة بعناية من أفضل المنتجات المميزة"
+                          : "Discover our carefully curated selection of premium featured products"}
+                      </p>
+                      <div className="space-y-3">
+                        <p className="text-sm uppercase tracking-[0.2em] text-rose-500">
+                          {heroSlides[currentSlide].category}
+                        </p>
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900">
+                          {heroSlides[currentSlide].name}
+                        </h2>
+                        <p className="text-xl sm:text-2xl font-semibold text-rose-600">
+                          {formatPrice(heroSlides[currentSlide].price)}
+                        </p>
+                      </div>
+                      <div className="flex justify-center lg:justify-start pt-2">
+                        <Link href={`/products/${heroSlides[currentSlide]._id || heroSlides[currentSlide].id}`}>
+                          <Button className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white hover:from-rose-600 hover:via-pink-600 hover:to-rose-700 px-8 py-6 text-lg rounded-full font-bold transition-all duration-300 hover:scale-110 hover:shadow-2xl">
+                            {language === "ar" ? "عرض المنتج" : "View Product"}
+                          </Button>
+                        </Link>
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      key={`image-${currentSlide}`}
+                      initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                      animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, rotate: 5 }}
+                      transition={{ duration: 0.8, delay: 0.3 }}
+                      className="relative h-[420px] sm:h-[520px] lg:h-[650px] flex items-center justify-center"
+                    >
+                      <div className="absolute inset-0">
+                        <div className="absolute inset-0 bg-gradient-to-br from-rose-300/30 to-pink-300/30 rounded-[3rem] blur-3xl transform rotate-6" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-pink-200/20 to-rose-200/20 rounded-[3rem] blur-2xl transform -rotate-6" />
+                      </div>
+                      <div className="relative w-full h-full max-w-lg mx-auto">
+                        <motion.div
+                          animate={{ y: [0, -10, 0] }}
+                          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                          className="relative bg-white/90 backdrop-blur-md rounded-[2.5rem] p-10 shadow-2xl border-2 border-white/80 overflow-hidden"
+                        >
+                          <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-rose-200/30 to-pink-200/30 rounded-full blur-2xl" />
+                          <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200/30 to-rose-200/30 rounded-full blur-xl" />
+                          <div className="relative w-full h-full min-h-[320px] sm:min-h-[420px] lg:min-h-[520px]">
+                            <Image
+                              src={heroSlides[currentSlide].image || "/placeholder-logo.png"}
+                              alt={heroSlides[currentSlide].name}
+                              fill
+                              className="object-contain rounded-2xl"
+                              priority={currentSlide === 0}
+                              sizes="(max-width: 768px) 100vw, 50vw"
+                            />
+                          </div>
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Navigation */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)
+            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group"
+            aria-label="Previous slide"
+            disabled={heroSlides.length === 0}
           >
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <Sparkles className="h-10 w-10 sm:h-12 sm:w-12 animate-pulse" />
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold">
-                {language === "ar" ? "المجموعات المميزة" : "Featured Collections"}
-              </h1>
-              <Star className="h-10 w-10 sm:h-12 sm:w-12 animate-pulse" />
-            </div>
-            <p className="text-lg sm:text-xl md:text-2xl text-rose-100 mb-8 max-w-2xl mx-auto">
-              {language === "ar"
-                ? "اكتشف مجموعتنا المختارة بعناية من أفضل المنتجات المميزة"
-                : "Discover our carefully curated selection of premium featured products"}
-            </p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="flex items-center justify-center gap-2"
-            >
-              <Zap className="h-5 w-5" />
-              <span className="text-sm sm:text-base">
-                {products.length} {language === "ar" ? "منتج مميز" : "Featured Products"}
+            <ChevronLeft className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group"
+            aria-label="Next slide"
+            disabled={heroSlides.length === 0}
+          >
+            <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors" />
+          </button>
+
+          {/* Dots */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex gap-2 items-center">
+            {heroSlides.map((_, index) => (
+              <button
+                key={`hero-dot-${index}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setCurrentSlide(index)
+                }}
+                className={`rounded-full transition-all duration-300 ${
+                  currentSlide === index
+                    ? "bg-rose-500 w-8 h-2"
+                    : "bg-gray-300 hover:bg-gray-400 w-2 h-2"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+
+          {/* Scroll Indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1.5 }}
+            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30"
+          >
+            <div className="flex flex-col items-center gap-2 text-gray-600">
+              <span className="text-xs uppercase tracking-wider font-medium">
+                {language === "ar" ? "مرر للاكتشاف" : "Scroll to explore"}
               </span>
-            </motion.div>
+              <motion.div
+                animate={{ y: [0, 10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <ChevronDown className="h-6 w-6 text-rose-500" />
+              </motion.div>
+            </div>
           </motion.div>
         </div>
-      </motion.div>
+      </section>
 
       {/* Products Grid - Masonry Style */}
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-12 sm:py-16 md:py-20">

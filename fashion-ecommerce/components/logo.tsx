@@ -9,12 +9,12 @@ import React, { useState } from "react"
 type LogoProps = { className?: string; alt?: string }
 
 function useLogoSource(initialHeight: number) {
-  const [src, setSrc] = useState<string>("/logo.svg")
+  const [src, setSrc] = useState<string>("/logo.png")
 
   const handleError = () => {
     setSrc((prev) => {
-      if (prev === "/logo.svg") return "/logo.png"
-      if (prev === "/logo.png") return "/logo.jpg"
+      if (prev === "/logo.png") return "/logo.svg"
+      if (prev === "/logo.svg") return "/logo.jpg"
       if (prev === "/logo.jpg") return "/logo.jpeg"
       return "/placeholder-logo.png"
     })
@@ -31,7 +31,7 @@ export function Logo({ className = "", alt = "FashionHub logo" }: LogoProps) {
       src={src}
       alt={alt}
       height={40}
-      className={`h-10 w-auto ${className}`}
+      className={`h-10 w-auto dark:brightness-110 dark:contrast-125 dark:drop-shadow-[0_2px_8px_rgba(255,255,255,0.35)] ${className}`}
       decoding="async"
       onError={handleError}
     />
@@ -45,7 +45,7 @@ export function LogoCompact({ className = "", alt = "FashionHub logo" }: LogoPro
       src={src}
       alt={alt}
       height={32}
-      className={`h-8 w-auto ${className}`}
+      className={`h-8 w-auto dark:brightness-110 dark:contrast-125 dark:drop-shadow-[0_2px_8px_rgba(255,255,255,0.35)] ${className}`}
       decoding="async"
       onError={handleError}
     />

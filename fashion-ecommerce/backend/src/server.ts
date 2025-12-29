@@ -25,6 +25,15 @@ import contactRoutes from './routes/contactRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import favoriteRoutes from './routes/favoriteRoutes';
 import studioProductRoutes from './routes/studioProductRoutes';
+import supplierRoutes from './routes/supplierRoutes';
+import supplierProductRoutes from './routes/supplierProductRoutes';
+import partnerStoreRoutes from './routes/partnerStoreRoutes';
+import partnerProductRoutes from './routes/partnerProductRoutes';
+import partnerPanelRoutes from './routes/partnerPanelRoutes';
+import featureControlRoutes from './routes/featureControlRoutes';
+import customDesignRoutes from './routes/customDesignRoutes';
+import vendorRoutes from './routes/vendorRoutes';
+import roleAssignmentRoutes from './routes/roleAssignmentRoutes';
 
 const app: Application = express();
 
@@ -194,6 +203,15 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/favorites', favoriteRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/supplier-products', supplierProductRoutes);
+app.use('/api/partner-stores', partnerStoreRoutes);
+app.use('/api/partner-products', partnerProductRoutes);
+app.use('/api/partner', partnerPanelRoutes);
+app.use('/api/feature-controls', featureControlRoutes);
+app.use('/api/custom-design-requests', customDesignRoutes);
+app.use('/api/vendor', vendorRoutes);
+app.use('/api/role-assignments', roleAssignmentRoutes);
 
 // 404 handler
 app.use((req, res) => {

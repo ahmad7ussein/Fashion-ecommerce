@@ -27,6 +27,7 @@ export type Product = {
   active?: boolean
   onSale?: boolean
   salePercentage?: number
+  inCollection?: boolean
 }
 
 // Fallback catalog for offline mode (will be replaced by MongoDB)
@@ -244,5 +245,4 @@ export async function listGenders(): Promise<string[]> {
     return Array.from(new Set(CATALOG.map((p) => p.gender)))
   }
 }
-
 

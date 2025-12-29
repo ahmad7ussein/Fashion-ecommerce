@@ -6,6 +6,7 @@ export type StudioProduct = {
   type: string
   description?: string
   baseMockupUrl: string
+  colorMockups?: Record<string, string>
   safeArea?: {
     x: number
     y: number

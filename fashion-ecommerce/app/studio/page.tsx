@@ -1,15 +1,19 @@
-"use client"
-
-import type React from "react"
+﻿"use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import "./studio.css"
+import { ColorPicker } from "@/components/ColorPicker"
+import { ImageUploader } from "@/components/ImageUploader"
+import { PositionSelector } from "@/components/PositionSelector"
+import { QuantitySelector } from "@/components/QuantitySelector"
+import { SizeSelector } from "@/components/SizeSelector"
+import { TextEditor } from "@/components/TextEditor"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
   ShoppingBag,
@@ -58,7 +62,6 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useCart } from "@/lib/cart"
-import { ProductPreview } from "./components/ProductPreview"
 import { getProductImagePath } from "./utils/productImages"
 import { designsApi, type Design } from "@/lib/api/designs"
 import { studioProductsApi, type StudioProduct } from "@/lib/api/studioProducts"
@@ -129,6 +132,59 @@ const designTemplates: Array<{
   elements: any[]
 }> = []
 
+const getOptimizedCloudinaryUrl = (url: string, width = 1600) => {
+  if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url
+  if (url.includes("/upload/f_auto") || url.includes("/upload/q_auto") || url.includes("/upload/w_")) return url
+  const [prefix, rest] = url.split("/upload/")
+  return `${prefix}/upload/f_auto,q_auto,dpr_auto,w_${width}/${rest}`
+}
+
+const colorNameToHex: Record<string, string> = {
+  white: "#ffffff",
+  black: "#111111",
+  navy: "#1f2a44",
+  gray: "#b6b6b6",
+  blue: "#5aa7e0",
+  charcoal: "#4a4a4a",
+  green: "#4fa884",
+  peach: "#f2b6a0",
+  pink: "#f2a8c7",
+  burgundy: "#722F37",
+  olive: "#556B2F",
+  cream: "#FFFDD0",
+  lavender: "#E6E6FA",
+  beige: "#f5f5dc",
+  brown: "#8b5e3c",
+  red: "#ef4444",
+  yellow: "#facc15",
+  orange: "#f97316",
+  purple: "#8b5cf6",
+  teal: "#14b8a6",
+  cyan: "#06b6d4",
+}
+
+const isColorValue = (value: string) =>
+  value.startsWith("#") || value.startsWith("rgb") || value.startsWith("hsl")
+
+const resolveColorHex = (color: string) => {
+  const normalized = color.trim().toLowerCase()
+  if (!normalized) return "#ffffff"
+  if (isColorValue(normalized)) return color
+  return colorNameToHex[normalized] || color
+}
+
+const resolveColorKey = (selectedColor: string, availableColors: string[]) => {
+  if (!availableColors.length) return ""
+  const normalizedSelected = selectedColor.trim().toLowerCase()
+  if (normalizedSelected && !isColorValue(normalizedSelected)) {
+    const direct = availableColors.find((c) => c.trim().toLowerCase() === normalizedSelected)
+    if (direct) return direct.trim().toLowerCase()
+  }
+  const selectedHex = resolveColorHex(selectedColor).toLowerCase()
+  const match = availableColors.find((c) => resolveColorHex(c).toLowerCase() === selectedHex)
+  return match ? match.trim().toLowerCase() : ""
+}
+
 type AIVariation = {
   id: string
   imageUrl: string
@@ -140,8 +196,18 @@ export default function DesignStudioPage() {
   const { user, isAuthenticated } = useAuth()
   const router = useRouter()
   const [selectedProduct, setSelectedProduct] = useState<ProductType>("tshirt")
-  const [productColor, setProductColor] = useState("#FFFFFF")
+  const [productColor, setProductColor] = useState("#ffffff")
   const [productSize, setProductSize] = useState("M")
+  const [productQuantity, setProductQuantity] = useState(1)
+  const [selectedPosition, setSelectedPosition] = useState<"front" | "back" | "chest">("front")
+  const [textValue, setTextValue] = useState("")
+  const [textFontSize, setTextFontSize] = useState(32)
+  const [textAlign, setTextAlign] = useState<"right" | "center" | "left">("center")
+  const [textColor, setTextColor] = useState("#000000")
+  const [textFontFamily, setTextFontFamily] = useState("Tajawal")
+  const [activeTextId, setActiveTextId] = useState<string | null>(null)
+  const [imageSize, setImageSize] = useState(120)
+  const [activeImageId, setActiveImageId] = useState<string | null>(null)
   const [currentSide, setCurrentSide] = useState<DesignSide>("front")
   const [designElements, setDesignElements] = useState<DesignElement[]>([])
   const [selectedElement, setSelectedElement] = useState<string | null>(null)
@@ -151,12 +217,11 @@ export default function DesignStudioPage() {
   const [aiVariations, setAiVariations] = useState<AIVariation[]>([])
   const [showAIResults, setShowAIResults] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
+  const activeTab = "all"
   const { toast } = useToast()
   const [zoom, setZoom] = useState(100)
   const [showGrid, setShowGrid] = useState(false)
   const [snapToGrid, setSnapToGrid] = useState(false)
-  const [leftSidebarTab, setLeftSidebarTab] = useState("product")
   const [canvasBackground, setCanvasBackground] = useState<string | null>(null)
   const { addItem } = useCart()
   const [isSaving, setIsSaving] = useState(false)
@@ -210,7 +275,15 @@ export default function DesignStudioPage() {
   const currentProduct = resolvedProductTemplates[selectedProduct]
   const activeStudioProduct = currentStudioProduct || studioProducts[0]
   const activeProduct = activeStudioProduct ? resolvedProductTemplates[activeStudioProduct.type] : undefined
-
+  const availableColors = useMemo(
+    () => (activeStudioProduct?.colors || []).map((color) => color.trim()).filter(Boolean),
+    [activeStudioProduct],
+  )
+  const selectedColorKey = resolveColorKey(productColor, availableColors)
+  const productColorHex = resolveColorHex(selectedColorKey || productColor)
+  const colorMockupUrl = selectedColorKey ? activeStudioProduct?.colorMockups?.[selectedColorKey] : undefined
+  const rawMockupUrl = colorMockupUrl || activeStudioProduct?.baseMockupUrl || activeProduct?.image || "/placeholder-logo.png"
+  const mockupUrl = getOptimizedCloudinaryUrl(rawMockupUrl)
   // Ensure selected product is always a real StudioProduct (no local defaults)
   useEffect(() => {
     if (studioProducts.length === 0) return
@@ -219,6 +292,31 @@ export default function DesignStudioPage() {
       setSelectedProduct(studioProducts[0].type as ProductType)
     }
   }, [studioProducts, selectedProduct])
+
+  useEffect(() => {
+    if (!availableColors.length) return
+    const match = resolveColorKey(productColor, availableColors)
+    if (!match) {
+      setProductColor(resolveColorHex(availableColors[0]))
+    }
+  }, [availableColors, productColor])
+
+  useEffect(() => {
+    const desiredSide = selectedPosition === "back" ? "back" : "front"
+    if (currentSide !== desiredSide) {
+      setCurrentSide(desiredSide)
+    }
+  }, [currentSide, selectedPosition])
+
+  useEffect(() => {
+    if (currentSide === "back" && selectedPosition !== "back") {
+      setSelectedPosition("back")
+      return
+    }
+    if (currentSide !== "back" && selectedPosition === "back") {
+      setSelectedPosition("front")
+    }
+  }, [currentSide, selectedPosition])
   const getSafeArea = useCallback(() => {
     const sa = (currentStudioProduct || studioProducts[0])?.safeArea
     if (sa && sa.width && sa.height) return sa
@@ -295,7 +393,7 @@ export default function DesignStudioPage() {
               name,
               baseProduct: {
                 type: selectedProduct,
-                color: productColor,
+                color: selectedColorKey || productColor,
                 size: productSize,
               },
               elements: designElements.map(el => ({
@@ -376,8 +474,8 @@ export default function DesignStudioPage() {
   const generateAIVariations = async () => {
     if (designElements.length === 0) {
       toast({
-        title: "لا يوجد تصميم لتحسينه",
-        description: "الرجاء إضافة عناصر للتصميم أولاً",
+        title: "┘ä╪º ┘è┘ê╪¼╪» ╪¬╪╡┘à┘è┘à ┘ä╪¬╪¡╪│┘è┘å┘ç",
+        description: "╪º┘ä╪▒╪¼╪º╪í ╪Ñ╪╢╪º┘ü╪⌐ ╪╣┘å╪º╪╡╪▒ ┘ä┘ä╪¬╪╡┘à┘è┘à ╪ú┘ê┘ä╪º┘ï",
         variant: "destructive",
       })
       return
@@ -391,8 +489,8 @@ export default function DesignStudioPage() {
     const textContent = designElements.filter((el) => el.type === "text").map((el) => el.content).join(" ")
 
     toast({
-      title: "🎨 جاري تحسين التصميم...",
-      description: "الذكاء الاصطناعي يقوم بإنشاء تنسيقات أفضل لتصميمك",
+      title: "≡ƒÄ¿ ╪¼╪º╪▒┘è ╪¬╪¡╪│┘è┘å ╪º┘ä╪¬╪╡┘à┘è┘à...",
+      description: "╪º┘ä╪░┘â╪º╪í ╪º┘ä╪º╪╡╪╖┘å╪º╪╣┘è ┘è┘é┘ê┘à ╪¿╪Ñ┘å╪┤╪º╪í ╪¬┘å╪│┘è┘é╪º╪¬ ╪ú┘ü╪╢┘ä ┘ä╪¬╪╡┘à┘è┘à┘â",
     })
 
     setTimeout(() => {
@@ -403,25 +501,25 @@ export default function DesignStudioPage() {
           {
             id: "1",
             imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-            prompt: "تنسيق عصري متوازن - نفس المحتوى بتصميم أنيق",
+            prompt: "╪¬┘å╪│┘è┘é ╪╣╪╡╪▒┘è ┘à╪¬┘ê╪º╪▓┘å - ┘å┘ü╪│ ╪º┘ä┘à╪¡╪¬┘ê┘ë ╪¿╪¬╪╡┘à┘è┘à ╪ú┘å┘è┘é",
             selected: false,
           },
           {
             id: "2",
             imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-            prompt: "تنسيق فني ملون - نفس العناصر بألوان متناسقة",
+            prompt: "╪¬┘å╪│┘è┘é ┘ü┘å┘è ┘à┘ä┘ê┘å - ┘å┘ü╪│ ╪º┘ä╪╣┘å╪º╪╡╪▒ ╪¿╪ú┘ä┘ê╪º┘å ┘à╪¬┘å╪º╪│┘é╪⌐",
             selected: false,
           },
           {
             id: "3",
             imageUrl: "/bold-typography-design-on-white-tshirt.jpg",
-            prompt: "تنسيق جريء - نفس النص بخط أقوى وأوضح",
+            prompt: "╪¬┘å╪│┘è┘é ╪¼╪▒┘è╪í - ┘å┘ü╪│ ╪º┘ä┘å╪╡ ╪¿╪«╪╖ ╪ú┘é┘ê┘ë ┘ê╪ú┘ê╪╢╪¡",
             selected: false,
           },
           {
             id: "4",
             imageUrl: "/abstract-geometric-design-on-white-tshirt.jpg",
-            prompt: "تنسيق هندسي - نفس التصميم بترتيب احترافي",
+            prompt: "╪¬┘å╪│┘è┘é ┘ç┘å╪»╪│┘è - ┘å┘ü╪│ ╪º┘ä╪¬╪╡┘à┘è┘à ╪¿╪¬╪▒╪¬┘è╪¿ ╪º╪¡╪¬╪▒╪º┘ü┘è",
             selected: false,
           }
         )
@@ -430,19 +528,19 @@ export default function DesignStudioPage() {
           {
             id: "1",
             imageUrl: "/bold-typography-design-on-white-tshirt.jpg",
-            prompt: `"${textContent}" - خط عريض احترافي`,
+            prompt: `"${textContent}" - ╪«╪╖ ╪╣╪▒┘è╪╢ ╪º╪¡╪¬╪▒╪º┘ü┘è`,
             selected: false,
           },
           {
             id: "2",
             imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-            prompt: `"${textContent}" - تنسيق عصري أنيق`,
+            prompt: `"${textContent}" - ╪¬┘å╪│┘è┘é ╪╣╪╡╪▒┘è ╪ú┘å┘è┘é`,
             selected: false,
           },
           {
             id: "3",
             imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-            prompt: `"${textContent}" - ألوان متدرجة جميلة`,
+            prompt: `"${textContent}" - ╪ú┘ä┘ê╪º┘å ┘à╪¬╪»╪▒╪¼╪⌐ ╪¼┘à┘è┘ä╪⌐`,
             selected: false,
           }
         )
@@ -451,13 +549,13 @@ export default function DesignStudioPage() {
           {
             id: "1",
             imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-            prompt: "نفس الصورة - موضعة احترافية",
+            prompt: "┘å┘ü╪│ ╪º┘ä╪╡┘ê╪▒╪⌐ - ┘à┘ê╪╢╪╣╪⌐ ╪º╪¡╪¬╪▒╪º┘ü┘è╪⌐",
             selected: false,
           },
           {
             id: "2",
             imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-            prompt: "نفس الصورة - تأثيرات فنية",
+            prompt: "┘å┘ü╪│ ╪º┘ä╪╡┘ê╪▒╪⌐ - ╪¬╪ú╪½┘è╪▒╪º╪¬ ┘ü┘å┘è╪⌐",
             selected: false,
           }
         )
@@ -466,8 +564,8 @@ export default function DesignStudioPage() {
       setAiVariations(variations)
       setIsGeneratingAI(false)
       toast({
-        title: "✨ تم إنشاء التصاميم المحسّنة!",
-        description: `${variations.length} تنسيق احترافي لنفس تصميمك - اختر المفضل لديك`,
+        title: "Γ£¿ ╪¬┘à ╪Ñ┘å╪┤╪º╪í ╪º┘ä╪¬╪╡╪º┘à┘è┘à ╪º┘ä┘à╪¡╪│┘æ┘å╪⌐!",
+        description: `${variations.length} ╪¬┘å╪│┘è┘é ╪º╪¡╪¬╪▒╪º┘ü┘è ┘ä┘å┘ü╪│ ╪¬╪╡┘à┘è┘à┘â - ╪º╪«╪¬╪▒ ╪º┘ä┘à┘ü╪╢┘ä ┘ä╪»┘è┘â`,
       })
     }, 3000)
   }
@@ -517,7 +615,7 @@ export default function DesignStudioPage() {
         price: product.price,
         quantity: 1,
         size: productSize,
-        color: productColor,
+        color: selectedColorKey || productColor,
         image: selected.imageUrl,
         isCustom: true,
       })
@@ -549,23 +647,23 @@ export default function DesignStudioPage() {
     }
   }
 
-  const addTextElement = () => {
+  const addTextElement = (content?: string) => {
     const safe = getSafeArea()
     const defaultWidth = 180
     const defaultHeight = 60
     const newElement: DesignElement = {
       id: Date.now().toString(),
       type: "text",
-      content: "Your Text Here",
+      content: content?.trim() ? content : "Your Text Here",
       x: safe.x + safe.width / 2 - defaultWidth / 2,
       y: safe.y + safe.height / 2 - defaultHeight / 2,
-      fontSize: 32,
-      color: "#000000",
-      fontFamily: "Arial",
+      fontSize: textFontSize,
+      color: textColor,
+      fontFamily: textFontFamily,
       fontWeight: "normal",
       fontStyle: "normal",
       textDecoration: "none",
-      textAlign: "left",
+      textAlign,
       rotation: 0,
       opacity: 1,
       layer: designElements.length,
@@ -579,6 +677,8 @@ export default function DesignStudioPage() {
     setDesignElements(newElements)
     saveToHistory(newElements)
     setSelectedElement(newElement.id)
+    setActiveTextId(newElement.id)
+    return newElement.id
   }
 
   const addImageElement = (imageUrl: string) => {
@@ -604,26 +704,25 @@ export default function DesignStudioPage() {
     setDesignElements(newElements)
     saveToHistory(newElements)
     setSelectedElement(newElement.id)
+    setActiveImageId(newElement.id)
+    return newElement.id
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please upload an image smaller than 10MB",
-          variant: "destructive",
-        })
-        return
-      }
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const imageUrl = event.target?.result as string
-        addImageElement(imageUrl)
-      }
-      reader.readAsDataURL(file)
+  const handleImageUpload = (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 10MB",
+        variant: "destructive",
+      })
+      return
     }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const imageUrl = event.target?.result as string
+      addImageElement(imageUrl)
+    }
+    reader.readAsDataURL(file)
   }
 
   function updateElement(id: string, updates: Partial<DesignElement>) {
@@ -639,6 +738,67 @@ export default function DesignStudioPage() {
     })
     setDesignElements(newElements)
     saveToHistory(newElements)
+  }
+
+  const getActiveTextElement = () => {
+    const selected = designElements.find((el) => el.id === selectedElement && el.type === "text")
+    if (selected) return selected
+    if (!activeTextId) return null
+    return designElements.find((el) => el.id === activeTextId && el.type === "text") || null
+  }
+
+  const getActiveImageElement = () => {
+    const selected = designElements.find((el) => el.id === selectedElement && el.type === "image")
+    if (selected) return selected
+    if (!activeImageId) return null
+    return designElements.find((el) => el.id === activeImageId && el.type === "image") || null
+  }
+
+  const handleTextChange = (value: string) => {
+    setTextValue(value)
+    const target = getActiveTextElement()
+    if (!target) {
+      if (value.trim()) {
+        addTextElement(value)
+      }
+      return
+    }
+    updateElement(target.id, { content: value })
+  }
+
+  const handleFontSizeChange = (size: number) => {
+    setTextFontSize(size)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { fontSize: size })
+  }
+
+  const handleTextAlignChange = (align: "right" | "center" | "left") => {
+    setTextAlign(align)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { textAlign: align })
+  }
+
+  const handleTextColorChange = (color: string) => {
+    setTextColor(color)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { color })
+  }
+
+  const handleFontFamilyChange = (font: string) => {
+    setTextFontFamily(font)
+    const target = getActiveTextElement()
+    if (!target) return
+    updateElement(target.id, { fontFamily: font })
+  }
+
+  const handleImageSizeChange = (size: number) => {
+    setImageSize(size)
+    const target = getActiveImageElement()
+    if (!target) return
+    updateElement(target.id, { width: size, height: size })
   }
 
   useEffect(() => {
@@ -933,10 +1093,10 @@ export default function DesignStudioPage() {
         id: `custom-${Date.now()}-${selectedProduct}-${productSize}`,
         name: `Custom ${product.name}`,
         price: product.price,
-        quantity: 1,
+        quantity: productQuantity,
         size: productSize,
-        color: productColor,
-        image: product.image,
+        color: selectedColorKey || productColor,
+        image: rawMockupUrl,
         isCustom: true,
       })
       toast({
@@ -973,7 +1133,7 @@ export default function DesignStudioPage() {
     })
 
   const generateNormalizedPreview = async () => {
-    const baseUrl = activeStudioProduct?.baseMockupUrl || activeProduct?.image || "/placeholder-logo.png"
+    const baseUrl = mockupUrl
     const baseImg = await loadImage(baseUrl)
     const canvas = document.createElement("canvas")
     const baseWidth = baseImg.naturalWidth || 1000
@@ -1079,7 +1239,7 @@ export default function DesignStudioPage() {
         name,
         baseProduct: {
           type: selectedProduct,
-          color: productColor,
+          color: selectedColorKey || productColor,
           size: productSize,
         },
         baseProductId: activeStudioProduct._id,
@@ -1090,10 +1250,10 @@ export default function DesignStudioPage() {
           safeArea: safe,
           elements: designElements.map((el) => clampElementToSafeArea(el)),
           productType: selectedProduct,
-          productColor,
+          productColor: selectedColorKey || productColor,
           productSize,
           side: currentSide,
-          mockup: activeStudioProduct.baseMockupUrl,
+          mockup: rawMockupUrl,
         },
         price: activeProduct?.price || activeStudioProduct?.price || 0,
         status: "draft" as const,
@@ -1149,7 +1309,7 @@ export default function DesignStudioPage() {
       }
 
       // Draw background
-      ctx.fillStyle = productColor
+      ctx.fillStyle = productColorHex
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // Draw elements - we need to load images first
@@ -1218,7 +1378,7 @@ export default function DesignStudioPage() {
         variant: "destructive",
       })
     }
-  }, [currentSideElements, productColor, designName, toast])
+  }, [currentSideElements, productColorHex, designName, toast])
 
   const selectedElementData = designElements.find((el) => el.id === selectedElement)
 
@@ -1227,6 +1387,26 @@ export default function DesignStudioPage() {
     const matchesTab = activeTab === "all" || product.category.toLowerCase() === activeTab.toLowerCase()
     return matchesSearch && matchesTab
   })
+
+  useEffect(() => {
+    if (!selectedElementData) return
+
+    if (selectedElementData.type === "text") {
+      setActiveTextId(selectedElementData.id)
+      setTextValue(selectedElementData.content || "")
+      setTextFontSize(selectedElementData.fontSize || 32)
+      setTextAlign((selectedElementData.textAlign as "right" | "center" | "left") || "center")
+      setTextColor(selectedElementData.color || "#000000")
+      setTextFontFamily(selectedElementData.fontFamily || "Tajawal")
+    }
+
+    if (selectedElementData.type === "image") {
+      setActiveImageId(selectedElementData.id)
+      if (selectedElementData.width) {
+        setImageSize(selectedElementData.width)
+      }
+    }
+  }, [selectedElementData])
 
   // Snap to grid helper
   const snapValue = (value: number) => {
@@ -1261,477 +1441,77 @@ export default function DesignStudioPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar */}
         <div className="w-80 border-r border-gray-200 bg-white overflow-hidden flex flex-col shadow-xl flex-shrink-0">
-          <Tabs value={leftSidebarTab} onValueChange={setLeftSidebarTab} className="flex-1 flex flex-col">
-            <TabsList className="w-full grid grid-cols-5 rounded-none border-b border-gray-200 bg-gray-50 h-[48px]">
-              <TabsTrigger value="product" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-600 text-gray-600 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <ShoppingBag className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Product</span>
-              </TabsTrigger>
-              <TabsTrigger value="gallery" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-600 text-gray-600 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <ImageIcon className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Gallery</span>
-              </TabsTrigger>
-              <TabsTrigger value="text" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-600 text-gray-600 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <Type className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Text</span>
-              </TabsTrigger>
-              <TabsTrigger value="background" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-600 text-gray-600 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <Palette className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Bg</span>
-              </TabsTrigger>
-              <TabsTrigger value="layer" className="flex flex-col gap-1 py-1.5 px-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-600 text-gray-600 data-[state=active]:shadow-sm transition-all min-w-0 h-full">
-                <Layers className="h-4 w-4 flex-shrink-0" />
-                <span className="text-[10px] font-medium truncate w-full">Layer</span>
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 studio-theme font-tajawal">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">المنتجات</h3>
+                <span className="text-xs text-muted-foreground">{filteredProducts.length}</span>
+              </div>
 
-            <div className="flex-1 overflow-y-auto">
-              <TabsContent value="product" className="p-4 space-y-4 mt-0">
-                <div className="flex items-center gap-2 text-sm">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="ابحث عن المنتج..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary/40"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {filteredProducts.map(([key, product]) => (
                   <button
-                    onClick={() => setActiveTab("all")}
-                    className={`px-3 py-1.5 rounded-lg transition-colors ${activeTab === "all" ? "bg-rose-500 text-gray-900" : "text-gray-600 hover:bg-rose-50 hover:text-rose-600"}`}
+                    key={key}
+                    onClick={() => setSelectedProduct(key as ProductType)}
+                    className={`aspect-square rounded-xl border-2 overflow-hidden transition-all hover:scale-105 ${
+                      selectedProduct === key
+                        ? "border-primary ring-2 ring-primary/20 shadow-card"
+                        : "border-border hover:border-primary/50"
+                    }`}
                   >
-                    All
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={product.image || "/placeholder-logo.png"}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, 25vw"
+                      />
+                    </div>
                   </button>
-                </div>
-
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
-                  <Input
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white border-gray-200 text-gray-900 placeholder:text-gray-600 focus:bg-white focus:border-rose-300"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-gray-900">Products</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {filteredProducts.map(([key, product]) => (
-                      <button
-                        key={key}
-                        onClick={() => setSelectedProduct(key as ProductType)}
-                        className={`aspect-square rounded-xl border-2 overflow-hidden transition-all hover:scale-105 ${
-                          selectedProduct === key
-                            ? "border-rose-500 ring-2 ring-rose-200 shadow-lg"
-                            : "border-gray-200 hover:border-rose-300"
-                        }`}
-                      >
-                        <div className="relative w-full h-full">
-                          <Image
-                            src={product.image || "/placeholder-logo.png"}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                          />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="gallery" className="p-4 space-y-4 mt-0">
-                <div>
-                  <Label htmlFor="image-upload" className="cursor-pointer">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-rose-300 transition-colors text-center bg-gray-50">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-gray-600" />
-                      <p className="text-sm font-medium text-gray-900">Upload Image</p>
-                      <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 10MB</p>
-                    </div>
-                  </Label>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </div>
-
-                {designTemplates.length > 0 && (
-                  <Dialog open={showTemplatesDialog} onOpenChange={setShowTemplatesDialog}>
-                    <DialogTrigger asChild>
-                      <Button className="w-full" variant="outline">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Design Templates
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                      <DialogHeader>
-                        <DialogTitle>Design Templates</DialogTitle>
-                        <DialogDescription>Choose a template to get started quickly</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid grid-cols-3 gap-4 mt-4">
-                        {designTemplates.map((template) => (
-                          <button
-                            key={template.id}
-                            onClick={() => loadTemplate(template)}
-                            className="relative aspect-square rounded-lg border-2 border-border hover:border-primary overflow-hidden transition-all hover:scale-105"
-                          >
-                            <Image src={template.thumbnail} alt={template.name} fill className="object-cover" />
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                              <p className="text-sm font-medium text-gray-900">{template.name}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
-
-                {clipartLibrary.length > 0 && (
-                  <div>
-                  <h3 className="text-sm font-semibold mb-3 text-gray-900">Clipart Library</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {clipartLibrary.map((clipart) => (
-                      <button
-                        key={clipart.id}
-                        onClick={() => addImageElement(clipart.url)}
-                        className="aspect-square rounded-lg border-2 border-gray-300 hover:border-rose-400 overflow-hidden transition-all hover:scale-105 bg-gray-50"
-                      >
-                        <img
-                          src={clipart.url || "/placeholder-logo.png"}
-                          alt={clipart.name}
-                          className="w-full h-full object-contain p-2"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="text" className="p-4 space-y-4 mt-0">
-                <Button className="w-full" onClick={addTextElement}>
-                  <Type className="mr-2 h-4 w-4" />
-                  Add Text Element
-                </Button>
-
-                {selectedElementData?.type === "text" && (
-                  <Card className="p-4 space-y-4 bg-gray-50 border-gray-200">
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-gray-900">Text Content</Label>
-                      <Input
-                        value={selectedElementData.content}
-                        onChange={(e) => updateElement(selectedElement!, { content: e.target.value })}
-                        className="bg-gray-50 border-gray-200 text-gray-900"
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-gray-900">Font Family</Label>
-                      <Select
-                        value={selectedElementData.fontFamily}
-                        onValueChange={(value) => updateElement(selectedElement!, { fontFamily: value })}
-                      >
-                        <SelectTrigger className="bg-gray-50 border-gray-200 text-gray-900">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fontFamilies.map((font) => (
-                            <SelectItem key={font.value} value={font.value}>
-                              {font.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-gray-900">Font Size: {selectedElementData.fontSize}px</Label>
-                      <Slider
-                        value={[selectedElementData.fontSize || 24]}
-                        onValueChange={([value]) => updateElement(selectedElement!, { fontSize: value })}
-                        min={12}
-                        max={120}
-                        step={1}
-                      />
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-gray-900">Text Color</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="color"
-                          value={selectedElementData.color}
-                          onChange={(e) => updateElement(selectedElement!, { color: e.target.value })}
-                          className="w-12 p-1 bg-gray-50 border-gray-200"
-                        />
-                        <Input
-                          type="text"
-                          value={selectedElementData.color}
-                          onChange={(e) => updateElement(selectedElement!, { color: e.target.value })}
-                          className="flex-1 bg-gray-50 border-gray-200 text-gray-900"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-gray-900">Text Style</Label>
-                      <div className="flex gap-2">
-                        <Button
-                          variant={selectedElementData.fontWeight === "bold" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() =>
-                            updateElement(selectedElement!, {
-                              fontWeight: selectedElementData.fontWeight === "bold" ? "normal" : "bold",
-                            })
-                          }
-                        >
-                          <Bold className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.fontStyle === "italic" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() =>
-                            updateElement(selectedElement!, {
-                              fontStyle: selectedElementData.fontStyle === "italic" ? "normal" : "italic",
-                            })
-                          }
-                        >
-                          <Italic className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.textDecoration === "underline" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() =>
-                            updateElement(selectedElement!, {
-                              textDecoration: selectedElementData.textDecoration === "underline" ? "none" : "underline",
-                            })
-                          }
-                        >
-                          <Underline className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs mb-1.5 block text-gray-900">Text Alignment</Label>
-                      <div className="flex gap-2">
-                        <Button
-                          variant={selectedElementData.textAlign === "left" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() => updateElement(selectedElement!, { textAlign: "left" })}
-                        >
-                          <AlignLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.textAlign === "center" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() => updateElement(selectedElement!, { textAlign: "center" })}
-                        >
-                          <AlignCenter className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant={selectedElementData.textAlign === "right" ? "default" : "outline"}
-                          size="icon"
-                          onClick={() => updateElement(selectedElement!, { textAlign: "right" })}
-                        >
-                          <AlignRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="background" className="p-4 space-y-4 mt-0">
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-gray-900">Solid Colors</h3>
-                  <div className="grid grid-cols-6 gap-2">
-                    {[
-                      "#FFFFFF", "#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00",
-                      "#FF00FF", "#00FFFF", "#FFA500", "#800080", "#FFC0CB", "#A52A2A",
-                    ].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setProductColor(color)}
-                        className={`aspect-square rounded-lg border-2 transition-transform hover:scale-110 ${
-                          productColor === color ? "border-white ring-2 ring-white/30" : "border-gray-300"
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {backgroundPatterns.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold mb-3 text-gray-900">Patterns</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      {backgroundPatterns.map((pattern) => (
-                        <button
-                          key={pattern.id}
-                          onClick={() => setCanvasBackground(pattern.url)}
-                          className="aspect-square rounded-lg border-2 border-gray-300 hover:border-rose-400 overflow-hidden transition-all hover:scale-105"
-                        >
-                          <img src={pattern.url || "/placeholder-logo.png"} alt={pattern.name} className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label className="text-xs mb-1.5 block text-gray-900">Custom Color</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="color"
-                      value={productColor}
-                      onChange={(e) => setProductColor(e.target.value)}
-                      className="w-12 p-1 bg-gray-50 border-gray-200"
-                    />
-                    <Input
-                      type="text"
-                      value={productColor}
-                      onChange={(e) => setProductColor(e.target.value)}
-                      className="flex-1 bg-gray-50 border-gray-200 text-gray-900"
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="layer" className="p-4 space-y-2 mt-0">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Layers ({currentSideElements.length})</h3>
-                  {currentSideElements.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={() => {
-                        const allVisible = currentSideElements.every((el) => el.visible !== false)
-                        currentSideElements.forEach((el) => {
-                          updateElement(el.id, { visible: !allVisible })
-                        })
-                      }}
-                      title="Toggle All Visibility"
-                    >
-                      {currentSideElements.every((el) => el.visible !== false) ? (
-                        <Eye className="h-4 w-4" />
-                      ) : (
-                        <EyeOff className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                </div>
-                {currentSideElements.length === 0 ? (
-                  <div className="text-center py-8 text-gray-600 text-sm">
-                    <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No layers yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {[...currentSideElements].reverse().map((element, index) => (
-                      <Card
-                        key={element.id}
-                        className={`p-3 cursor-pointer transition-all bg-gray-50 border-gray-200 ${
-                          selectedElement === element.id ? "ring-2 ring-primary" : ""
-                        }`}
-                        onClick={() => setSelectedElement(element.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {element.visible === false ? (
-                              <EyeOff className="h-4 w-4 text-gray-500" />
-                            ) : (
-                              element.type === "text" ? <Type className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />
-                            )}
-                            <span className="text-sm font-medium truncate text-gray-900">
-                              {element.type === "text"
-                                ? element.content.substring(0, 20)
-                                : `Image ${currentSideElements.length - index}`}
-                            </span>
-                            {element.locked && <Lock className="h-3 w-3 text-gray-500" />}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                updateElement(element.id, { visible: element.visible === false ? true : false })
-                              }}
-                              title={element.visible === false ? "Show" : "Hide"}
-                            >
-                              {element.visible === false ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                updateElement(element.id, { locked: !element.locked })
-                              }}
-                              title={element.locked ? "Unlock" : "Lock"}
-                            >
-                              {element.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                duplicateElement(element.id)
-                              }}
-                              title="Duplicate"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                moveLayerUp(element.id)
-                              }}
-                              title="Move Up"
-                            >
-                              ↑
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                moveLayerDown(element.id)
-                              }}
-                              title="Move Down"
-                            >
-                              ↓
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                deleteElement(element.id)
-                              }}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
+                ))}
+              </div>
             </div>
-          </Tabs>
-        </div>
 
+            <SizeSelector selectedSize={productSize} onSizeChange={setProductSize} />
+
+            <QuantitySelector quantity={productQuantity} onQuantityChange={setProductQuantity} />
+
+            <PositionSelector selectedPosition={selectedPosition} onPositionChange={setSelectedPosition} />
+
+            <ColorPicker selectedColor={productColor} onColorChange={setProductColor} colors={availableColors} />
+
+            <ImageUploader
+              onImageUpload={handleImageUpload}
+              uploadedImage={getActiveImageElement()?.content || null}
+              imageSize={imageSize}
+              onImageSizeChange={handleImageSizeChange}
+            />
+
+            <TextEditor
+              text={textValue}
+              onTextChange={handleTextChange}
+              fontSize={textFontSize}
+              onFontSizeChange={handleFontSizeChange}
+              textAlign={textAlign}
+              onTextAlignChange={handleTextAlignChange}
+              textColor={textColor}
+              onTextColorChange={handleTextColorChange}
+              fontFamily={textFontFamily}
+              onFontFamilyChange={handleFontFamilyChange}
+            />
+          </div>
+        </div>
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden">
           <div className="bg-background/95 backdrop-blur-sm border-b border-border px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-sm flex-shrink-0 gap-4 h-[48px]">
@@ -1910,21 +1690,21 @@ export default function DesignStudioPage() {
                   <div
                     className="relative w-full h-full rounded-lg overflow-hidden"
                     style={{
-                      backgroundColor: productColor,
+                      backgroundColor: productColorHex,
                       backgroundImage: canvasBackground ? `url(${canvasBackground})` : undefined,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                     }}
                   >
                     <img
-                      src={activeStudioProduct?.baseMockupUrl || activeProduct?.image || "/placeholder-logo.png"}
+                      src={mockupUrl}
                       alt={`${activeProduct?.name || "Studio Product"} ${currentSide}`}
                       className="w-full h-full object-contain"
                       style={{
-                        filter: productColor !== "#FFFFFF" ? "brightness(0.95)" : undefined,
+                        filter: productColorHex.toLowerCase() !== "#ffffff" ? "brightness(0.95)" : undefined,
                       }}
                       onError={(e) => {
-                        ;(e.target as HTMLImageElement).src = activeProduct?.image || "/placeholder-logo.png"
+                        ;(e.target as HTMLImageElement).src = "/placeholder-logo.png"
                       }}
                     />
 
@@ -2124,21 +1904,10 @@ export default function DesignStudioPage() {
           </div>
         </div>
 
-        {/* Right Panel - Product Preview & Settings */}
+        {/* Right Panel - Settings */}
         <div className="w-96 border-l border-border bg-background overflow-hidden flex flex-col shadow-sm flex-shrink-0">
-          <ProductPreview
-            productType={selectedProduct}
-            productColor={productColor}
-            currentSide={currentSide}
-            onSideChange={setCurrentSide}
-            designElements={designElements}
-            zoom={zoom}
-            safeArea={getSafeArea()}
-            mockupUrl={activeStudioProduct?.baseMockupUrl || activeProduct?.image}
-          />
-          
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <div className="p-4 space-y-4 border-t border-border overflow-y-auto bg-muted/20 flex-1 min-h-0">
+            <div className="p-4 space-y-4 overflow-y-auto bg-muted/20 flex-1 min-h-0">
             <Card className="p-4 bg-background shadow-sm">
               <h3 className="font-semibold mb-4 text-sm flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
@@ -2207,7 +1976,7 @@ export default function DesignStudioPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <Label className="text-xs font-medium text-muted-foreground">Rotation</Label>
-                      <span className="text-xs font-semibold">{selectedElementData.rotation || 0}°</span>
+                      <span className="text-xs font-semibold">{selectedElementData.rotation || 0}┬░</span>
                     </div>
                     <Slider
                       value={[selectedElementData.rotation || 0]}
@@ -2328,7 +2097,7 @@ export default function DesignStudioPage() {
                 onClick={handleAddToCart}
               >
                 <ShoppingBag className="mr-2 h-5 w-5" />
-                Add to Cart - ${activeProduct?.price ?? 0}
+                Add to Cart x{productQuantity} - ${activeProduct?.price ?? 0}
               </Button>
               <Button 
                 variant="outline" 
@@ -2355,3 +2124,4 @@ export default function DesignStudioPage() {
     </div>
   )
 }
+
