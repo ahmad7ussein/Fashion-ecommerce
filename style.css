@@ -1,0 +1,298 @@
+/* إعدادات عامة */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #1f2933, #050816);
+  color: #f9fafb;
+  min-height: 100vh;
+}
+
+/* تخطيط الصفحة */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 20px 32px;
+}
+
+/* الهيدر */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.logo {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.logo span {
+  color: #38bdf8;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+}
+
+.nav-link {
+  color: #cbd5f5;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.nav-link:hover {
+  background: rgba(148, 163, 184, 0.25);
+}
+
+.nav-link.active {
+  background: rgba(56, 189, 248, 0.15);
+  color: #e0f2fe;
+}
+
+/* المحتوى الرئيسي */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: stretch;
+}
+
+/* النص */
+.hero-text h1 {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.hero-text p {
+  font-size: 14px;
+  color: #d1d5db;
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.feature-item {
+  background: rgba(15, 23, 42, 0.85);
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.feature-item h3 {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.feature-item p {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* زر تشغيل الكاميرا */
+.btn-primary {
+  border: none;
+  outline: none;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #38bdf8, #6366f1);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+  box-shadow: 0 10px 20px rgba(56, 189, 248, 0.35);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(56, 189, 248, 0.4);
+  opacity: 0.95;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.3);
+}
+
+/* نص الحالة */
+.status-text {
+  font-size: 12px;
+  margin-top: 10px;
+  color: #9ca3af;
+}
+
+/* جزء الكاميرا */
+.hero-camera {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.camera-card {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.7);
+  overflow: hidden;
+}
+
+.camera-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.9);
+  position: relative;
+}
+
+.camera-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+
+.camera-dot.red {
+  background: #f97373;
+}
+.camera-dot.yellow {
+  background: #facc15;
+}
+.camera-dot.green {
+  background: #4ade80;
+}
+
+.camera-title {
+  font-size: 12px;
+  color: #9ca3af;
+  position: absolute;
+  left: 12px;
+}
+
+/* جسم الكاميرا */
+.camera-body {
+  padding: 12px 12px 14px;
+}
+
+.camera-container {
+  position: relative;
+  background: #020617;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(30, 64, 175, 0.7);
+  max-height: 520px; /* 🔼 تكبير ارتفاع الكاميرا على الشاشات الكبيرة */
+}
+
+/* الفيديو */
+.camera-container video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 520px;   /* 🔼 كانت 360px */
+  background: #000;
+}
+
+/* الكانفاس فوق الفيديو */
+.camera-container canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.camera-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+
+/* معلومات القطعة */
+.outfit-info {
+  background: rgba(15, 23, 42, 0.85);
+  border-radius: 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.outfit-info h3 {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.outfit-info ul {
+  list-style: none;
+  font-size: 12px;
+  color: #d1d5db;
+  line-height: 1.7;
+}
+
+/* الفوتر */
+.footer {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* تجاوب الشاشات الصغيرة */
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .nav {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .hero-text h1 {
+    font-size: 26px;
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 12px;
+  }
+
+  /* على الموبايل نخلي الكاميرا أقل شوي عشان ما تاخذ كل الشاشة */
+  .camera-container {
+    max-height: 360px;
+  }
+
+  .camera-container video {
+    max-height: 360px;
+  }
+}

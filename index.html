@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>تجربة الملابس عبر الكاميرا</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5/holistic.js" crossorigin="anonymous"></script>
+
+</head>
+
+<body dir="rtl">
+  <div class="page">
+
+    <!-- الهيدر -->
+    <header class="header">
+      <div class="logo">Test<span>Camera</span></div>
+      <nav class="nav">
+        <a href="#" class="nav-link active">الرئيسية</a>
+        <a href="#" class="nav-link">المنتجات</a>
+        <a href="#" class="nav-link">عن المشروع</a>
+      </nav>
+    </header>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="main">
+      <section class="hero">
+
+        <!-- النص -->
+        <div class="hero-text">
+          <h1>جرّب ملابسك افتراضياً قبل الشراء 🧥</h1>
+          <p>
+            قِف أمام الكاميرا، اختر قطعة الملابس، وشاهد كيف تبدو عليك مباشرة.
+            هذه الصفحة توفر لك عرضاً مباشراً من الكاميرا لتجربة الملابس افتراضياً ضمن مشروع التخرج.
+          </p>
+
+          <div class="features">
+            <div class="feature-item">
+              <h3>🎥 كاميرا مباشرة</h3>
+              <p>استخدام كاميرا اللابتوب لعرض صورتك في الوقت الحقيقي.</p>
+            </div>
+          </div>
+
+          <button id="startCameraBtn" class="btn-primary">
+            تشغيل الكاميرا
+          </button>
+
+          <p id="statusText" class="status-text">
+            اضغط على زر تشغيل الكاميرا لبدء التجربة.
+          </p>
+        </div>
+
+        <!-- قسم الكاميرا -->
+        <div class="hero-camera">
+          <div class="camera-card">
+
+            <div class="camera-header">
+              <span class="camera-dot red"></span>
+              <span class="camera-dot yellow"></span>
+              <span class="camera-dot green"></span>
+              <span class="camera-title">معاينة الكاميرا</span>
+            </div>
+
+            <div class="camera-body">
+
+              <div class="camera-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="overlay"></canvas>
+              </div>
+
+              <p class="camera-hint">
+                تأكد من وجود إضاءة جيدة، واسمح للمتصفح باستخدام الكاميرا.
+              </p>
+
+            </div>
+          </div>
+
+          <!-- معلومات القطعة (مستقبلاً) -->
+          <div class="outfit-info">
+            <h3>🧾 معلومات القطعة (مستقبلاً)</h3>
+            <ul>
+              <li>اسم القطعة: تيشيرت أساسي أبيض</li>
+              <li>المقاس: M</li>
+              <li>القماش: قطن 100%</li>
+              <li>هذه المنطقة سيتم ربطها لاحقاً ببيانات المنتج.</li>
+            </ul>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <!-- الفوتر -->
+    <footer class="footer">
+      <p>
+           تجربة الملابس عبر الكاميرا ✔️
+      </p>
+    </footer>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
