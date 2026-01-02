@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ShoppingBag, Search, Filter, X, Heart } from "lucide-react"
+import { ShoppingBag, Search, Filter, X, Heart, ChevronLeft, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { listProducts, type Product } from "@/lib/api/products"
+import { listProductsPaginated, type Product } from "@/lib/api/products"
 import { useRegion } from "@/lib/region"
 import { useLanguage } from "@/lib/language"
 import { ProductGridSkeleton } from "@/components/skeletons"
@@ -30,8 +30,12 @@ export default function ProductsPage() {
   const { addItem } = useCart()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const PAGE_SIZE = 24
   const [isLoading, setIsLoading] = useState(true) // Start with true to show skeleton on initial load
   const [products, setProducts] = useState<Product[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
   
@@ -82,7 +86,12 @@ export default function ProductsPage() {
       // If no category param in URL, reset to "all" (show all products)
       setCategoryFilter("all")
     }
+    setCurrentPage(1)
   }, [searchParams])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy])
 
   // Load products - only apply filters if they are explicitly set in URL or state
   useEffect(() => {
@@ -99,6 +108,8 @@ export default function ProductsPage() {
         // Build filters object - only include filters that are explicitly set (not "all")
         const filters: any = {
           sortBy: sortBy as any,
+          page: currentPage,
+          limit: PAGE_SIZE,
         }
         
         // Only add search if it exists
@@ -139,16 +150,20 @@ export default function ProductsPage() {
           filters.occasion = occasionFilter
         }
         
-        // If no filters at all (just /products), show all products
-        const list = await listProducts(filters)
+        // Fetch the current page of products
+        const result = await listProductsPaginated(filters)
         if (isMounted) {
-          setProducts(list)
+          setProducts(result.data)
+          setTotalCount(result.total)
+          setTotalPages(Math.max(result.pages || 1, 1))
           setIsLoading(false)
         }
       } catch (error) {
         console.error("Failed to load products:", error)
         if (isMounted) {
           setProducts([])
+          setTotalCount(0)
+          setTotalPages(1)
           setIsLoading(false)
         }
       }
@@ -157,7 +172,7 @@ export default function ProductsPage() {
     return () => {
       isMounted = false
     }
-  }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy])
+  }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy, currentPage])
 
   // Load favorite status for all products
   useEffect(() => {
@@ -349,6 +364,25 @@ export default function ProductsPage() {
     styleFilter !== "all",
     occasionFilter !== "all",
   ].filter(Boolean).length
+
+  const paginationPages = (() => {
+    const maxPagesToShow = 5
+    const half = Math.floor(maxPagesToShow / 2)
+    let start = Math.max(1, currentPage - half)
+    let end = Math.min(totalPages, start + maxPagesToShow - 1)
+    if (end - start + 1 < maxPagesToShow) {
+      start = Math.max(1, end - maxPagesToShow + 1)
+    }
+    const pages: number[] = []
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page)
+    }
+    return {
+      pages,
+      showStartEllipsis: start > 1,
+      showEndEllipsis: end < totalPages,
+    }
+  })()
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
@@ -569,7 +603,9 @@ export default function ProductsPage() {
               ? (language === "ar" ? "جاري التحميل..." : "Loading...") 
               : language === "ar" 
                 ? `عرض ${products.length} ${products.length === 1 ? "منتج" : "منتج"}`
-                : `Showing ${products.length} ${products.length === 1 ? "product" : "products"}`
+                : totalCount > 0
+                  ? `Showing ${products.length} of ${totalCount} ${totalCount === 1 ? "product" : "products"}`
+                  : `Showing ${products.length} ${products.length === 1 ? "product" : "products"}`
             }
           </p>
         </div>
@@ -676,6 +712,79 @@ export default function ProductsPage() {
             </motion.div>
             )
           })}
+          </div>
+        )}
+
+        {!isLoading && totalPages > 1 && products.length > 0 && (
+          <div className="mt-10 flex justify-center">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {paginationPages.showStartEllipsis && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                    onClick={() => setCurrentPage(1)}
+                  >
+                    1
+                  </Button>
+                  <span className="px-1 text-gray-400">...</span>
+                </>
+              )}
+
+              {paginationPages.pages.map((page) => (
+                <Button
+                  key={page}
+                  variant="outline"
+                  size="sm"
+                  className={
+                    page === currentPage
+                      ? "h-9 w-9 p-0 bg-rose-500 text-white border-rose-500 hover:bg-rose-600"
+                      : "h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                  }
+                  onClick={() => setCurrentPage(page)}
+                  aria-current={page === currentPage ? "page" : undefined}
+                >
+                  {page}
+                </Button>
+              ))}
+
+              {paginationPages.showEndEllipsis && (
+                <>
+                  <span className="px-1 text-gray-400">...</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                    onClick={() => setCurrentPage(totalPages)}
+                  >
+                    {totalPages}
+                  </Button>
+                </>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                aria-label="Next page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 

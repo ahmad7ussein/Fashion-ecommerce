@@ -105,23 +105,59 @@ export type ProductFilters = {
   page?: number
 }
 
+export type PaginatedProducts = {
+  data: Product[]
+  total: number
+  page: number
+  pages: number
+}
+
+const buildProductQueryParams = (filters: ProductFilters) => {
+  const params = new URLSearchParams()
+  if (filters.search) params.append("search", filters.search)
+  if (filters.category && filters.category !== "all") params.append("category", filters.category)
+  if (filters.gender && filters.gender !== "all") params.append("gender", filters.gender)
+  if (filters.season && filters.season !== "all") params.append("season", filters.season)
+  if (filters.style && filters.style !== "all") params.append("style", filters.style)
+  if (filters.occasion && filters.occasion !== "all") params.append("occasion", filters.occasion)
+  if (filters.sortBy) params.append("sortBy", filters.sortBy)
+  if (filters.onSale !== undefined) params.append("onSale", filters.onSale.toString())
+  if (filters.inCollection !== undefined) params.append("inCollection", filters.inCollection.toString())
+  if (filters.featured !== undefined) params.append("featured", filters.featured.toString())
+  if (filters.active !== undefined) params.append("active", filters.active.toString())
+  if (filters.limit) params.append("limit", filters.limit.toString())
+  if (filters.page) params.append("page", filters.page.toString())
+  return params
+}
+
+const filterCatalog = (filters: ProductFilters): Product[] => {
+  const q = (filters.search ?? "").toLowerCase()
+  let results = CATALOG.filter((p) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(q) ||
+      (p.nameAr && p.nameAr.toLowerCase().includes(q)) ||
+      p.category.toLowerCase().includes(q) ||
+      (p.categoryAr && p.categoryAr.toLowerCase().includes(q)) ||
+      (p.description && p.description.toLowerCase().includes(q)) ||
+      (p.descriptionAr && p.descriptionAr.toLowerCase().includes(q))
+    const matchesCategory = !filters.category || filters.category === "all" || p.category === filters.category
+    const matchesGender = !filters.gender || filters.gender === "all" || p.gender === filters.gender
+    const matchesSeason =
+      !filters.season || filters.season === "all" || p.season === filters.season || p.season === "All Season"
+    const matchesStyle = !filters.style || filters.style === "all" || p.style === filters.style
+    const matchesOccasion = !filters.occasion || filters.occasion === "all" || p.occasion === filters.occasion
+    return matchesSearch && matchesCategory && matchesGender && matchesSeason && matchesStyle && matchesOccasion
+  })
+
+  if (filters.sortBy === "price-low") results = results.sort((a, b) => a.price - b.price)
+  if (filters.sortBy === "price-high") results = results.sort((a, b) => b.price - a.price)
+  return results
+}
+
 // Try to fetch from backend API, fallback to local catalog if offline
 export async function listProducts(filters: ProductFilters = {}): Promise<Product[]> {
   try {
-    const params = new URLSearchParams()
-    if (filters.search) params.append("search", filters.search)
-    if (filters.category && filters.category !== "all") params.append("category", filters.category)
-    if (filters.gender && filters.gender !== "all") params.append("gender", filters.gender)
-    if (filters.season && filters.season !== "all") params.append("season", filters.season)
-    if (filters.style && filters.style !== "all") params.append("style", filters.style)
-    if (filters.occasion && filters.occasion !== "all") params.append("occasion", filters.occasion)
-    if (filters.sortBy) params.append("sortBy", filters.sortBy)
-    if (filters.onSale !== undefined) params.append("onSale", filters.onSale.toString())
-    if (filters.inCollection !== undefined) params.append("inCollection", filters.inCollection.toString())
-    if (filters.featured !== undefined) params.append("featured", filters.featured.toString())
-    if (filters.active !== undefined) params.append("active", filters.active.toString())
-    if (filters.limit) params.append("limit", filters.limit.toString())
-    if (filters.page) params.append("page", filters.page.toString())
+    const params = buildProductQueryParams(filters)
 
     const response = await apiClient.get<{ data: Product[]; total?: number; page?: number; pages?: number } | Product[]>(`/products?${params.toString()}`)
     // Backend returns { success: true, data: [...], total, page, pages }
@@ -151,27 +187,68 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
     if (!isNetworkError || process.env.NODE_ENV === 'development') {
       console.warn("Backend API unavailable, using fallback catalog", error?.message || error?.errorMessage || error)
     }
-    const q = (filters.search ?? "").toLowerCase()
-    let results = CATALOG.filter((p) => {
-      const matchesSearch = 
-        p.name.toLowerCase().includes(q) ||
-        (p.nameAr && p.nameAr.toLowerCase().includes(q)) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.categoryAr && p.categoryAr.toLowerCase().includes(q)) ||
-        (p.description && p.description.toLowerCase().includes(q)) ||
-        (p.descriptionAr && p.descriptionAr.toLowerCase().includes(q))
-      const matchesCategory = !filters.category || filters.category === "all" || p.category === filters.category
-      const matchesGender = !filters.gender || filters.gender === "all" || p.gender === filters.gender
-      const matchesSeason =
-        !filters.season || filters.season === "all" || p.season === filters.season || p.season === "All Season"
-      const matchesStyle = !filters.style || filters.style === "all" || p.style === filters.style
-      const matchesOccasion = !filters.occasion || filters.occasion === "all" || p.occasion === filters.occasion
-      return matchesSearch && matchesCategory && matchesGender && matchesSeason && matchesStyle && matchesOccasion
-    })
+    return filterCatalog(filters)
+  }
+}
 
-    if (filters.sortBy === "price-low") results = results.sort((a, b) => a.price - b.price)
-    if (filters.sortBy === "price-high") results = results.sort((a, b) => b.price - a.price)
-    return results
+export async function listProductsPaginated(filters: ProductFilters = {}): Promise<PaginatedProducts> {
+  try {
+    const params = buildProductQueryParams(filters)
+    const response = await apiClient.get<
+      | { data: Product[]; total?: number; page?: number; pages?: number }
+      | Product[]
+      | PaginatedProducts
+    >(`/products?${params.toString()}`)
+
+    if (Array.isArray(response)) {
+      const total = response.length
+      const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined
+      if (!limit) {
+        return { data: response, total, page: 1, pages: 1 }
+      }
+      const page = Math.max(1, filters.page || 1)
+      const pages = Math.max(1, Math.ceil(total / limit))
+      const safePage = Math.min(page, pages)
+      const start = (safePage - 1) * limit
+      return { data: response.slice(start, start + limit), total, page: safePage, pages }
+    }
+
+    if (response && typeof response === "object" && "data" in response && Array.isArray(response.data)) {
+      const total = Number((response as PaginatedProducts).total) || response.data.length
+      const page = Number((response as PaginatedProducts).page) || filters.page || 1
+      const pages = Number((response as PaginatedProducts).pages) || (filters.limit ? Math.ceil(total / filters.limit) : 1)
+      return { data: response.data, total, page, pages }
+    }
+
+    return { data: [], total: 0, page: filters.page || 1, pages: 1 }
+  } catch (error: any) {
+    const isNetworkError = error?.status === 503 || 
+                          error?.status === 504 ||
+                          error?.status === 500 && error?.errorMessage?.includes('timeout') ||
+                          error?.message?.includes('fetch failed') || 
+                          error?.message?.includes('Cannot connect') ||
+                          error?.message?.includes('timeout') ||
+                          error?.errorMessage?.includes('timeout')
+
+    if (isNetworkError && (error?.status === 503 || error?.status === 504 || error?.message?.includes('timeout'))) {
+      throw error
+    }
+
+    if (!isNetworkError || process.env.NODE_ENV === 'development') {
+      console.warn("Backend API unavailable, using fallback catalog", error?.message || error?.errorMessage || error)
+    }
+
+    const results = filterCatalog(filters)
+    const total = results.length
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined
+    if (!limit) {
+      return { data: results, total, page: 1, pages: 1 }
+    }
+    const page = Math.max(1, filters.page || 1)
+    const pages = Math.max(1, Math.ceil(total / limit))
+    const safePage = Math.min(page, pages)
+    const start = (safePage - 1) * limit
+    return { data: results.slice(start, start + limit), total, page: safePage, pages }
   }
 }
 
@@ -245,4 +322,3 @@ export async function listGenders(): Promise<string[]> {
     return Array.from(new Set(CATALOG.map((p) => p.gender)))
   }
 }
-
