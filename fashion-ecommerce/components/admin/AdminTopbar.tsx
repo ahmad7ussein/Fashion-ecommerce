@@ -1,9 +1,8 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { Eye, Home, Languages, LogOut, Moon, Settings, Sun } from "lucide-react"
-import { Logo } from "@/components/logo"
-import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { Eye, Home, Languages, LogOut, Moon, Settings, Sun, UserCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -14,15 +13,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/auth"
-import { useTheme } from "next-themes"
 import { useLanguage } from "@/lib/language"
 import { t } from "@/lib/i18n"
+import { useTheme } from "next-themes"
 
 export function AdminTopbar() {
-  const { user, logout } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { logout } = useAuth()
   const { theme, setTheme } = useTheme()
   const { language, setLanguage } = useLanguage()
-  const router = useRouter()
+  const currentTab = searchParams.get("tab") || "overview"
+  const isAdminRoot = pathname === "/admin"
+
+  const topbarTabs = [
+    { key: "overview", labelKey: "overview" },
+    { key: "analytics", labelKey: "analytics" },
+    { key: "reports", labelKey: "reports" },
+  ]
+
+  const activeTabClasses =
+    "bg-blue-800 text-white border border-blue-900 dark:bg-blue-900 dark:text-white dark:border-blue-950"
+  const inactiveTabClasses =
+    "text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent"
 
   const handleViewAsGuest = () => {
     if (typeof window !== "undefined") {
@@ -42,36 +56,31 @@ export function AdminTopbar() {
     setLanguage(language === "ar" ? "en" : "ar")
   }
 
+  const handleOpenSettings = () => {
+    router.push("/admin?tab=settings")
+  }
+
   return (
-    <div className="flex h-16 items-center justify-end gap-3 px-4 lg:px-6">
-      <Badge variant="destructive" className="hidden sm:inline-flex text-xs font-semibold">
-        ADMIN
-      </Badge>
-      <div className="text-right">
-        <p className="text-sm font-semibold text-foreground">
-          {user ? `${user.firstName} ${user.lastName}` : "Admin"}
-        </p>
-        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
-          <Logo className="h-4 w-auto" />
-          <span className="max-w-[180px] truncate">{user?.email || "admin@fashionhub.com"}</span>
+    <div className="flex h-16 items-center gap-4 px-4 lg:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <div className="flex items-center gap-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 border-border/60"
-                aria-label="Settings"
-              >
+              <Button variant="outline" size="icon" className="h-8 w-8 border-border/60" aria-label="Settings">
                 <Settings className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Quick Settings</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleToggleTheme}>
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                {theme === "dark" ? t("lightMode", language) : t("darkMode", language)}
-              </DropdownMenuItem>
+            <DropdownMenuContent align="start" className="w-56">
+          <DropdownMenuLabel>Quick Settings</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={handleOpenSettings}>
+            <Settings className="h-4 w-4" />
+            {t("settings", language)}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={handleToggleTheme}>
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {theme === "dark" ? t("lightMode", language) : t("darkMode", language)}
+          </DropdownMenuItem>
               <DropdownMenuItem onSelect={handleToggleLanguage}>
                 <Languages className="h-4 w-4" />
                 {language === "ar" ? "English" : "Arabic"}
@@ -92,8 +101,34 @@ export function AdminTopbar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <div className="text-sm font-semibold text-foreground">Admin FashionHub</div>
         </div>
+        <nav className="flex items-center gap-2 overflow-x-auto" aria-label="Admin sections">
+          {topbarTabs.map((tab) => {
+            const isActive = isAdminRoot && currentTab === tab.key
+            return (
+              <Link
+                key={tab.key}
+                href={`/admin?tab=${tab.key}`}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  isActive ? activeTabClasses : inactiveTabClasses
+                }`}
+              >
+                {t(tab.labelKey, language)}
+              </Link>
+            )
+          })}
+        </nav>
       </div>
+      <Button
+        variant="destructive"
+        size="sm"
+        className="h-8 px-3"
+        onClick={logout}
+      >
+        <UserCircle className="h-4 w-4" />
+        <span className="ml-2">{t("logout", language)}</span>
+      </Button>
     </div>
   )
 }

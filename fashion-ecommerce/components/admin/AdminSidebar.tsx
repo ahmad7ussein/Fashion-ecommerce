@@ -3,13 +3,9 @@
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import {
-  LayoutDashboard,
   Package,
   ShoppingCart,
   Users,
-  Settings,
-  BarChart3,
-  FileText,
   UserCog,
   Palette as PaletteIcon,
   Star,
@@ -21,6 +17,8 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Logo } from "@/components/logo"
+import { useAuth } from "@/lib/auth"
 import { useLanguage } from "@/lib/language"
 import { t } from "@/lib/i18n"
 
@@ -46,16 +44,6 @@ type NavSection = {
 }
 
 const navigationSections: NavSection[] = [
-  {
-    id: "general",
-    title: { en: "General", ar: "General" },
-    items: [
-      { type: "tab", key: "overview", icon: LayoutDashboard, labelKey: "overview" },
-      { type: "tab", key: "analytics", icon: BarChart3, labelKey: "analytics" },
-      { type: "tab", key: "reports", icon: FileText, labelKey: "reports" },
-      { type: "tab", key: "settings", icon: Settings, labelKey: "settings" },
-    ],
-  },
   {
     id: "products",
     title: { en: "Products & Orders", ar: "Products & Orders" },
@@ -117,6 +105,7 @@ const sectionClasses: Record<string, string> = {
 export function AdminSidebar({ activeTab, pendingReviewsCount }: AdminSidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { user } = useAuth()
   const { language } = useLanguage()
   const tabParam = searchParams.get("tab") || "overview"
   const currentTab = activeTab || tabParam
@@ -143,7 +132,22 @@ export function AdminSidebar({ activeTab, pendingReviewsCount }: AdminSidebarPro
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="border-b border-border/50 px-4 lg:px-6 py-6">
+        <div className="flex justify-center">
+          <Logo className="h-16 w-auto lg:h-20" />
+        </div>
+      </div>
+      <div className="px-4 lg:px-6 py-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Badge variant="destructive" className="text-xs font-semibold uppercase">
+            Admin
+          </Badge>
+          <span className="text-xs text-muted-foreground truncate flex-1">
+            {user?.email || "admin@fashionhub.com"}
+          </span>
+        </div>
+      </div>
       <nav className="px-3 lg:px-4 space-y-4 pt-4 pb-4 flex-1 overflow-y-auto">
         {navigationSections.map((section, sectionIndex) => (
           <div

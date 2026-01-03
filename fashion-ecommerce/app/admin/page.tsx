@@ -400,11 +400,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user && user.role === 'admin') {
       loadDashboardData()
-      loadProducts()
       loadUserPreferences()
-      
-      loadStaff()
-      loadStudioProducts()
     }
   }, [user])
 
@@ -452,6 +448,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === "customers" && user) {
       loadCustomers()
+    }
+  }, [activeTab, user])
+
+  useEffect(() => {
+    if (activeTab === "studioProducts" && user) {
+      loadStudioProducts()
     }
   }, [activeTab, user])
 
@@ -755,7 +757,7 @@ export default function AdminDashboard() {
         
         setTimeout(async () => {
           try {
-            const retryResponse = await productsAdminApi.getAllProducts({ limit: 25, page: 1 })
+            const retryResponse = await productsAdminApi.getAllProducts({ limit: 5, page: 1 })
             const retryProducts = Array.isArray(retryResponse.data) ? retryResponse.data : []
             setProducts(retryProducts)
             setProductsLoading(false)
@@ -788,6 +790,12 @@ export default function AdminDashboard() {
       setProductsLoading(false)
     }
   }, [language, toast])
+
+  useEffect(() => {
+    if (activeTab === "products" && user) {
+      loadProducts()
+    }
+  }, [activeTab, user, loadProducts])
 
   
   const resetStudioForm = () => {
@@ -1288,7 +1296,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="flex min-h-screen">
-        <aside className="w-64 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
+        <aside className="w-64 h-screen sticky top-0 shrink-0 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
           <AdminSidebar
             activeTab={activeTab}
             pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}
