@@ -7,7 +7,7 @@ export default function AdminModulesLayout({ children }: { children: React.React
   return (
     <div className="min-h-screen bg-background" dir="ltr">
       <div className="flex min-h-screen">
-        <aside className="w-64 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
+        <aside className="w-64 h-screen sticky top-0 shrink-0 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
           <AdminSidebar />
         </aside>
         <div className="flex-1 min-w-0">
