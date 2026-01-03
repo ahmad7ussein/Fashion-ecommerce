@@ -13,7 +13,7 @@ export const getVendorProducts = async (req: AuthRequest, res: Response) => {
 
     if (req.user?.role === 'admin') {
       if (req.query.all === 'true') {
-        // Admin can list all vendor products
+        
       } else if (req.query.vendorUserId) {
         query.vendorUser = req.query.vendorUserId;
       } else {

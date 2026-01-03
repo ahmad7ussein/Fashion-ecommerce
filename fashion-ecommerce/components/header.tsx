@@ -49,7 +49,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
-  // Prevent hydration mismatch
+  
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -84,12 +84,12 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
+          { }
           <Link href="/" className="flex items-center space-x-2">
             <Logo />
           </Link>
 
-          {/* Desktop Navigation */}
+          { }
           <nav className="hidden lg:flex items-center gap-2">
             <NavigationMenu>
               <NavigationMenuList>
@@ -217,9 +217,9 @@ export function Header() {
             </NavigationMenu>
           </nav>
 
-          {/* Right Side Actions */}
+          { }
           <div className="flex items-center gap-2">
-            {/* Language Toggle */}
+            { }
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600">
@@ -243,7 +243,7 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Theme Toggle */}
+            { }
             <Button
               variant="ghost"
               size="icon"
@@ -255,7 +255,7 @@ export function Header() {
               <span className="sr-only">Toggle Theme</span>
             </Button>
 
-            {/* Cart */}
+            { }
             <Link href="/cart">
               <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600">
                 <ShoppingBag className="h-5 w-5 group-hover:animate-bounce" />
@@ -267,7 +267,7 @@ export function Header() {
               </Button>
             </Link>
 
-            {/* User Menu */}
+            { }
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -341,7 +341,7 @@ export function Header() {
               </Link>
             )}
 
-            {/* Mobile Menu Button */}
+            { }
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="lg:hidden">
@@ -355,7 +355,7 @@ export function Header() {
                 </SheetHeader>
                 <nav className="flex flex-col gap-2 mt-6">
                   <Accordion type="multiple" className="w-full">
-                    {/* Men Section */}
+                    { }
                     <AccordionItem value="men" className="border-b">
                       <AccordionTrigger className="px-3 py-3 text-base font-semibold hover:no-underline hover:bg-primary/5 transition-all">
                         <span className="flex items-center gap-2">
@@ -379,7 +379,7 @@ export function Header() {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Women Section */}
+                    { }
                     <AccordionItem value="women" className="border-b">
                       <AccordionTrigger className="px-3 py-3 text-base font-semibold hover:no-underline hover:bg-primary/5 transition-all">
                         <span className="flex items-center gap-2">
@@ -403,7 +403,7 @@ export function Header() {
                       </AccordionContent>
                     </AccordionItem>
 
-                    {/* Kids Section */}
+                    { }
                     <AccordionItem value="kids" className="border-b">
                       <AccordionTrigger className="px-3 py-3 text-base font-semibold hover:no-underline hover:bg-primary/5 transition-all">
                         <span className="flex items-center gap-2">
@@ -428,7 +428,7 @@ export function Header() {
                     </AccordionItem>
                   </Accordion>
 
-                  {/* Other Links */}
+                  { }
                   <div className="border-t pt-4 mt-2 space-y-1">
                     <Link
                       href="/products"

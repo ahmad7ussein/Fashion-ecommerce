@@ -33,7 +33,7 @@ export type NotificationResponse = {
   data: Notification[]
 }
 
-// Get user notifications
+
 export async function getNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
   const params = new URLSearchParams()
   if (filters.read !== undefined) params.append("read", filters.read.toString())
@@ -43,17 +43,17 @@ export async function getNotifications(filters: NotificationFilters = {}): Promi
   return apiClient.get<NotificationResponse>(`/notifications?${params.toString()}`)
 }
 
-// Mark notification as read
+
 export async function markAsRead(id: string): Promise<{ success: boolean; message: string; data: Notification }> {
   return apiClient.put(`/notifications/${id}/read`, {})
 }
 
-// Mark all notifications as read
+
 export async function markAllAsRead(): Promise<{ success: boolean; message: string }> {
   return apiClient.put("/notifications/read-all", {})
 }
 
-// Delete notification
+
 export async function deleteNotification(id: string): Promise<{ success: boolean; message: string }> {
   return apiClient.delete(`/notifications/${id}`)
 }

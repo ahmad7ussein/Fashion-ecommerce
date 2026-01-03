@@ -4,9 +4,9 @@ import Product from '../models/Product';
 import { AuthRequest } from '../middleware/auth';
 import mongoose from 'mongoose';
 
-// @desc    Get user favorites
-// @route   GET /api/favorites
-// @access  Private
+
+
+
 export const getFavorites = async (req: AuthRequest, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -44,9 +44,9 @@ export const getFavorites = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Check if product is favorited
-// @route   GET /api/favorites/check/:productId
-// @access  Private
+
+
+
 export const checkFavorite = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?._id) {
@@ -83,9 +83,9 @@ export const checkFavorite = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Add product to favorites
-// @route   POST /api/favorites/:productId
-// @access  Private
+
+
+
 export const addFavorite = async (req: AuthRequest, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -111,7 +111,7 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if product exists
+    
     const product = await Product.findById(productId).maxTimeMS(20000);
     if (!product) {
       return res.status(404).json({
@@ -120,7 +120,7 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if already favorited
+    
     const existingFavorite = await Favorite.findOne({
       user: req.user._id,
       product: productId,
@@ -134,7 +134,7 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Create favorite
+    
     const favorite = await Favorite.create({
       user: req.user._id,
       product: productId,
@@ -146,7 +146,7 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
       data: favorite,
     });
   } catch (error: any) {
-    // Handle duplicate key error (unique index)
+    
     if (error.code === 11000) {
       return res.status(200).json({
         success: true,
@@ -161,9 +161,9 @@ export const addFavorite = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Remove product from favorites
-// @route   DELETE /api/favorites/:productId
-// @access  Private
+
+
+
 export const removeFavorite = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?._id) {
@@ -207,9 +207,9 @@ export const removeFavorite = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Toggle favorite (add if not exists, remove if exists)
-// @route   POST /api/favorites/toggle/:productId
-// @access  Private
+
+
+
 export const toggleFavorite = async (req: AuthRequest, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -235,7 +235,7 @@ export const toggleFavorite = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if product exists
+    
     const product = await Product.findById(productId).maxTimeMS(20000);
     if (!product) {
       return res.status(404).json({
@@ -244,10 +244,10 @@ export const toggleFavorite = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Deterministic toggle based solely on DB state
+    
     const filter = { user: req.user._id, product: productId };
 
-    // Attempt to remove first; if a doc existed, we are now unfavorited
+    
     const removed = await Favorite.findOneAndDelete(filter).maxTimeMS(20000);
     if (removed) {
       return res.status(200).json({
@@ -257,7 +257,7 @@ export const toggleFavorite = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Not found: create the favorite (unique index enforces idempotency)
+    
     try {
       const favorite = await Favorite.create(filter);
       return res.status(201).json({
@@ -267,7 +267,7 @@ export const toggleFavorite = async (req: AuthRequest, res: Response) => {
         data: favorite,
       });
     } catch (err: any) {
-      // If another request added it in the meantime, treat as favorited
+      
       if (err?.code === 11000) {
         return res.status(200).json({
           success: true,

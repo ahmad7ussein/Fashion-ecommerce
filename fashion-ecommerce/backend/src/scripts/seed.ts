@@ -54,8 +54,8 @@ const seedUsers = async () => {
 const seedProducts = async () => {
   try {
     await Product.deleteMany({});
-    // NOTE: For production, replace local image paths with Cloudinary URLs
-    // Example: image: 'https://res.cloudinary.com/your-cloud/image/upload/v1234567890/stylecraft/products/summer-shirt-main.png'
+    
+    
     const products = [
       { 
         name: 'Tropical Leaf Summer Shirt', 
@@ -63,7 +63,7 @@ const seedProducts = async () => {
         description: 'Casual short-sleeved shirt with tropical leaf pattern in blue tones. Perfect for summer days.',
         descriptionAr: 'قميص كاجوال بأكمام قصيرة مع طبع أوراق استوائية بألوان زرقاء. مثالي لأيام الصيف.',
         price: 45.99, 
-        // Local path - replace with Cloudinary URL for production
+        
         image: '/MenSummer/summer-shirt-main.png', 
         images: ['/MenSummer/summer-shirt-2.png', '/MenSummer/summer-shirt-3.png', '/MenSummer/summer-shirt-4.png'],
         category: 'Tops', 

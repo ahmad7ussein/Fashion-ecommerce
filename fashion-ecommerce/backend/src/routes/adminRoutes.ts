@@ -13,14 +13,14 @@ import { protect, authorize } from '../middleware/auth';
 
 const router = express.Router();
 
-// All routes require authentication
+
 router.use(protect);
 
-// Routes accessible by both admin and employee
+
 router.get('/users', authorize('admin', 'employee'), getAllUsers);
 router.get('/users/:id', authorize('admin', 'employee'), getUser);
 
-// Routes accessible only by admin
+
 router.get('/dashboard/stats', authorize('admin'), getDashboardStats);
 router.put('/users/:id/role', authorize('admin'), updateUserRole);
 router.delete('/users/:id', authorize('admin'), deleteUser);

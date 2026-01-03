@@ -10,9 +10,9 @@ function ensureFile(filePath, contents) {
   fs.writeFileSync(filePath, contents, "utf8")
 }
 
-// Next.js sometimes reads `.next/routes-manifest.json` very early; if the folder
-// was deleted while the dev server is running, Next can throw ENOENT.
-// This is a safe guard to prevent hard 500s in dev.
+
+
+
 const projectRoot = process.cwd()
 const nextDir = path.join(projectRoot, ".next")
 const routesManifestPath = path.join(nextDir, "routes-manifest.json")

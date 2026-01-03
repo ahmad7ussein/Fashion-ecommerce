@@ -16,10 +16,10 @@ export const favoritesApi = {
   async checkFavorite(productId: string): Promise<boolean> {
     try {
       const response = await apiClient.get<{ isFavorite: boolean }>(`/favorites/check/${productId}`)
-      // Explicitly check if isFavorite is true, default to false
+      
       return response?.isFavorite === true
     } catch (error) {
-      // If check fails (e.g., user not authenticated), return false
+      
       return false
     }
   },

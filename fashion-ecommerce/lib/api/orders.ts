@@ -63,7 +63,7 @@ export type Order = {
 export const ordersApi = {
   async getMyOrders(): Promise<Order[]> {
     const response = await apiClient.get<Order[] | { data: Order[]; count?: number }>("/orders/my-orders")
-    // Backend returns { success: true, count: number, data: [...] }
+    
     if (Array.isArray(response)) {
       return response
     }
@@ -86,7 +86,7 @@ export const ordersApi = {
     const queryString = queryParams.toString()
     const response = await apiClient.get<{ data: Order[] } | Order[]>(`/orders${queryString ? `?${queryString}` : ""}`)
     
-    // Handle response structure
+    
     if (Array.isArray(response)) {
       return response
     }
@@ -125,7 +125,7 @@ export const ordersApi = {
     total?: number
   }): Promise<Order> {
     const response = await apiClient.post<Order | { data: Order }>("/orders", orderData)
-    // Backend returns { success: true, message, data: {...} }
+    
     if (response && typeof response === 'object' && 'data' in response && !('_id' in response)) {
       return (response as { data: Order }).data
     }

@@ -1,7 +1,7 @@
-/**
- * نظام الترجمة المتقدم - دعم عربي/إنجليزي
- * يدعم الترجمة للنصوص والبيانات من قاعدة البيانات
- */
+
+
+
+
 
 export type Language = "ar" | "en"
 
@@ -9,10 +9,10 @@ export interface TranslationData {
   [key: string]: string | TranslationData
 }
 
-// ترجمة النصوص الثابتة
+
 export const translations: Record<Language, Record<string, string>> = {
   en: {
-    // Dashboard
+    
     dashboard: "Dashboard",
     overview: "Overview",
     orders: "Orders",
@@ -23,7 +23,7 @@ export const translations: Record<Language, Record<string, string>> = {
     reports: "Reports",
     settings: "Settings",
     
-    // Stats
+    
     totalRevenue: "Total Revenue",
     totalOrders: "Orders",
     totalProducts: "Products",
@@ -33,7 +33,7 @@ export const translations: Record<Language, Record<string, string>> = {
     lowStockItems: "Low Stock Items",
     activeProducts: "Active Products",
     
-    // Actions
+    
     add: "Add",
     edit: "Edit",
     delete: "Delete",
@@ -43,7 +43,7 @@ export const translations: Record<Language, Record<string, string>> = {
     update: "Update",
     search: "Search",
     
-    // Status
+    
     pending: "Pending",
     processing: "Processing",
     shipped: "Shipped",
@@ -52,7 +52,7 @@ export const translations: Record<Language, Record<string, string>> = {
     active: "Active",
     inactive: "Inactive",
     
-    // Common
+    
     name: "Name",
     email: "Email",
     price: "Price",
@@ -64,7 +64,7 @@ export const translations: Record<Language, Record<string, string>> = {
     welcome: "Welcome",
     logout: "Logout",
     
-    // Theme & Settings
+    
     theme: "Theme",
     lightMode: "Light Mode",
     darkMode: "Dark Mode",
@@ -75,7 +75,7 @@ export const translations: Record<Language, Record<string, string>> = {
     currency: "Currency",
   },
   ar: {
-    // Dashboard
+    
     dashboard: "لوحة التحكم",
     overview: "نظرة عامة",
     orders: "الطلبات",
@@ -86,7 +86,7 @@ export const translations: Record<Language, Record<string, string>> = {
     reports: "التقارير",
     settings: "الإعدادات",
     
-    // Stats
+    
     totalRevenue: "إجمالي الإيرادات",
     totalOrders: "الطلبات",
     totalProducts: "المنتجات",
@@ -96,7 +96,7 @@ export const translations: Record<Language, Record<string, string>> = {
     lowStockItems: "عناصر قليلة المخزون",
     activeProducts: "المنتجات النشطة",
     
-    // Actions
+    
     add: "إضافة",
     edit: "تعديل",
     delete: "حذف",
@@ -106,7 +106,7 @@ export const translations: Record<Language, Record<string, string>> = {
     update: "تحديث",
     search: "بحث",
     
-    // Status
+    
     pending: "معلق",
     processing: "قيد المعالجة",
     shipped: "تم الشحن",
@@ -115,7 +115,7 @@ export const translations: Record<Language, Record<string, string>> = {
     active: "نشط",
     inactive: "غير نشط",
     
-    // Common
+    
     name: "الاسم",
     email: "البريد الإلكتروني",
     price: "السعر",
@@ -127,7 +127,7 @@ export const translations: Record<Language, Record<string, string>> = {
     welcome: "مرحباً",
     logout: "تسجيل الخروج",
     
-    // Theme & Settings
+    
     theme: "المظهر",
     lightMode: "الوضع الفاتح",
     darkMode: "الوضع الداكن",
@@ -139,12 +139,12 @@ export const translations: Record<Language, Record<string, string>> = {
   },
 }
 
-// Helper function to get translated text
+
 export function t(key: string, lang: Language = "en"): string {
   return translations[lang][key] || key
 }
 
-// Helper function to get translated data based on language preference
+
 export function getTranslatedData<T extends { name?: string; nameAr?: string; nameEn?: string }>(
   item: T,
   lang: Language
@@ -158,7 +158,7 @@ export function getTranslatedData<T extends { name?: string; nameAr?: string; na
   return item.name || ""
 }
 
-// Helper for multilingual fields
+
 export interface MultilingualField {
   ar?: string
   en?: string

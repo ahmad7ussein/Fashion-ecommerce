@@ -44,7 +44,7 @@ interface AnimatedProductCardProps {
 }
 
 export function AnimatedProductCard({ image, name, price, category, delay = 0, formatPrice }: AnimatedProductCardProps) {
-  // Use provided formatPrice or default to USD
+  
   const displayPrice = formatPrice ? formatPrice(price) : `$${price.toFixed(2)}`
   
   return (

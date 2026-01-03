@@ -51,9 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = React.useState(true)
   const hasCheckedAuth = React.useRef(false)
 
-  // Load user from database on mount (only once)
+  
   React.useEffect(() => {
-    // Prevent multiple calls
+    
     if (hasCheckedAuth.current) {
       return
     }
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const token = getToken()
 
     if (token) {
-      // Verify token and get user from database
+      
       authApi
         .getMe()
         .then((userData) => {
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(newUser)
         })
         .catch((error: any) => {
-          // Token invalid or expired, clear storage
+          
           logger.warn("⚠️ Failed to get user from database:", error?.message || "Unknown error")
           setUser(null)
           setToken(null)
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       logger.log("🔍 Login API Response:", response)
       
-      // Ensure we have the user data
+      
       const userData: User = {
         id: (response.user?.id || (response.user as any)?._id || "").toString(),
         name: `${response.user?.firstName || ""} ${response.user?.lastName || ""}`,
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return userData
     } catch (error: any) {
-      // Log detailed error information
+      
       console.error("=".repeat(50))
       console.error("❌ LOGIN ERROR - Full Details")
       console.error("=".repeat(50))
@@ -138,17 +138,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         type: error?.constructor?.name || typeof error,
       }
       
-      // Add status if it's an ApiError
+      
       if (error?.status) {
         errorDetails.status = error.status
       }
       
-      // Add stack trace if available
+      
       if (error?.stack) {
         errorDetails.stack = error.stack
       }
       
-      // Log everything
+      
       console.error("Error Message:", errorDetails.message)
       console.error("Error Name:", errorDetails.name)
       console.error("Error Type:", errorDetails.type)
@@ -161,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Full Error Object:", error)
       console.error("=".repeat(50))
       
-      // Also use logger for consistency
+      
       logger.error("❌ Login Error:", error)
       console.error("Login Error Details:", errorDetails)
       
@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       logger.error("Registration error in auth.tsx:", error)
       
-      // Extract error message from ApiError or generic error
+      
       let errorMessage = "Registration failed. Please try again."
       
       if (error instanceof Error) {
@@ -233,7 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(newUser)
     } catch (error) {
-      // If refresh fails, logout
+      
       logout()
     }
   }

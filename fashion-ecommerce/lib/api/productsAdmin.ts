@@ -8,8 +8,8 @@ export const productsAdminApi = {
     description?: string
     descriptionAr?: string
     price: number
-    image?: File | string // Can be File or URL string
-    images?: File[] | string[] // Can be File array or URL array
+    image?: File | string 
+    images?: File[] | string[] 
     category: string
     gender: string
     season: string
@@ -24,15 +24,15 @@ export const productsAdminApi = {
     salePercentage?: number
     inCollection?: boolean
   }): Promise<Product> {
-    // Check if we have files to upload
+    
     const hasFiles = productData.image instanceof File || 
                      (productData.images && productData.images.length > 0 && productData.images[0] instanceof File);
     
     if (hasFiles) {
-      // Create FormData for file upload
+      
       const formData = new FormData();
       
-      // Add text fields
+      
       formData.append('name', productData.name);
       if (productData.nameAr) formData.append('nameAr', productData.nameAr);
       if (productData.description) formData.append('description', productData.description);
@@ -50,31 +50,31 @@ export const productsAdminApi = {
       if (productData.inCollection !== undefined) formData.append('inCollection', productData.inCollection.toString());
       if (productData.salePercentage) formData.append('salePercentage', productData.salePercentage.toString());
       
-      // Add sizes array
+      
       if (productData.sizes && productData.sizes.length > 0) {
         productData.sizes.forEach(size => formData.append('sizes[]', size));
       }
       
-      // Add colors array
+      
       if (productData.colors && productData.colors.length > 0) {
         productData.colors.forEach(color => formData.append('colors[]', color));
       }
       
-      // Add main image
+      
       if (productData.image instanceof File) {
         formData.append('image', productData.image);
       } else if (productData.image) {
-        // If it's a URL string, append it
+        
         formData.append('image', productData.image);
       }
       
-      // Add additional images
+      
       if (productData.images && productData.images.length > 0) {
         productData.images.forEach((img) => {
           if (img instanceof File) {
             formData.append('images', img);
           } else if (typeof img === 'string') {
-            // If it's a URL string, append it (backend will handle it)
+            
             formData.append('images', img);
           }
         });
@@ -82,7 +82,7 @@ export const productsAdminApi = {
       
       return await apiClient.post<Product>("/products", formData);
     } else {
-      // No files, send as JSON (backward compatibility)
+      
       return await apiClient.post<Product>("/products", productData);
     }
   },
@@ -96,20 +96,20 @@ export const productsAdminApi = {
       }
     >
   ): Promise<Product> {
-    // Check if we have files to upload
+    
     const hasFiles = productData.image instanceof File || 
                      (productData.images && productData.images.length > 0 && productData.images[0] instanceof File);
     
     if (hasFiles) {
-      // Create FormData for file upload
+      
       const formData = new FormData();
       
-      // Add all text fields
+      
       Object.keys(productData).forEach(key => {
         const value = (productData as any)[key];
         if (value === undefined || value === null) return;
         
-        // Skip file fields, handle them separately
+        
         if (key === 'image' && value instanceof File) {
           formData.append('image', value);
           return;
@@ -119,7 +119,7 @@ export const productsAdminApi = {
           return;
         }
         
-        // Handle arrays
+        
         if (Array.isArray(value)) {
           value.forEach((item: any) => {
             if (typeof item === 'string' || typeof item === 'number') {
@@ -127,14 +127,14 @@ export const productsAdminApi = {
             }
           });
         } else if (typeof value === 'object') {
-          // Skip objects (they'll be stringified if needed)
+          
           formData.append(key, JSON.stringify(value));
         } else {
           formData.append(key, value.toString());
         }
       });
       
-      // Handle image URLs if they're strings
+      
       if (productData.image && typeof productData.image === 'string') {
         formData.append('image', productData.image);
       }
@@ -148,7 +148,7 @@ export const productsAdminApi = {
       
       return await apiClient.put<Product>(`/products/${id}`, formData);
     } else {
-      // No files, send as JSON (backward compatibility)
+      
       return await apiClient.put<Product>(`/products/${id}`, productData);
     }
   },
@@ -171,7 +171,7 @@ export const productsAdminApi = {
 
     const response = await apiClient.get(`/products?${queryParams.toString()}`)
     
-    // Handle response structure - backend returns { success: true, data: [...], total, page, pages }
+    
     if (response && typeof response === 'object') {
       if ('data' in response && Array.isArray(response.data)) {
         return {
@@ -181,11 +181,11 @@ export const productsAdminApi = {
           pages: (response as any).pages || 1,
         }
       }
-      // If response is already in the correct format
+      
       if ('total' in response && 'data' in response) {
         return response as { data: Product[]; total: number; page: number; pages: number }
       }
-      // If response is an array
+      
       if (Array.isArray(response)) {
         return {
           data: response,

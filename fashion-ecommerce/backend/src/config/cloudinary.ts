@@ -1,19 +1,19 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { env } from './env';
 
-// Get and trim Cloudinary credentials
+
 const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
 const apiKey = (process.env.CLOUDINARY_API_KEY || '').trim();
 const apiSecret = (process.env.CLOUDINARY_API_SECRET || '').trim();
 
-// Configure Cloudinary
+
 cloudinary.config({
   cloud_name: cloudName,
   api_key: apiKey,
   api_secret: apiSecret,
 });
 
-// Log configuration status (without exposing secrets)
+
 if (process.env.NODE_ENV === 'development') {
   console.log('');
   console.log('☁️  Cloudinary Configuration:');
@@ -25,28 +25,28 @@ if (process.env.NODE_ENV === 'development') {
   console.log('');
 }
 
-/**
- * Upload image to Cloudinary
- * @param file - File buffer or base64 string
- * @param folder - Optional folder path in Cloudinary
- * @returns Promise with secure_url
- */
+
+
+
+
+
+
 export const uploadToCloudinary = async (
   file: Buffer | string,
   folder: string = 'stylecraft/products'
 ): Promise<string> => {
   try {
-    // Get and trim credentials
+    
     const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
     const apiKey = (process.env.CLOUDINARY_API_KEY || '').trim();
     const apiSecret = (process.env.CLOUDINARY_API_SECRET || '').trim();
 
-    // Check if Cloudinary is configured
+    
     if (!cloudName || !apiKey || !apiSecret) {
       throw new Error('Cloudinary credentials are not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in your environment variables.');
     }
 
-    // Reconfigure with trimmed values (in case they changed)
+    
     cloudinary.config({
       cloud_name: cloudName,
       api_key: apiKey,
@@ -58,12 +58,12 @@ export const uploadToCloudinary = async (
       resource_type: 'image',
       overwrite: false,
       invalidate: true,
-      timeout: 120000, // 120 seconds (2 minutes) timeout for Cloudinary upload
+      timeout: 120000, 
     };
 
     let result;
     
-    // If file is a Buffer (from multer), upload as buffer
+    
     if (Buffer.isBuffer(file)) {
       result = await Promise.race([
         new Promise((resolve, reject) => {
@@ -79,17 +79,17 @@ export const uploadToCloudinary = async (
         new Promise((_, reject) => {
           setTimeout(() => {
             reject(new Error('Cloudinary upload timeout: Request took longer than 120 seconds'));
-          }, 120000); // 2 minutes timeout
+          }, 120000); 
         })
       ]);
     } else {
-      // If file is a base64 string, upload as base64
+      
       result = await Promise.race([
         cloudinary.uploader.upload(file, uploadOptions),
         new Promise((_, reject) => {
           setTimeout(() => {
             reject(new Error('Cloudinary upload timeout: Request took longer than 120 seconds'));
-          }, 120000); // 2 minutes timeout
+          }, 120000); 
         })
       ]);
     }
@@ -102,11 +102,11 @@ export const uploadToCloudinary = async (
   } catch (error: any) {
     console.error('Cloudinary upload error:', error);
     
-    // Provide more detailed error information
+    
     const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
     let errorMessage = error.message || 'Unknown error';
     
-    // Check for specific Cloudinary errors
+    
     if (errorMessage.includes('Invalid cloud_name')) {
       errorMessage = `Invalid cloud_name "${cloudName}". Please verify your CLOUDINARY_CLOUD_NAME in your .env.local file. Make sure it matches your Cloudinary dashboard exactly (case-sensitive, no spaces).`;
     } else if (errorMessage.includes('Invalid API Key')) {
@@ -123,24 +123,24 @@ export const uploadToCloudinary = async (
   }
 };
 
-/**
- * Delete image from Cloudinary
- * @param imageUrl - Full Cloudinary URL or public_id
- */
+
+
+
+
 export const deleteFromCloudinary = async (imageUrl: string): Promise<void> => {
   try {
-    // Extract public_id from URL
+    
     const urlParts = imageUrl.split('/');
     const filename = urlParts[urlParts.length - 1];
     const publicId = filename.split('.')[0];
-    const folder = urlParts.slice(-2, -1)[0]; // Get folder name
+    const folder = urlParts.slice(-2, -1)[0]; 
     
     const fullPublicId = folder ? `${folder}/${publicId}` : publicId;
     
     await cloudinary.uploader.destroy(fullPublicId);
   } catch (error: any) {
     console.error('Cloudinary delete error:', error);
-    // Don't throw - deletion failure shouldn't break the flow
+    
   }
 };
 

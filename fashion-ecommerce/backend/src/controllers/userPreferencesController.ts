@@ -3,13 +3,13 @@ import mongoose from 'mongoose';
 import UserPreferences from '../models/UserPreferences';
 import { AuthRequest } from '../middleware/auth';
 
-// @desc    Get user preferences
-// @route   GET /api/user-preferences
-// @access  Private
+
+
+
 export const getUserPreferences = async (req: AuthRequest, res: Response) => {
-  // Full try/catch wrapper - ensure nothing throws unhandled
+  
   try {
-    // Check database connection first
+    
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
@@ -37,7 +37,7 @@ export const getUserPreferences = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // If preferences don't exist, create default ones
+    
     if (!preferences) {
       try {
         preferences = await UserPreferences.create({
@@ -57,7 +57,7 @@ export const getUserPreferences = async (req: AuthRequest, res: Response) => {
       data: preferences,
     });
   } catch (error: any) {
-    // API ERROR - Always return clean JSON response
+    
     console.error('API ERROR:', error?.message || error?.toString() || 'Unknown error');
     
     return res.status(500).json({
@@ -67,13 +67,13 @@ export const getUserPreferences = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update user preferences
-// @route   PUT /api/user-preferences
-// @access  Private
+
+
+
 export const updateUserPreferences = async (req: AuthRequest, res: Response) => {
-  // Full try/catch wrapper - ensure nothing throws unhandled
+  
   try {
-    // Check database connection first
+    
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
@@ -92,16 +92,16 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
 
     const updateData = req.body;
 
-    // FIXED: Sanitize dashboardPreferences to ensure chartSettings and tableSettings are objects
+    
     if (updateData.dashboardPreferences) {
-      // Ensure chartSettings is an object, not undefined
+      
       if (updateData.dashboardPreferences.chartSettings === undefined || 
           typeof updateData.dashboardPreferences.chartSettings !== 'object' ||
           updateData.dashboardPreferences.chartSettings === null) {
         updateData.dashboardPreferences.chartSettings = {};
       }
       
-      // Ensure tableSettings is an object, not undefined
+      
       if (updateData.dashboardPreferences.tableSettings === undefined || 
           typeof updateData.dashboardPreferences.tableSettings !== 'object' ||
           updateData.dashboardPreferences.tableSettings === null) {
@@ -109,7 +109,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
       }
     }
 
-    // Helper function to remove undefined values from object
+    
     const removeUndefined = (obj: any): any => {
       try {
         if (obj === null || obj === undefined) return undefined;
@@ -131,12 +131,12 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
       }
     };
 
-    // Clean updateData to remove undefined values
+    
     const cleanedUpdateData = removeUndefined(updateData);
 
-    // Validate that we have data to update
+    
     if (!cleanedUpdateData || (typeof cleanedUpdateData === 'object' && Object.keys(cleanedUpdateData).length === 0)) {
-      // Return current preferences instead of error (preferences saving is not critical)
+      
       try {
         const currentPreferences = await UserPreferences.findOne({ user: userId });
         if (currentPreferences) {
@@ -146,7 +146,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
             data: currentPreferences,
           });
         }
-        // If no preferences exist, create default ones
+        
         const defaultPreferences = await UserPreferences.create({
           user: userId,
         });
@@ -175,7 +175,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
     }
 
     if (!preferences) {
-      // Creating new preferences
+      
       try {
         preferences = await UserPreferences.create({
           user: userId,
@@ -189,9 +189,9 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
         });
       }
     } else {
-      // Updating existing preferences
+      
       try {
-        // Merge existing preferences with new data
+        
         if (cleanedUpdateData.dashboardPreferences) {
           const existingDashboard = preferences.dashboardPreferences || {};
           const newDashboard = cleanedUpdateData.dashboardPreferences;
@@ -201,7 +201,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
             activeTab: newDashboard.activeTab !== undefined ? newDashboard.activeTab : existingDashboard.activeTab,
           };
           
-          // FIXED: Merge chartSettings - ensure it's always an object
+          
           if (newDashboard.chartSettings && typeof newDashboard.chartSettings === 'object') {
             preferences.dashboardPreferences.chartSettings = {
               ...(existingDashboard.chartSettings || {
@@ -212,7 +212,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
               ...newDashboard.chartSettings,
             };
           } else {
-            // Ensure chartSettings exists even if not provided
+            
             if (!preferences.dashboardPreferences.chartSettings) {
               preferences.dashboardPreferences.chartSettings = {
                 revenueChartType: 'bar',
@@ -222,7 +222,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
             }
           }
           
-          // FIXED: Merge tableSettings - ensure it's always an object
+          
           if (newDashboard.tableSettings && typeof newDashboard.tableSettings === 'object') {
             preferences.dashboardPreferences.tableSettings = {
               ...(existingDashboard.tableSettings || {
@@ -233,7 +233,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
               ...newDashboard.tableSettings,
             };
           } else {
-            // Ensure tableSettings exists even if not provided
+            
             if (!preferences.dashboardPreferences.tableSettings) {
               preferences.dashboardPreferences.tableSettings = {
                 pageSize: 10,
@@ -275,18 +275,18 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
       }
     }
 
-    // Success response
+    
     return res.status(200).json({
       success: true,
       message: 'Preferences updated successfully',
       data: preferences,
     });
   } catch (error: any) {
-    // API ERROR - Always return clean JSON response
-    // Never throw unhandled exceptions
+    
+    
     console.error('API ERROR:', error?.message || error?.toString() || 'Unknown error');
     
-    // Safely extract error message
+    
     let errorMessage = 'Internal Server Error';
     try {
       errorMessage = error?.message || error?.toString() || 'Internal Server Error';
@@ -294,7 +294,7 @@ export const updateUserPreferences = async (req: AuthRequest, res: Response) => 
       errorMessage = 'Internal Server Error';
     }
     
-    // Always return clean JSON response
+    
     return res.status(500).json({
       success: false,
       message: errorMessage,

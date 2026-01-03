@@ -8,12 +8,12 @@ export type CartValidationResult = {
 
 const isObjectId = (id?: string) => !!id && /^[0-9a-fA-F]{24}$/.test(id)
 
-/**
- * Validates cart items against the database.
- * - Ensures ObjectId format
- * - Ensures product exists and is active
- * - Ensures stock is sufficient
- */
+
+
+
+
+
+
 export async function validateCartItems(items: Array<{ id?: string; product?: string; quantity: number }>): Promise<CartValidationResult> {
   const validItems: CartValidationResult["validItems"] = []
   const invalidItems: CartValidationResult["invalidItems"] = []

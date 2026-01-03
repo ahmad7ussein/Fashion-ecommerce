@@ -41,7 +41,7 @@ export type UserResponse = {
 
 export const authApi = {
   async login(identifier: string, password: string): Promise<LoginResponse["data"]> {
-    // Make direct fetch to have full control over response handling
+    
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
     
@@ -64,7 +64,7 @@ export const authApi = {
         const contentType = response.headers.get("content-type")
         
         try {
-          // Clone response to read it without consuming it
+          
           const clonedResponse = response.clone()
           const responseText = await clonedResponse.text()
           
@@ -78,9 +78,9 @@ export const authApi = {
               const errorData = JSON.parse(responseText)
               logger.error("Login error response (parsed):", errorData)
               
-              // Handle different error response structures
+              
               if (errorData && typeof errorData === 'object') {
-                // Check if object is empty
+                
                 if (Object.keys(errorData).length === 0) {
                   errorMessage = `HTTP ${response.status}: ${response.statusText || 'Login failed'}`
                 } else {
@@ -96,12 +96,12 @@ export const authApi = {
                 }
               }
             } catch (jsonError) {
-              // Not JSON, use as text
+              
               logger.error("Error response is not JSON, using as text")
               errorMessage = responseText || response.statusText || `HTTP ${response.status}: Login failed`
             }
           } else {
-            // Empty body - provide specific error messages based on status code
+            
             logger.error("Error response has empty body")
             if (response.status === 400) {
               errorMessage = "Invalid request. Please check your email and password."
@@ -118,7 +118,7 @@ export const authApi = {
             }
           }
         } catch (readError: any) {
-          // If reading fails, use status text
+          
           logger.error("Failed to read error response:", readError)
           errorMessage = response.statusText || `HTTP ${response.status}: Login failed`
         }
@@ -129,7 +129,7 @@ export const authApi = {
       const data = await response.json()
       logger.log("🔍 authApi.login raw response:", JSON.stringify(data, null, 2))
       
-      // Backend returns: {success: true, data: {user: {...}, token: "..."}}
+      
       if (data.success && data.data && data.data.user && data.data.token) {
         logger.log("✅ Response structure correct: {success, data: {user, token}}")
         return {
@@ -138,7 +138,7 @@ export const authApi = {
         } as LoginResponse["data"]
       }
       
-      // If data is already extracted (shouldn't happen, but handle it)
+      
       if (data.user && data.token) {
         logger.log("✅ Response already has user and token")
         return {
@@ -150,7 +150,7 @@ export const authApi = {
       logger.error("❌ Unexpected response structure:", data)
       throw new Error("Invalid response structure from login API")
     } catch (error: any) {
-      // Handle network errors (Failed to fetch, CORS, etc.)
+      
       if (error instanceof TypeError && error.message === "Failed to fetch") {
         logger.error("❌ Network Error - Backend may be offline")
         logger.error("API URL:", API_BASE_URL)
@@ -158,12 +158,12 @@ export const authApi = {
         throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`)
       }
       
-      // Re-throw if it's already an Error with a message
+      
       if (error instanceof Error) {
         throw error
       }
       
-      // Otherwise, wrap it
+      
       logger.error("❌ Unexpected error during login:", error)
       throw new Error(error?.message || "An unexpected error occurred during login")
     }

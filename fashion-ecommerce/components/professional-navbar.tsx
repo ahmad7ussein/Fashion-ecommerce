@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 
-// Categories with subcategories
+
 const categories = [
   {
     name: "Men",
@@ -104,17 +104,17 @@ export function ProfessionalNavbar() {
   const [unreadCount, setUnreadCount] = useState(0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
-  // Handle theme mount
+  
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Force re-render when language changes
+  
   useEffect(() => {
-    // This ensures the component re-renders when language changes
+    
   }, [language])
 
-  // Handle scroll effect
+  
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
@@ -171,7 +171,7 @@ export function ProfessionalNavbar() {
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 md:h-20 items-center justify-between gap-4">
-            {/* Logo */}
+            { }
             <Link href="/" className="flex items-center space-x-3 group flex-shrink-0 ml-4 md:ml-8">
               <motion.div
                 whileHover={{ scale: 1.05 }}
@@ -182,7 +182,7 @@ export function ProfessionalNavbar() {
               </motion.div>
             </Link>
 
-            {/* Desktop Navigation */}
+            { }
             <nav className="hidden lg:flex items-center gap-1 flex-1 justify-center">
               {navLinks.map((link, index) => (
                 <Link key={link.href} href={link.href}>
@@ -215,7 +215,7 @@ export function ProfessionalNavbar() {
                 </Link>
               ))}
 
-              {/* Categories with Nested Dropdown */}
+              { }
               <div
                 className="relative"
                 onMouseEnter={() => setOpenDropdown("categories")}
@@ -240,7 +240,7 @@ export function ProfessionalNavbar() {
                   </Button>
                 </motion.div>
 
-                {/* First Level Dropdown - Genders */}
+                { }
                 <AnimatePresence>
                   {openDropdown === "categories" && (
                     <motion.div
@@ -270,7 +270,7 @@ export function ProfessionalNavbar() {
                               </motion.div>
                             </Link>
 
-                            {/* Second Level Dropdown - Seasons */}
+                            { }
                             {selectedGender === category.name && (
                               <motion.div
                                 initial={{ opacity: 0, x: language === "ar" ? 10 : -10 }}
@@ -305,9 +305,9 @@ export function ProfessionalNavbar() {
               </div>
             </nav>
 
-            {/* Right Actions */}
+            { }
             <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-              {/* Search Button */}
+              { }
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -326,7 +326,7 @@ export function ProfessionalNavbar() {
                 </Button>
               </motion.div>
 
-              {/* Cart Button */}
+              { }
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -354,7 +354,7 @@ export function ProfessionalNavbar() {
                 </Link>
               </motion.div>
 
-              {/* Settings Menu */}
+              { }
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -377,7 +377,7 @@ export function ProfessionalNavbar() {
                     align={language === "ar" ? "start" : "end"} 
                     className="w-64 bg-popover border border-border shadow-lg"
                   >
-                    {/* Language Section */}
+                    { }
                     <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
                       {language === "ar" ? "اللغة" : "Language"}
                     </DropdownMenuLabel>
@@ -404,7 +404,7 @@ export function ProfessionalNavbar() {
                     
                     <DropdownMenuSeparator />
                     
-                    {/* Theme Section */}
+                    { }
                     <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
                       {language === "ar" ? "المظهر" : "Theme"}
                     </DropdownMenuLabel>
@@ -425,7 +425,7 @@ export function ProfessionalNavbar() {
                     
                     <DropdownMenuSeparator />
                     
-                    {/* Region Section */}
+                    { }
                     <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
                       {language === "ar" ? "المنطقة" : "Region"}
                     </DropdownMenuLabel>
@@ -483,7 +483,7 @@ export function ProfessionalNavbar() {
                     
                     <DropdownMenuSeparator />
                     
-                    {/* Additional Links Section */}
+                    { }
                     <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
                       {language === "ar" ? "معلومات" : "Information"}
                     </DropdownMenuLabel>
@@ -521,7 +521,7 @@ export function ProfessionalNavbar() {
                 </DropdownMenu>
               </motion.div>
 
-              {/* User Menu */}
+              { }
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -538,7 +538,7 @@ export function ProfessionalNavbar() {
                       <User className="h-4 w-4" />
                     </Button>
                     
-                    {/* Dropdown Menu */}
+                    { }
                     <div className={`absolute ${language === "ar" ? "left-0" : "right-0"} mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50`}>
                       <div className="bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
                         <div className="p-4 border-b border-border">
@@ -595,7 +595,7 @@ export function ProfessionalNavbar() {
                 )}
               </motion.div>
 
-              {/* Mobile Menu Button */}
+              { }
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -616,7 +616,7 @@ export function ProfessionalNavbar() {
         </div>
       </motion.header>
 
-      {/* Mobile Menu */}
+      { }
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -655,7 +655,7 @@ export function ProfessionalNavbar() {
                   </motion.div>
                 ))}
 
-                {/* Mobile Categories - Nested */}
+                { }
                 <div className="space-y-2">
                   <div className="px-6 py-2">
                     <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -694,9 +694,9 @@ export function ProfessionalNavbar() {
                 </div>
               </nav>
 
-              {/* Mobile Settings */}
+              { }
               <div className="mt-8 pt-6 border-t border-border space-y-4">
-                {/* Language Toggle Mobile */}
+                { }
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground mb-3 px-2">
                     {language === "ar" ? "اللغة" : "Language"}
@@ -725,7 +725,7 @@ export function ProfessionalNavbar() {
                   </div>
                 </div>
 
-                {/* Theme Toggle Mobile */}
+                { }
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground mb-3 px-2">
                     {language === "ar" ? "المظهر" : "Theme"}
@@ -754,7 +754,7 @@ export function ProfessionalNavbar() {
                   </div>
                 </div>
 
-                {/* Additional Links Mobile */}
+                { }
                 <div className="space-y-2">
                   <Link href="/collections" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full justify-start">
@@ -776,7 +776,7 @@ export function ProfessionalNavbar() {
                   </Link>
                 </div>
 
-                {/* Region Selector Mobile */}
+                { }
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground mb-3 px-2">
                     {language === "ar" ? "المنطقة" : "Region"}
@@ -856,7 +856,7 @@ export function ProfessionalNavbar() {
         )}
       </AnimatePresence>
 
-      {/* Search Dialog */}
+      { }
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>

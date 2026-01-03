@@ -13,8 +13,8 @@ export interface ICartItem {
 }
 
 export interface ICart extends Document {
-  user?: mongoose.Types.ObjectId; // Optional for authenticated users
-  guestSessionId?: string; // For guest users
+  user?: mongoose.Types.ObjectId; 
+  guestSessionId?: string; 
   items: ICartItem[];
   subtotal: number;
   createdAt: Date;
@@ -26,12 +26,12 @@ const cartSchema = new Schema<ICart>(
     user: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: false, // Not required for guests
+      required: false, 
     },
     guestSessionId: {
       type: String,
       required: false,
-      // Index is defined below using schema.index() to avoid duplicates
+      
     },
     items: [
       {
@@ -62,11 +62,11 @@ const cartSchema = new Schema<ICart>(
   }
 );
 
-// Compound index: user OR guestSessionId must be unique
+
 cartSchema.index({ user: 1 }, { unique: true, sparse: true, partialFilterExpression: { user: { $exists: true } } });
 cartSchema.index({ guestSessionId: 1 }, { unique: true, sparse: true, partialFilterExpression: { guestSessionId: { $exists: true } } });
 
-// Calculate subtotal before saving
+
 cartSchema.pre('save', function (next) {
   this.subtotal = this.items.reduce((total, item) => {
     return total + item.price * item.quantity;

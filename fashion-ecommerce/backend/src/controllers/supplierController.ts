@@ -8,7 +8,7 @@ import { AuthRequest } from '../middleware/auth';
 
 const isValidObjectId = (id?: string) => !!id && mongoose.Types.ObjectId.isValid(id);
 
-// Supplier CRUD
+
 export const getSuppliers = async (_req: AuthRequest, res: Response) => {
   try {
     const suppliers = await Supplier.find().sort({ createdAt: -1 });
@@ -161,7 +161,7 @@ export const getSupplierAnalytics = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Supplier Product Review
+
 export const getSupplierProducts = async (req: AuthRequest, res: Response) => {
   try {
     const { status, supplierId } = req.query;

@@ -7,19 +7,19 @@ const connectDB = async (): Promise<void> => {
     const isAtlas = mongoURI.includes('mongodb+srv://') || mongoURI.includes('mongodb.net');
     
     const options: mongoose.ConnectOptions = {
-      maxPoolSize: isAtlas ? 15 : 5, // Increased pool size for better concurrency
-      minPoolSize: isAtlas ? 3 : 1, // Keep more connections alive
-      serverSelectionTimeoutMS: isAtlas ? 20000 : 10000, // 20s - fail faster
-      socketTimeoutMS: isAtlas ? 45000 : 20000, // 45s - increased for network latency
-      connectTimeoutMS: isAtlas ? 20000 : 10000, // 20s - fail faster
+      maxPoolSize: isAtlas ? 15 : 5, 
+      minPoolSize: isAtlas ? 3 : 1, 
+      serverSelectionTimeoutMS: isAtlas ? 20000 : 10000, 
+      socketTimeoutMS: isAtlas ? 45000 : 20000, 
+      connectTimeoutMS: isAtlas ? 20000 : 10000, 
       retryWrites: true,
       retryReads: true,
-      heartbeatFrequencyMS: 5000, // Check connection health every 5s (more frequent)
-      maxIdleTimeMS: 60000, // Keep connections alive longer (60s) to reduce reconnection overhead
-      // Disable buffering - fail fast if not connected
-      bufferCommands: false, // Disable buffering - fail fast if not connected
-      // Add connection monitoring
-      monitorCommands: false, // Disable command monitoring to reduce overhead
+      heartbeatFrequencyMS: 5000, 
+      maxIdleTimeMS: 60000, 
+      
+      bufferCommands: false, 
+      
+      monitorCommands: false, 
     };
 
     console.log('');

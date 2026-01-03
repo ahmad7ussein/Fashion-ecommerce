@@ -45,7 +45,7 @@ async function createAdminAndEmployee() {
 
     console.log('');
 
-    // Check if employee already exists
+    
     const existingEmployee = await User.findOne({ email: employeeData.email });
     if (existingEmployee) {
       console.log(' Employee already exists');

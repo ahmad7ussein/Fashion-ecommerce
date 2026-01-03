@@ -75,7 +75,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-12 sm:py-16">
-        {/* Header */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -93,7 +93,7 @@ export default function ContactPage() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          {/* Contact Information */}
+          { }
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -127,7 +127,7 @@ export default function ContactPage() {
             ))}
           </motion.div>
 
-          {/* Contact Form */}
+          { }
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}

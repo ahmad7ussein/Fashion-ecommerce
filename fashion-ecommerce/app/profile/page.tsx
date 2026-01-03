@@ -19,7 +19,7 @@ import { designsApi, type Design } from "@/lib/api/designs"
 import Image from "next/image"
 import logger from "@/lib/logger"
 
-// Removed mock data - will use API
+
 
 export default function ProfilePage() {
   const { user, logout, refreshUser, isLoading } = useAuth()
@@ -44,7 +44,7 @@ export default function ProfilePage() {
     country: "United States",
   })
 
-  // Update userData when user changes
+  
   React.useEffect(() => {
     if (user) {
       setUserData((prev) => ({
@@ -56,7 +56,7 @@ export default function ProfilePage() {
     }
   }, [user])
 
-  // Load orders
+  
   React.useEffect(() => {
     if (user && user.role === "customer") {
       setLoadingOrders(true)
@@ -77,7 +77,7 @@ export default function ProfilePage() {
     }
   }, [user])
 
-  // Load designs
+  
   React.useEffect(() => {
     if (user && user.role === "customer") {
       setLoadingDesigns(true)
@@ -101,9 +101,9 @@ export default function ProfilePage() {
     country: "USA",
   })
 
-  // Redirect if not logged in (only once)
+  
   React.useEffect(() => {
-    // Prevent multiple redirects
+    
     if (hasRedirected.current) return
     if (isLoading) return
 
@@ -112,7 +112,7 @@ export default function ProfilePage() {
       router.push("/login")
     } else if (user.role !== "customer") {
       hasRedirected.current = true
-      // Redirect non-customers to their appropriate pages
+      
       if (user.role === "admin") {
         router.push("/admin")
       } else if (user.role === "employee") {
@@ -123,7 +123,7 @@ export default function ProfilePage() {
     }
   }, [user, isLoading, router])
 
-  // Show loading state while checking auth
+  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -208,7 +208,7 @@ export default function ProfilePage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Profile Tab */}
+            { }
             <TabsContent value="profile">
               <Card className="bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 shadow-xl rounded-xl sm:rounded-2xl">
                 <CardHeader>
@@ -332,7 +332,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            {/* Orders Tab */}
+            { }
             <TabsContent value="orders">
               {loadingOrders ? (
                 <div className="text-center py-12">
@@ -414,7 +414,7 @@ export default function ProfilePage() {
               )}
             </TabsContent>
 
-            {/* Saved Designs Tab */}
+            { }
             <TabsContent value="designs">
               {loadingDesigns ? (
                 <div className="text-center py-12">
@@ -491,7 +491,7 @@ export default function ProfilePage() {
               )}
             </TabsContent>
 
-            {/* Addresses Tab */}
+            { }
             <TabsContent value="addresses">
               <Card className="bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 shadow-xl rounded-xl sm:rounded-2xl">
                 <CardHeader>
@@ -545,7 +545,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            {/* Settings Tab */}
+            { }
             <TabsContent value="settings">
               <div className="space-y-6">
                 <Card className="bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 shadow-xl rounded-xl sm:rounded-2xl">

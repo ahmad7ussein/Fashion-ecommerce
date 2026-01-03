@@ -2,11 +2,11 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IEmployeeActivity extends Document {
   employee: mongoose.Types.ObjectId;
-  action: string; // e.g., 'product_added', 'order_updated', 'user_created'
+  action: string; 
   description: string;
-  targetType?: string; // e.g., 'Product', 'Order', 'User'
+  targetType?: string; 
   targetId?: mongoose.Types.ObjectId;
-  metadata?: Record<string, any>; // Additional data about the action
+  metadata?: Record<string, any>; 
   createdAt: Date;
 }
 
@@ -40,7 +40,7 @@ const employeeActivitySchema = new Schema<IEmployeeActivity>(
   }
 );
 
-// Index for faster queries
+
 employeeActivitySchema.index({ employee: 1, createdAt: -1 });
 employeeActivitySchema.index({ action: 1, createdAt: -1 });
 

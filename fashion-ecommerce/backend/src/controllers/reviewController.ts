@@ -2,12 +2,12 @@ import { Response } from 'express';
 import Review from '../models/Review';
 import { AuthRequest } from '../middleware/auth';
 
-// @desc    Create new review
-// @route   POST /api/reviews
-// @access  Private
+
+
+
 export const createReview = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Ensure user is authenticated
+    
     if (!req.user?._id) {
       return res.status(401).json({
         success: false,
@@ -31,7 +31,7 @@ export const createReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // VALIDATION: Validate order ID format if provided
+    
     if (order && !order.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -68,9 +68,9 @@ export const createReview = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get approved reviews (public)
-// @route   GET /api/reviews
-// @access  Public
+
+
+
 export const getApprovedReviews = async (req: any, res: Response) => {
   try {
     const { limit = 10, page = 1 } = req.query;
@@ -79,14 +79,14 @@ export const getApprovedReviews = async (req: any, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Optimize review query - use lean() and select() for better performance
+    
     const reviews = await Review.find({ status: 'approved' })
       .select('user rating title comment createdAt')
-      .populate('user', 'firstName lastName email') // Keep populate for user info
+      .populate('user', 'firstName lastName email') 
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
-      .lean() // Use lean() for better performance
+      .lean() 
       .maxTimeMS(10000);
 
     const total = await Review.countDocuments({ status: 'approved' });
@@ -108,12 +108,12 @@ export const getApprovedReviews = async (req: any, res: Response) => {
   }
 };
 
-// @desc    Get user's reviews
-// @route   GET /api/reviews/my-reviews
-// @access  Private
+
+
+
 export const getMyReviews = async (req: AuthRequest, res: Response) => {
   try {
-    // Optimize user reviews query
+    
     const reviews = await Review.find({ user: req.user?._id })
       .select('rating title comment status createdAt')
       .sort({ createdAt: -1 })
@@ -134,9 +134,9 @@ export const getMyReviews = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get all reviews (Admin)
-// @route   GET /api/reviews/all
-// @access  Private/Admin
+
+
+
 export const getAllReviews = async (req: AuthRequest, res: Response) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -150,7 +150,7 @@ export const getAllReviews = async (req: AuthRequest, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Optimize admin reviews query
+    
     const reviews = await Review.find(query)
       .select('user order rating title comment status createdAt')
       .populate('user', 'firstName lastName email')
@@ -180,15 +180,15 @@ export const getAllReviews = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update review status (Admin)
-// @route   PUT /api/reviews/:id/status
-// @access  Private/Admin
+
+
+
 export const updateReviewStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status, adminResponse } = req.body;
 
-    // VALIDATION: Validate ObjectId format
+    
     if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -235,14 +235,14 @@ export const updateReviewStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Delete review
-// @route   DELETE /api/reviews/:id
-// @access  Private
+
+
+
 export const deleteReview = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // VALIDATION: Validate ObjectId format
+    
     if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -259,7 +259,7 @@ export const deleteReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user owns the review or is admin
+    
     if (
       review.user.toString() !== (req.user?._id as any)?.toString() &&
       req.user?.role !== 'admin'

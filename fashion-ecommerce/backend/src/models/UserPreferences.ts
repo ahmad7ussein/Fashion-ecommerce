@@ -45,7 +45,7 @@ const userPreferencesSchema = new Schema<IUserPreferences>(
         type: String,
         default: 'overview',
       },
-      // FIXED: Add default object to prevent "Cast to Object failed" error
+      
       chartSettings: {
         type: Schema.Types.Mixed,
         default: () => ({
@@ -55,7 +55,7 @@ const userPreferencesSchema = new Schema<IUserPreferences>(
           selectedMetrics: [],
         }),
       },
-      // FIXED: Add default object to prevent "Cast to Object failed" error
+      
       tableSettings: {
         type: Schema.Types.Mixed,
         default: () => ({

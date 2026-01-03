@@ -42,7 +42,7 @@ export type ContactMessageResponse = {
   data: ContactMessage[]
 }
 
-// Create a new contact message (Public)
+
 export async function createContactMessage(data: {
   name: string
   email: string
@@ -52,7 +52,7 @@ export async function createContactMessage(data: {
   return apiClient.post("/contact", data)
 }
 
-// Get all contact messages (Admin/Employee only)
+
 export async function getContactMessages(
   filters: ContactMessageFilters = {}
 ): Promise<ContactMessageResponse> {
@@ -65,12 +65,12 @@ export async function getContactMessages(
   return apiClient.get<ContactMessageResponse>(`/contact?${params.toString()}`)
 }
 
-// Get single contact message (Admin/Employee only)
+
 export async function getContactMessage(id: string): Promise<{ success: boolean; data: ContactMessage }> {
   return apiClient.get(`/contact/${id}`)
 }
 
-// Update contact message (Admin/Employee only)
+
 export async function updateContactMessage(
   id: string,
   data: {
@@ -81,7 +81,7 @@ export async function updateContactMessage(
   return apiClient.put(`/contact/${id}`, data)
 }
 
-// Delete contact message (Admin only)
+
 export async function deleteContactMessage(id: string): Promise<{ success: boolean; message: string }> {
   return apiClient.delete(`/contact/${id}`)
 }

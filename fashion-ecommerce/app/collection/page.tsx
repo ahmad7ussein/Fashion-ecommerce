@@ -60,7 +60,7 @@ export default function CollectionPage() {
           listProducts({ gender: "Women", active: true }),
           listProducts({ gender: "Kids", active: true }),
         ])
-        // Get 5 products from each category
+        
         setMenProducts(men.slice(0, 5))
         setWomenProducts(women.slice(0, 5))
         setKidsProducts(kids.slice(0, 5))
@@ -82,7 +82,7 @@ export default function CollectionPage() {
     loadCollection()
   }, [])
 
-  // Load favorite status
+  
   useEffect(() => {
     if (!isAuthenticated || !user) {
       setFavoriteIds(new Set())
@@ -107,10 +107,10 @@ export default function CollectionPage() {
           })
         )
 
-        // Build set only with products that are actually favorites (explicitly true)
+        
         const favoriteSet = new Set<string>()
         favoriteStatuses.forEach((status) => {
-          // Only add if status exists AND isFavorite is explicitly true
+          
           if (status && status.productId && status.isFavorite === true) {
             favoriteSet.add(status.productId)
           }
@@ -124,7 +124,7 @@ export default function CollectionPage() {
     loadFavorites()
   }, [menProducts, womenProducts, kidsProducts, collectionProducts, isAuthenticated, user])
 
-  // Handle favorite toggle
+  
   const handleToggleFavorite = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -186,7 +186,7 @@ export default function CollectionPage() {
     }
   }
 
-  // Handle add to cart
+  
   const handleAddToCart = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -337,7 +337,7 @@ export default function CollectionPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-24 py-6 sm:py-8 md:py-12">
-        {/* Header */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -365,7 +365,7 @@ export default function CollectionPage() {
           </p>
         </motion.div>
 
-        {/* Collection Hero Slider */}
+        { }
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -403,7 +403,7 @@ export default function CollectionPage() {
           ) : null}
         </motion.section>
 
-        {/* Men's Collection */}
+        { }
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -431,7 +431,7 @@ export default function CollectionPage() {
           )}
         </motion.section>
 
-        {/* Women's Collection */}
+        { }
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -459,7 +459,7 @@ export default function CollectionPage() {
           )}
         </motion.section>
 
-        {/* Kids Collection */}
+        { }
         <motion.section
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}

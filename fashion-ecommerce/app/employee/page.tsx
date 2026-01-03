@@ -105,8 +105,8 @@ export default function EmployeeDashboard() {
     description: "",
     descriptionAr: "",
     price: "",
-    image: "", // Base64 string for main image
-    images: [] as string[], // Base64 strings for additional images (max 2)
+    image: "", 
+    images: [] as string[], 
     category: "",
     gender: "",
     season: "",
@@ -132,7 +132,7 @@ export default function EmployeeDashboard() {
   const router = useRouter()
   const productColorSet = new Set(productForm.colors.map(normalizeColorKey))
 
-  // Redirect if not employee - use router for faster navigation
+  
   useEffect(() => {
     if (authLoading) return
     
@@ -147,7 +147,7 @@ export default function EmployeeDashboard() {
     }
   }, [user, authLoading, router])
 
-  // Load orders, users, products, and preferences
+  
   useEffect(() => {
     loadOrders()
     loadUsers()
@@ -155,31 +155,31 @@ export default function EmployeeDashboard() {
     loadUserPreferences()
   }, [])
 
-  // Load products when products tab is active
+  
   useEffect(() => {
     if (activeTab === "products") {
       loadProducts()
     }
   }, [activeTab])
 
-  // Load user preferences from database
+  
   const loadUserPreferences = async () => {
     try {
       const preferences = await userPreferencesApi.getPreferences()
       if (preferences) {
-        // Restore active tab
+        
         if (preferences.dashboardPreferences?.activeTab) {
           setActiveTab(preferences.dashboardPreferences.activeTab)
         }
-        // Restore sidebar state
+        
         if (preferences.sidebarPreferences?.collapsed !== undefined) {
-          // Employee page doesn't have sidebar state, but we can use it if needed
+          
         }
-        // Restore theme
+        
         if (preferences.theme && preferences.theme !== 'system') {
           setTheme(preferences.theme)
         }
-        // Restore language
+        
         if (preferences.language) {
           setLanguage(preferences.language)
         }
@@ -189,13 +189,13 @@ export default function EmployeeDashboard() {
     }
   }
 
-  // Save preferences to database when they change
+  
   useEffect(() => {
     if (!user) return
     
     const savePreferences = async () => {
       try {
-        // FIXED: Type-safe theme and language values
+        
         await userPreferencesApi.updatePreferences({
           dashboardPreferences: {
             activeTab: activeTab,
@@ -212,7 +212,7 @@ export default function EmployeeDashboard() {
       }
     }
 
-    // Debounce saving preferences
+    
     const timeoutId = setTimeout(savePreferences, 1000)
     return () => clearTimeout(timeoutId)
   }, [activeTab, theme, language, user])
@@ -251,7 +251,7 @@ export default function EmployeeDashboard() {
     }
   }
 
-  // Load products from database
+  
   const loadProducts = async () => {
     try {
       setLoading(true)
@@ -269,7 +269,7 @@ export default function EmployeeDashboard() {
     }
   }
 
-  // Convert file to base64 string
+  
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -279,12 +279,12 @@ export default function EmployeeDashboard() {
     })
   }
 
-  // Handle main image upload
+  
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
+    
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Error",
@@ -294,7 +294,7 @@ export default function EmployeeDashboard() {
       return
     }
 
-    // Validate file size (max 5MB)
+    
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Error",
@@ -317,12 +317,12 @@ export default function EmployeeDashboard() {
     }
   }
 
-  // Handle additional images upload (exactly 3 images required)
+  
   const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    // Limit to 3 additional images
+    
     const maxImages = 3
     const currentImagesCount = productForm.images.length
     const remainingSlots = maxImages - currentImagesCount
@@ -350,7 +350,7 @@ export default function EmployeeDashboard() {
       const newBase64Images: string[] = []
 
       for (const file of filesToProcess) {
-        // Validate file type
+        
         if (!file.type.startsWith('image/')) {
           toast({
             title: "Error",
@@ -360,7 +360,7 @@ export default function EmployeeDashboard() {
           continue
         }
 
-        // Validate file size (max 5MB)
+        
         if (file.size > 5 * 1024 * 1024) {
           toast({
             title: "Error",
@@ -386,7 +386,7 @@ export default function EmployeeDashboard() {
     }
   }
 
-  // Remove additional image
+  
   const removeAdditionalImage = (index: number) => {
     const newImages = productForm.images.filter((_, i) => i !== index)
     const newFiles = additionalImageFiles.filter((_, i) => i !== index)
@@ -471,7 +471,7 @@ export default function EmployeeDashboard() {
   const inProgressOrders = orders.filter((o) => o.status === "processing")
   const completedOrders = orders.filter((o) => o.status === "shipped" || o.status === "delivered")
 
-  // Stats
+  
   const stats = [
     {
       label: language === "ar" ? "الطلبات المعلقة" : "Pending Orders",
@@ -499,7 +499,7 @@ export default function EmployeeDashboard() {
     },
   ]
 
-  // Show loading while checking auth or loading dashboard data
+  
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center">
@@ -511,7 +511,7 @@ export default function EmployeeDashboard() {
     )
   }
 
-  // Redirect if not employee
+  
   if (!user || user.role !== "employee") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -522,7 +522,7 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Sidebar */}
+      { }
       <div className="fixed left-0 top-0 h-full w-64 bg-background border-r border-border overflow-y-auto z-50">
         <div className="p-6">
           <Link href="/">
@@ -636,7 +636,7 @@ export default function EmployeeDashboard() {
         </div>
       </div>
 
-      {/* Main Content */}
+      { }
       <div className="ml-64 p-8">
         {loading ? (
           <div className="flex items-center justify-center h-screen">
@@ -647,7 +647,7 @@ export default function EmployeeDashboard() {
           </div>
         ) : (
           <>
-        {/* Overview Tab */}
+        { }
         {activeTab === "overview" && (
           <div className="space-y-8">
             <div>
@@ -659,7 +659,7 @@ export default function EmployeeDashboard() {
                   </p>
             </div>
 
-            {/* Stats Grid */}
+            { }
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat) => (
                 <Card key={stat.label}>
@@ -747,7 +747,7 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-        {/* Orders Tab */}
+        { }
         {activeTab === "orders" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -929,7 +929,7 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-            {/* Progress Tab */}
+            { }
         {activeTab === "progress" && (
           <div className="space-y-6">
             <div>
@@ -1048,7 +1048,7 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-        {/* Customers Tab */}
+        { }
         {activeTab === "customers" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1126,7 +1126,7 @@ export default function EmployeeDashboard() {
           </div>
         )}
 
-        {/* Products Tab */}
+        { }
         {activeTab === "products" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1299,7 +1299,7 @@ export default function EmployeeDashboard() {
               </CardContent>
             </Card>
 
-            {/* Add/Edit Product Modal */}
+            { }
             <Dialog open={showProductModal} onOpenChange={(open) => {
               setShowProductModal(open)
               if (!open) {
@@ -1386,7 +1386,7 @@ export default function EmployeeDashboard() {
                     </div>
                   </div>
 
-                  {/* Main Image Upload */}
+                  { }
                   <div className="space-y-2">
                     <Label htmlFor="main-image">{language === "ar" ? "الصورة الرئيسية" : "Main Image"} *</Label>
                     <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
@@ -1434,7 +1434,7 @@ export default function EmployeeDashboard() {
                     </div>
                   </div>
 
-                  {/* Additional Images Upload (3 images required) */}
+                  { }
                   <div className="space-y-2">
                     <Label htmlFor="additional-images">
                       {language === "ar" ? "الصور الإضافية (3 صور مطلوبة)" : "Additional Images (3 images required)"}
@@ -1638,7 +1638,7 @@ export default function EmployeeDashboard() {
                     </Label>
                   </div>
 
-                  {/* Sale Options */}
+                  { }
                   <div className="border-t pt-4 space-y-4">
                     <div className="flex items-center space-x-2">
                       <input
@@ -1786,7 +1786,7 @@ export default function EmployeeDashboard() {
                         return
                       }
 
-                      // Validate that we have exactly 3 additional images
+                      
                       if (productForm.images.length !== 3) {
                         toast({
                           title: "Error",
@@ -1873,7 +1873,7 @@ export default function EmployeeDashboard() {
           </>
         )}
 
-        {/* Order Details Modal */}
+        { }
       {showOrderDetails && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">

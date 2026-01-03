@@ -18,7 +18,7 @@ function AnimatedTShirt() {
   return (
     <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
       <mesh ref={meshRef} castShadow>
-        {/* T-Shirt body */}
+        { }
         <boxGeometry args={[2, 2.5, 0.3]} />
         <meshStandardMaterial 
           color="#ffffff" 
@@ -27,19 +27,19 @@ function AnimatedTShirt() {
         />
       </mesh>
       
-      {/* Left sleeve */}
+      { }
       <mesh position={[-1.3, 0.8, 0]} castShadow>
         <boxGeometry args={[0.8, 0.6, 0.3]} />
         <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
       </mesh>
       
-      {/* Right sleeve */}
+      { }
       <mesh position={[1.3, 0.8, 0]} castShadow>
         <boxGeometry args={[0.8, 0.6, 0.3]} />
         <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
       </mesh>
       
-      {/* Collar */}
+      { }
       <mesh position={[0, 1.3, 0]} castShadow>
         <cylinderGeometry args={[0.3, 0.3, 0.2, 32]} />
         <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />

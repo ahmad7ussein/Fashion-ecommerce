@@ -85,7 +85,7 @@ export default function SignupPage() {
       }, 1000)
     } catch (error: any) {
       console.error("Registration error:", error)
-      // Extract error message properly
+      
       let errorMessage = "Registration failed. Please try again."
       
       if (error?.message) {
@@ -94,7 +94,7 @@ export default function SignupPage() {
         errorMessage = error
       }
       
-      // Show user-friendly message for connection errors
+      
       if (errorMessage.includes("Cannot connect to the server") || errorMessage.includes("Failed to fetch")) {
         errorMessage = "Cannot connect to the server. Please make sure the backend server is running on http://localhost:5000"
       }
@@ -115,25 +115,25 @@ export default function SignupPage() {
       ...formData,
       [e.target.id]: e.target.value,
     })
-    // Clear error for this field when user starts typing
+    
     if (errors[e.target.id]) {
       setErrors({ ...errors, [e.target.id]: "" })
     }
   }
 
   const handleGoogleLogin = async (e?: React.MouseEvent) => {
-    // Prevent any default behavior
+    
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    // Prevent multiple simultaneous requests
+    
     if (isGoogleLoading) {
       return;
     }
 
-    // Check for Google Client ID first (before doing anything else)
+    
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!googleClientId || googleClientId.trim() === '' || googleClientId.includes('your-google-client-id') || googleClientId.includes('placeholder')) {
       toast({
@@ -146,7 +146,7 @@ export default function SignupPage() {
       return;
     }
 
-    // Check current origin for debugging
+    
     if (typeof window !== 'undefined') {
       const currentOrigin = window.location.origin;
       const fullUrl = window.location.href;
@@ -162,7 +162,7 @@ export default function SignupPage() {
       console.log(`   ${currentOrigin}`);
       console.log("=".repeat(60));
       
-      // Always show toast with current origin
+      
       toast({
         title: "معلومات Origin",
         description: `Origin الحالي: ${currentOrigin}. تأكد من إضافة هذا بالضبط في Google Cloud Console → Authorized JavaScript origins`,
@@ -174,22 +174,22 @@ export default function SignupPage() {
     setIsGoogleLoading(true);
 
     try {
-      // Wait for Google Identity Services to load
+      
       if (typeof window === 'undefined') {
         setIsGoogleLoading(false);
         return;
       }
       
-      // Load Google Identity Services script dynamically only when needed
+      
       if (!(window as any).google) {
-        // Create and load script
+        
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
         
-        // Wait for script to load (max 10 seconds)
+        
         let attempts = 0;
         while (!(window as any).google && attempts < 20) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -201,13 +201,13 @@ export default function SignupPage() {
         }
       }
 
-      // Google login callback handler
+      
       const handleGoogleCallback = async (response: any) => {
         try {
-          setIsGoogleLoading(false); // Reset loading state
+          setIsGoogleLoading(false); 
           const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
           
-          // Show loading toast
+          
           toast({
             title: "جاري إنشاء الحساب...",
             description: "يرجى الانتظار",
@@ -230,18 +230,18 @@ export default function SignupPage() {
             throw new Error(data.message || 'Google login failed');
           }
 
-          // Save token
+          
           if (data.data.token) {
             localStorage.setItem('auth_token', data.data.token);
           }
 
-          // Show success message
+          
           toast({
             title: "تم إنشاء الحساب بنجاح! ✨",
             description: `مرحباً ${data.data.user.firstName}!`,
           });
 
-          // Redirect based on role
+          
           const role = String(data.data.user.role || "").toLowerCase().trim();
           const redirectUrl = role === "admin" 
             ? "/admin" 
@@ -249,10 +249,10 @@ export default function SignupPage() {
             ? "/employee" 
             : "/profile";
           
-          // Use router for faster navigation
+          
           router.replace(redirectUrl);
         } catch (error: any) {
-          setIsGoogleLoading(false); // Reset loading state on error
+          setIsGoogleLoading(false); 
           console.error("❌ Google login error:", error);
           toast({
             title: "فشل التسجيل",
@@ -262,9 +262,9 @@ export default function SignupPage() {
         }
       };
 
-      // Check if already initialized to prevent multiple initializations
+      
       if (!(window as any).google.accounts?.id?._clientId) {
-        // Initialize Google Identity Services with better UX
+        
         (window as any).google.accounts.id.initialize({
           client_id: googleClientId,
           callback: handleGoogleCallback,
@@ -274,11 +274,11 @@ export default function SignupPage() {
         });
       }
 
-      // Use One Tap for better UX (more elegant than prompt)
+      
       try {
         (window as any).google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed()) {
-            // If One Tap is not displayed, fallback to button click
+            
             console.log("One Tap not displayed, using button");
           } else if (notification.isSkippedMoment()) {
             console.log("One Tap skipped");
@@ -288,7 +288,7 @@ export default function SignupPage() {
         });
       } catch (promptError: any) {
         console.warn("Google One Tap error:", promptError);
-        // Fallback: just show the button is ready
+        
       }
     } catch (error: any) {
       console.error("❌ Google login initialization error:", error);
@@ -304,10 +304,12 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8 space-y-4">
-          <Link href="/" className="inline-block mb-4 transition-transform hover:scale-105">
-            <Logo className="mx-auto" />
+        { }
+        <div className="text-center mb-8 space-y-5">
+          <Link href="/" className="inline-flex items-center justify-center mb-4 transition-transform hover:scale-105">
+            <span className="inline-flex items-center justify-center rounded-full bg-white/85 ring-1 ring-rose-200/70 px-5 py-3 shadow-lg">
+              <Logo className="h-16 w-auto sm:h-20 md:h-24" />
+            </span>
           </Link>
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Create your account</h1>
@@ -315,7 +317,7 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Main Card */}
+        { }
         <Card className="shadow-lg border-2">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl">Sign Up</CardTitle>
@@ -323,7 +325,7 @@ export default function SignupPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name Fields */}
+              { }
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
@@ -359,7 +361,7 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Email */}
+              { }
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -377,7 +379,7 @@ export default function SignupPage() {
                 {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
               </div>
 
-              {/* Password */}
+              { }
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -405,7 +407,7 @@ export default function SignupPage() {
                 {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
               </div>
 
-              {/* Confirm Password */}
+              { }
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
@@ -430,7 +432,7 @@ export default function SignupPage() {
                 {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
               </div>
 
-              {/* Terms */}
+              { }
               <div className="space-y-2">
                 <div className="flex flex-row items-start space-x-3">
                   <Checkbox
@@ -452,7 +454,7 @@ export default function SignupPage() {
                 {errors.acceptTerms && <p className="text-sm text-destructive">{errors.acceptTerms}</p>}
               </div>
 
-              {/* Submit Button */}
+              { }
               <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -467,7 +469,7 @@ export default function SignupPage() {
               </Button>
             </form>
 
-            {/* Divider */}
+            { }
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <Separator />
@@ -477,7 +479,7 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Social Login */}
+            { }
             <Button 
               variant="outline" 
               type="button" 
@@ -521,7 +523,7 @@ export default function SignupPage() {
               </div>
             </Button>
 
-            {/* Toggle Sign Up/In */}
+            { }
             <div className="text-center text-sm pt-4 border-t">
               <span className="text-muted-foreground">Already have an account? </span>
               <Link href="/login" className="text-primary hover:underline font-semibold transition-colors">
@@ -531,7 +533,7 @@ export default function SignupPage() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
+        { }
         <div className="mt-6 text-center">
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1">
             ← Back to home

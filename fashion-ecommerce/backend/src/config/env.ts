@@ -1,25 +1,25 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables
-// Try to load from parent directory .env.local first (for SMTP_USER, SMTP_PASS, etc.)
+
+
 const parentEnvPath = path.resolve(__dirname, '../../../.env.local');
 dotenv.config({ path: parentEnvPath });
 
-// Then load from backend/.env.local (overrides parent if exists)
+
 const backendEnvLocalPath = path.resolve(__dirname, '../../.env.local');
 dotenv.config({ path: backendEnvLocalPath });
 
-// Finally load from backend/.env (default)
+
 dotenv.config();
 
-// Required environment variables
+
 const requiredEnvVars = [
   'MONGODB_URI',
   'JWT_SECRET',
 ];
 
-// Optional but recommended for production
+
 const recommendedEnvVars = [
   'CLOUDINARY_CLOUD_NAME',
   'CLOUDINARY_API_KEY',
@@ -27,14 +27,14 @@ const recommendedEnvVars = [
   'GOOGLE_CLIENT_ID',
 ];
 
-// Validate required environment variables
+
 requiredEnvVars.forEach((varName) => {
   if (!process.env[varName]) {
     throw new Error(`Missing required environment variable: ${varName}`);
   }
 });
 
-// Export validated environment variables
+
 export const env = {
   mongodbUri: process.env.MONGODB_URI!,
   jwtSecret: process.env.JWT_SECRET!,
@@ -57,7 +57,7 @@ export const env = {
   },
 };
 
-// Log environment info (without sensitive data)
+
 if (process.env.NODE_ENV === 'development') {
   console.log('');
   console.log('📋 Environment Configuration:');
@@ -67,7 +67,7 @@ if (process.env.NODE_ENV === 'development') {
   console.log(`  ✅ FRONTEND_URL: ${env.frontendUrl}`);
   console.log(`  ${env.mongodbUri ? '✅' : '❌'} MONGODB_URI: ${env.mongodbUri ? 'Set' : 'Missing'}`);
   if (env.mongodbUri) {
-    // Show connection type without exposing credentials
+    
     const isAtlas = env.mongodbUri.includes('mongodb+srv://') || env.mongodbUri.includes('mongodb.net');
     const uriPreview = env.mongodbUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@').substring(0, 60) + '...';
     console.log(`     Type: ${isAtlas ? 'MongoDB Atlas (Cloud)' : 'Local MongoDB'}`);

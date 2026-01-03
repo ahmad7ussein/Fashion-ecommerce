@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ShoppingBag, Search, Filter, X, Heart } from "lucide-react"
+import { ShoppingBag, Search, Filter, X, Heart, ChevronLeft, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { listProducts, type Product } from "@/lib/api/products"
+import { listProductsPaginated, type Product } from "@/lib/api/products"
 import { useRegion } from "@/lib/region"
 import { useLanguage } from "@/lib/language"
 import { ProductGridSkeleton } from "@/components/skeletons"
@@ -21,7 +21,7 @@ import { favoritesApi } from "@/lib/api/favorites"
 import { useCart } from "@/lib/cart"
 import { useRouter } from "next/navigation"
 
-// Note: metadata cannot be exported from client components in Next.js
+
 export default function ProductsPage() {
   const { formatPrice } = useRegion()
   const { language } = useLanguage()
@@ -30,12 +30,16 @@ export default function ProductsPage() {
   const { addItem } = useCart()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [isLoading, setIsLoading] = useState(true) // Start with true to show skeleton on initial load
+  const PAGE_SIZE = 24
+  const [isLoading, setIsLoading] = useState(true) 
   const [products, setProducts] = useState<Product[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set())
   const [loadingFavorites, setLoadingFavorites] = useState<Set<string>>(new Set())
   
-  // Initialize filters from URL params if they exist, otherwise default to "all" (show all products)
+  
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "")
   const [categoryFilter, setCategoryFilter] = useState(() => {
     const cat = searchParams.get("category")
@@ -54,21 +58,21 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState("featured")
   const [showFilters, setShowFilters] = useState(false)
 
-  // Update filters from URL params - only if they exist in URL
+  
   useEffect(() => {
     const searchParam = searchParams.get("search")
     const genderParam = searchParams.get("gender")
     const seasonParam = searchParams.get("season")
     const categoryParam = searchParams.get("category")
     
-    // Only update from URL if param exists and is not "all"
+    
     if (searchParam !== null) {
       setSearchQuery(searchParam)
     }
     if (genderParam !== null && genderParam !== "all") {
       setGenderFilter(genderParam)
     } else if (genderParam === null) {
-      // If no gender param in URL, reset to "all" (show all products)
+      
       setGenderFilter("all")
     }
     if (seasonParam !== null && seasonParam !== "all") {
@@ -79,76 +83,87 @@ export default function ProductsPage() {
     if (categoryParam !== null && categoryParam !== "all") {
       setCategoryFilter(categoryParam)
     } else if (categoryParam === null) {
-      // If no category param in URL, reset to "all" (show all products)
+      
       setCategoryFilter("all")
     }
+    setCurrentPage(1)
   }, [searchParams])
 
-  // Load products - only apply filters if they are explicitly set in URL or state
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy])
+
+  
   useEffect(() => {
     let isMounted = true
     const load = async () => {
       setIsLoading(true)
       try {
-        // Get current values from URL params
+        
         const searchParam = searchParams.get("search")
         const genderParam = searchParams.get("gender")
         const seasonParam = searchParams.get("season")
         const categoryParam = searchParams.get("category")
         
-        // Build filters object - only include filters that are explicitly set (not "all")
+        
         const filters: any = {
           sortBy: sortBy as any,
+          page: currentPage,
+          limit: PAGE_SIZE,
         }
         
-        // Only add search if it exists
+        
         if (searchParam) {
           filters.search = searchParam
         } else if (searchQuery) {
           filters.search = searchQuery
         }
         
-        // Only add category if it's explicitly set in URL or state (not "all")
+        
         if (categoryParam !== null && categoryParam !== "all") {
           filters.category = categoryParam
         } else if (categoryFilter !== "all") {
           filters.category = categoryFilter
         }
         
-        // Only add gender if it's explicitly set in URL or state (not "all")
+        
         if (genderParam !== null && genderParam !== "all") {
           filters.gender = genderParam
         } else if (genderFilter !== "all") {
           filters.gender = genderFilter
         }
         
-        // Only add season if it's explicitly set in URL or state (not "all")
+        
         if (seasonParam !== null && seasonParam !== "all") {
           filters.season = seasonParam
         } else if (seasonFilter !== "all") {
           filters.season = seasonFilter
         }
         
-        // Only add style if it's not "all"
+        
         if (styleFilter !== "all") {
           filters.style = styleFilter
         }
         
-        // Only add occasion if it's not "all"
+        
         if (occasionFilter !== "all") {
           filters.occasion = occasionFilter
         }
         
-        // If no filters at all (just /products), show all products
-        const list = await listProducts(filters)
+        
+        const result = await listProductsPaginated(filters)
         if (isMounted) {
-          setProducts(list)
+          setProducts(result.data)
+          setTotalCount(result.total)
+          setTotalPages(Math.max(result.pages || 1, 1))
           setIsLoading(false)
         }
       } catch (error) {
         console.error("Failed to load products:", error)
         if (isMounted) {
           setProducts([])
+          setTotalCount(0)
+          setTotalPages(1)
           setIsLoading(false)
         }
       }
@@ -157,11 +172,11 @@ export default function ProductsPage() {
     return () => {
       isMounted = false
     }
-  }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy])
+  }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy, currentPage])
 
-  // Load favorite status for all products
+  
   useEffect(() => {
-    // Reset favorites when user logs out or products change
+    
     if (!isAuthenticated || !user || products.length === 0) {
       setFavoriteIds(new Set())
       return
@@ -169,7 +184,7 @@ export default function ProductsPage() {
 
     const loadFavorites = async () => {
       try {
-        // Only check products with valid MongoDB ObjectId
+        
         const validProducts = products.filter(p => {
           const productId = p._id || p.id?.toString()
           return productId && /^[0-9a-fA-F]{24}$/.test(productId)
@@ -186,21 +201,21 @@ export default function ProductsPage() {
             if (!productId) return null
             try {
               const isFavorite = await favoritesApi.checkFavorite(productId)
-              // Only return if it's actually a favorite
+              
               return isFavorite ? { productId, isFavorite: true } : null
             } catch (error) {
-              // If check fails, assume not favorite
+              
               console.warn(`Failed to check favorite for product ${productId}:`, error)
               return null
             }
           })
         )
 
-        // Build set only with products that are actually favorites
-        // Build set only with products that are actually favorites (explicitly true)
+        
+        
         const favoriteSet = new Set<string>()
         favoriteStatuses.forEach((status) => {
-          // Only add if status exists AND isFavorite is explicitly true
+          
           if (status && status.productId && status.isFavorite === true) {
             favoriteSet.add(status.productId)
           }
@@ -208,7 +223,7 @@ export default function ProductsPage() {
         setFavoriteIds(favoriteSet)
       } catch (error) {
         console.error("Failed to load favorites:", error)
-        // On error, assume no favorites
+        
         setFavoriteIds(new Set())
       }
     }
@@ -216,7 +231,7 @@ export default function ProductsPage() {
     loadFavorites()
   }, [products, isAuthenticated, user])
 
-  // Handle favorite toggle
+  
   const handleToggleFavorite = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -283,7 +298,7 @@ export default function ProductsPage() {
     }
   }
 
-  // Handle add to cart
+  
   const handleAddToCart = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -350,10 +365,29 @@ export default function ProductsPage() {
     occasionFilter !== "all",
   ].filter(Boolean).length
 
+  const paginationPages = (() => {
+    const maxPagesToShow = 5
+    const half = Math.floor(maxPagesToShow / 2)
+    let start = Math.max(1, currentPage - half)
+    let end = Math.min(totalPages, start + maxPagesToShow - 1)
+    if (end - start + 1 < maxPagesToShow) {
+      start = Math.max(1, end - maxPagesToShow + 1)
+    }
+    const pages: number[] = []
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page)
+    }
+    return {
+      pages,
+      showStartEllipsis: start > 1,
+      showEndEllipsis: end < totalPages,
+    }
+  })()
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-8 sm:py-12">
-        {/* Page Header */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -378,7 +412,7 @@ export default function ProductsPage() {
           </p>
         </motion.div>
 
-        {/* Search and Filter Toggle */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -512,7 +546,7 @@ export default function ProductsPage() {
           )}
         </AnimatePresence>
 
-        {/* Active Filters Display */}
+        { }
         {activeFiltersCount > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -562,19 +596,21 @@ export default function ProductsPage() {
           </motion.div>
         )}
 
-        {/* Results Count */}
+        { }
         <div className="mb-6">
           <p className="text-base text-gray-600">
             {isLoading 
               ? (language === "ar" ? "جاري التحميل..." : "Loading...") 
               : language === "ar" 
                 ? `عرض ${products.length} ${products.length === 1 ? "منتج" : "منتج"}`
-                : `Showing ${products.length} ${products.length === 1 ? "product" : "products"}`
+                : totalCount > 0
+                  ? `Showing ${products.length} of ${totalCount} ${totalCount === 1 ? "product" : "products"}`
+                  : `Showing ${products.length} ${products.length === 1 ? "product" : "products"}`
             }
           </p>
         </div>
 
-        {/* Products Grid - Optimized for better visibility */}
+        { }
         {isLoading ? (
           <ProductGridSkeleton count={10} />
         ) : (
@@ -676,6 +712,79 @@ export default function ProductsPage() {
             </motion.div>
             )
           })}
+          </div>
+        )}
+
+        {!isLoading && totalPages > 1 && products.length > 0 && (
+          <div className="mt-10 flex justify-center">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {paginationPages.showStartEllipsis && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                    onClick={() => setCurrentPage(1)}
+                  >
+                    1
+                  </Button>
+                  <span className="px-1 text-gray-400">...</span>
+                </>
+              )}
+
+              {paginationPages.pages.map((page) => (
+                <Button
+                  key={page}
+                  variant="outline"
+                  size="sm"
+                  className={
+                    page === currentPage
+                      ? "h-9 w-9 p-0 bg-rose-500 text-white border-rose-500 hover:bg-rose-600"
+                      : "h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                  }
+                  onClick={() => setCurrentPage(page)}
+                  aria-current={page === currentPage ? "page" : undefined}
+                >
+                  {page}
+                </Button>
+              ))}
+
+              {paginationPages.showEndEllipsis && (
+                <>
+                  <span className="px-1 text-gray-400">...</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                    onClick={() => setCurrentPage(totalPages)}
+                  >
+                    {totalPages}
+                  </Button>
+                </>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 p-0 border-gray-200 text-gray-700 hover:border-rose-300"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                aria-label="Next page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 

@@ -1,9 +1,9 @@
-/**
- * Delete Product by Name
- * 
- * This script deletes a product from the database by name.
- * Run with: npx ts-node src/scripts/deleteProductByName.ts
- */
+
+
+
+
+
+
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -12,7 +12,7 @@ import Product from '../models/Product';
 import { deleteFromCloudinary } from '../config/cloudinary';
 import connectDB from '../config/database';
 
-// Load environment variables
+
 const parentEnvPath = path.resolve(__dirname, '../../../.env.local');
 dotenv.config({ path: parentEnvPath });
 
@@ -25,13 +25,13 @@ const productName = 'Quarter-Zip Polo Shirt';
 
 async function deleteProductByName() {
   try {
-    // Connect to database
+    
     await connectDB();
     console.log('✅ Connected to database');
 
-    // Find product by name
+    
     const product = await Product.findOne({ 
-      name: { $regex: productName, $options: 'i' } // Case-insensitive search
+      name: { $regex: productName, $options: 'i' } 
     });
 
     if (!product) {
@@ -41,7 +41,7 @@ async function deleteProductByName() {
 
     console.log(`📦 Found product: ${product.name} (ID: ${product._id})`);
 
-    // Delete images from Cloudinary
+    
     if (product.image && product.image.includes('cloudinary.com')) {
       console.log('🗑️  Deleting main image from Cloudinary...');
       await deleteFromCloudinary(product.image);
@@ -56,7 +56,7 @@ async function deleteProductByName() {
       }
     }
 
-    // Delete product from database
+    
     await Product.findByIdAndDelete(product._id);
     console.log(`✅ Product "${product.name}" deleted successfully`);
 

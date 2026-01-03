@@ -12,15 +12,15 @@ export class ApiError extends Error {
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
 
-  // Build headers - don't set Content-Type for FormData (browser will set it with boundary)
+  
   const headers: Record<string, string> = {};
   
-  // Only set Content-Type for non-FormData requests
+  
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
   
-  // Merge any additional headers
+  
   if (options.headers) {
     Object.assign(headers, options.headers);
   }
@@ -36,15 +36,15 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Longer timeout for file uploads (FormData) and product listings
+      
       const isFileUpload = options.body instanceof FormData
       const requestMethod = options.method || 'GET'
       const isProductList = url.includes('/products') && requestMethod === 'GET'
       const timeoutDuration = isFileUpload 
-        ? (attempt === 0 ? 120000 : 180000) // 2-3 minutes for file uploads
+        ? (attempt === 0 ? 120000 : 180000) 
         : isProductList
-        ? (attempt === 0 ? 120000 : 150000) // 2-2.5 minutes for product listings
-        : (attempt === 0 ? 60000 : 90000) // 1-1.5 minutes for regular requests
+        ? (attempt === 0 ? 120000 : 150000) 
+        : (attempt === 0 ? 60000 : 90000) 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeoutDuration)
 
@@ -101,21 +101,21 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
           }
         }
       } catch (readError) {
-        // If reading fails, use statusText
+        
         errorMessage = response.statusText || `HTTP ${response.status} Error`;
       }
       
-      // Handle 401 Unauthorized - clear token and redirect to login
+      
       if (response.status === 401) {
-        // Clear token from localStorage
+        
         if (typeof window !== 'undefined') {
           localStorage.removeItem('auth_token');
           logger.warn("⚠️ 401 Unauthorized - Token cleared. Redirecting to login...");
           
-          // Only redirect if we're not already on login/signup page
+          
           const currentPath = window.location.pathname;
           if (!currentPath.includes('/login') && !currentPath.includes('/signup')) {
-            // Use setTimeout to avoid navigation during render
+            
             setTimeout(() => {
               window.location.href = '/login';
             }, 100);
@@ -123,8 +123,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         }
       }
       
-      // Log detailed error information
-      // Skip logging for expected 404 errors on numeric product IDs (fallback catalog)
+      
+      
       const isNumericProductId = /\/products\/\d+$/.test(url) && response.status === 404
       if (!isNumericProductId) {
         try {
@@ -138,11 +138,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
             headers: Object.fromEntries(response.headers.entries()),
           });
         } catch {
-          // Silent fail for logging
+          
         }
       }
       
-      // Create detailed error with all available information
+      
       const detailedError = new ApiError(response.status, errorMessage);
       (detailedError as any).url = url;
       (detailedError as any).method = options.method || "GET";
@@ -152,42 +152,42 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       throw detailedError;
     }
 
-    // Parse response JSON safely
+    
     let data: any
     try {
       const text = await response.text()
       if (!text || text.trim().length === 0) {
-        // Empty response
+        
         return {} as T
       }
       data = JSON.parse(text)
     } catch (parseError) {
-      // Invalid JSON response
+      
       try {
         logger.error("Failed to parse JSON response")
       } catch {
-        // Silent fail
+        
       }
       throw new ApiError(500, "Invalid response from server")
     }
     
-    // Backend returns: {success: true, data: {...}} or {success: true, count, total, page, pages, data: [...]}
-    // For endpoints that return paginated data with metadata (like getAllUsers), return the full object
-    // For other endpoints, extract just the data part
+    
+    
+    
     if (data && typeof data === 'object' && 'data' in data) {
-      // If the response has pagination metadata (count, total, page, pages), return full object
+      
       if ('total' in data || 'count' in data || 'page' in data || 'pages' in data) {
         return data
       }
-      // Otherwise, extract just the data part
+      
       return data.data
       } else {
         return data
       }
     } catch (error) {
-      // If it's the last attempt, handle the error
+      
       if (attempt === maxRetries) {
-        // Handle network errors (Failed to fetch, CORS, timeout, etc.)
+        
         if (lastError) {
           if (lastError.name === 'AbortError') {
             throw new ApiError(504, "Request timeout. Please try again.")
@@ -199,7 +199,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
               logger.error("URL:", url)
               logger.error("Error:", lastError.message || "Failed to fetch")
             } catch {
-              // Silent fail for logging
+              
             }
             throw new ApiError(
               503,
@@ -207,21 +207,21 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
             )
           }
           
-          // Re-throw if it's already an ApiError
+          
           if (lastError instanceof ApiError) {
             throw lastError
           }
           
-          // Unknown network error
+          
           throw new ApiError(500, lastError.message || "Network error occurred")
         }
         
-        // Handle ApiError (already formatted) - re-throw as is
+        
         if (error instanceof ApiError) {
           throw error
         }
         
-        // Handle other unexpected errors
+        
         try {
           const errorDetails = error instanceof Error ? {
             message: error.message,
@@ -236,10 +236,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
             error: errorDetails,
           });
         } catch {
-          // Silent fail for logging
+          
         }
         
-        // Wrap unknown errors with full details
+        
         const wrappedError = new ApiError(500, error instanceof Error ? error.message : "An unexpected error occurred");
         (wrappedError as any).originalError = error;
         (wrappedError as any).endpoint = endpoint;
@@ -247,17 +247,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         throw wrappedError;
       }
       
-      // If not the last attempt and it's a retryable error, continue
+      
       if (error instanceof TypeError || (error as any)?.name === 'AbortError') {
         continue
       }
       
-      // For non-retryable errors, throw immediately
+      
       throw error
     }
   }
   
-  // If we exit the loop without returning, handle lastError
+  
   if (lastError) {
     if (lastError.name === 'AbortError') {
       throw new ApiError(504, "Request timeout. Please try again.")
@@ -277,7 +277,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     throw new ApiError(500, lastError.message || "Network error occurred")
   }
   
-  // This should never happen, but TypeScript needs it
+  
   throw new ApiError(500, "Unexpected error in request")
 }
 
@@ -287,24 +287,24 @@ export const apiClient = {
   },
 
   post<T>(endpoint: string, data?: any): Promise<T> {
-    // Check if data is FormData
+    
     const isFormData = data instanceof FormData;
     
     return request<T>(endpoint, {
       method: "POST",
       body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
-      headers: isFormData ? {} : undefined, // Let browser set Content-Type for FormData
+      headers: isFormData ? {} : undefined, 
     })
   },
 
   put<T>(endpoint: string, data?: any): Promise<T> {
-    // Check if data is FormData
+    
     const isFormData = data instanceof FormData;
     
     return request<T>(endpoint, {
       method: "PUT",
       body: isFormData ? data : JSON.stringify(data),
-      headers: isFormData ? {} : undefined, // Let browser set Content-Type for FormData
+      headers: isFormData ? {} : undefined, 
     })
   },
 

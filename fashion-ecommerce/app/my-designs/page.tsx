@@ -88,7 +88,7 @@ export default function MyDesignsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      { }
       <header className="border-b border-border bg-background shadow-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -122,15 +122,15 @@ export default function MyDesignsPage() {
         </div>
       </header>
 
-      {/* Main Content */}
+      { }
       <div className="container mx-auto px-4 py-8">
-        {/* Page Header */}
+        { }
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">My Designs</h1>
           <p className="text-muted-foreground">Manage and organize your custom clothing designs</p>
         </div>
 
-        {/* Stats */}
+        { }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardContent className="p-6">
@@ -181,7 +181,7 @@ export default function MyDesignsPage() {
           </Card>
         </div>
 
-        {/* Toolbar */}
+        { }
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -218,7 +218,7 @@ export default function MyDesignsPage() {
         </div>
 
 
-        {/* Designs Grid/List */}
+        { }
         {filteredDesigns.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">

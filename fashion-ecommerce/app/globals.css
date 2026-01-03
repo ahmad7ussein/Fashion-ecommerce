@@ -122,7 +122,7 @@
   }
 }
 
-/* Professional Smooth Scrolling & Typography */
+ 
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
@@ -134,7 +134,7 @@ body {
   direction: ltr !important;
 }
 
-/* Minimal Professional Scrollbar */
+ 
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -162,14 +162,14 @@ body {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Professional Typography */
+ 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
 
-/* Professional Animations */
+ 
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -223,7 +223,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Professional Hover Effects */
+ 
 .hover-lift {
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -241,7 +241,7 @@ h1, h2, h3, h4, h5, h6 {
   transform: scale(1.05);
 }
 
-/* Professional Glass Effect */
+ 
 .glass-effect {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
@@ -249,7 +249,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Professional Card Styles */
+ 
 .card-professional {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 1rem;
@@ -261,7 +261,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
 }
 
-/* Professional Button Ripple Effect */
+ 
 .btn-ripple {
   position: relative;
   overflow: hidden;
@@ -286,20 +286,20 @@ h1, h2, h3, h4, h5, h6 {
   height: 400px;
 }
 
-/* Professional Selection */
+ 
 ::selection {
   background: rgba(255, 255, 255, 0.2);
   color: inherit;
 }
 
-/* Professional Focus Styles */
+ 
 *:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 4px;
   border-radius: 8px;
 }
 
-/* Blob Animation for Background */
+ 
 @keyframes blob {
   0%, 100% {
     transform: translate(0, 0) scale(1);
@@ -327,7 +327,7 @@ h1, h2, h3, h4, h5, h6 {
   animation-delay: 4s;
 }
 
-/* RTL Support */
+ 
 [dir="rtl"] {
   direction: rtl;
   text-align: right;
@@ -348,14 +348,14 @@ h1, h2, h3, h4, h5, h6 {
   text-align: left;
 }
 
-/* ==============================
-   Student UI overrides (simpler)
-   ==============================
-   Goal: keep structure and functionality intact while toning down
-   colors, gradients, animations, shadows, and fancy effects so the
-   UI feels simpler and more "student-level" rather than fully polished.
-   Activate via adding `student-ui` on <body> (already applied).
-*/
+
+
+
+
+
+
+
+
 .student-ui [class*="bg-gradient-to-"],
 .student-ui [class*="from-"],
 .student-ui [class*="via-"],
@@ -363,14 +363,14 @@ h1, h2, h3, h4, h5, h6 {
   background-image: none !important;
 }
 
-/* Remove custom gradient utilities/patterns */
+ 
 .student-ui [class*="bg-[radial-gradient"],
 .student-ui [class*="bg-[linear-gradient"],
 .student-ui [class*="bg-[conic-gradient"] {
   background-image: none !important;
 }
 
-/* Hide decorative blur blobs */
+ 
 .student-ui [class~="blur-sm"],
 .student-ui [class~="blur-md"],
 .student-ui [class~="blur-lg"],
@@ -380,47 +380,47 @@ h1, h2, h3, h4, h5, h6 {
   display: none !important;
 }
 
-/* Drop background images used only for decoration */
+ 
 .student-ui [class~="bg-cover"] {
   background-image: none !important;
 }
 
-/* Tone down glass/backdrop blur effects */
+ 
 .student-ui [class*="backdrop-blur"] {
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
 
-/* Remove heavy shadows site-wide */
+ 
 .student-ui [class*="shadow"],
 .student-ui [class*="hover:shadow"] {
   box-shadow: none !important;
 }
 
-/* Remove drop-shadow filters */
+ 
 .student-ui [class*="drop-shadow"] {
   filter: none !important;
 }
 
-/* Remove ring shadows (keep focus outline from base styles) */
+ 
 .student-ui [class*="ring-"] {
   box-shadow: none !important;
 }
 
-/* Make transitions instant (or minimal) */
+ 
 .student-ui [class*="transition"],
 .student-ui [class*="duration-"],
 .student-ui [class*="ease-"] {
   transition: none !important;
 }
 
-/* Stop CSS-based animations */
+ 
 .student-ui [class*="animate-"],
 .student-ui [class*="group-hover:animate"] {
   animation: none !important;
 }
 
-/* Reduce hover motion flair (scales/rotations/translations) */
+ 
 .student-ui [class*="hover:scale-"],
 .student-ui [class*="group-hover:scale-"],
 .student-ui [class*="hover:rotate-"],
@@ -430,12 +430,12 @@ h1, h2, h3, h4, h5, h6 {
   transform: none !important;
 }
 
-/* Ensure gradient text remains readable */
+ 
 .student-ui .text-transparent {
   color: inherit !important;
 }
 
-/* Soften typography weight and oversized headings */
+ 
 .student-ui .font-extrabold,
 .student-ui .font-black {
   font-weight: 700 !important;
@@ -458,12 +458,12 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 3rem !important;
 }
 
-/* Normalize semi-transparent white backgrounds to solid white */
+ 
 .student-ui [class*="bg-white/"] {
   background-color: rgba(255, 255, 255, 1) !important;
 }
 
-/* Reduce oversized rounding */
+ 
 .student-ui [class*="rounded-3xl"],
 .student-ui [class*="rounded-[3rem]"],
 .student-ui [class*="rounded-[2.5rem]"] {
@@ -474,16 +474,16 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 0.625rem !important;
 }
 
-/* Tone down custom helper classes if used */
+ 
 .student-ui .hover-lift:hover,
 .student-ui .hover-scale:hover {
   transform: none !important;
   box-shadow: none !important;
 }
 
-/* Optional: slightly calmer primary color without changing structure */
+ 
 .student-ui {
-  --primary: oklch(0.55 0.08 260); /* muted bluish */
+  --primary: oklch(0.55 0.08 260);  
   --ring: oklch(0.55 0.08 260);
   --radius: 0.5rem;
 }

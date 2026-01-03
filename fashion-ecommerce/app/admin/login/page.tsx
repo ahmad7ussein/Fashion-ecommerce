@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Validate email format
+    
     if (!email || !email.includes("@")) {
       toast({
         title: "Invalid Email",

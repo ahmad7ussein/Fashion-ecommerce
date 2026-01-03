@@ -1,13 +1,7 @@
 "use client"
 
-import dynamic from "next/dynamic"
 import { ReactNode } from "react"
-
-// Dynamically import ErrorBoundary to avoid chunk loading issues
-const ErrorBoundary = dynamic(
-  () => import("@/components/error-boundary").then((mod) => mod.default),
-  { ssr: false }
-)
+import ErrorBoundary from "@/components/error-boundary"
 
 interface ErrorBoundaryWrapperProps {
   children: ReactNode

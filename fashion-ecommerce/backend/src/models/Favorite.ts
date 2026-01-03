@@ -27,7 +27,7 @@ const favoriteSchema = new Schema<IFavorite>(
   }
 );
 
-// Prevent duplicate favorites (one user can only favorite a product once)
+
 favoriteSchema.index({ user: 1, product: 1 }, { unique: true });
 
 export default mongoose.model<IFavorite>('Favorite', favoriteSchema);

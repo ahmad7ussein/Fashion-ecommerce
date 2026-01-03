@@ -137,7 +137,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-md">
-        {/* Header */}
+        { }
         <div className="text-center mb-6 sm:mb-8 space-y-3 sm:space-y-4">
           <Link href="/" className="inline-block mb-3 sm:mb-4 transition-transform hover:scale-105">
             <Logo className="mx-auto scale-90 sm:scale-100" />
@@ -152,7 +152,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        {/* Main Card */}
+        { }
         <Card className="shadow-lg border-2">
           <CardHeader className="space-y-1 pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
             <CardTitle className="text-xl sm:text-2xl">إعادة تعيين كلمة المرور</CardTitle>
@@ -162,7 +162,7 @@ export default function ForgotPasswordPage() {
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
+              { }
               <div className="space-y-2">
                 <Label htmlFor="email">البريد الإلكتروني المسجل</Label>
                 <div className="relative">
@@ -184,7 +184,7 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              {/* Submit Button */}
+              { }
               <Button type="submit" className="w-full h-11 sm:h-12 text-base font-semibold" disabled={isLoading}>
                 {isLoading ? (
                   <>
@@ -200,7 +200,7 @@ export default function ForgotPasswordPage() {
               </Button>
             </form>
 
-            {/* Back to Login */}
+            { }
             <div className="text-center text-xs sm:text-sm pt-4 border-t">
               <Link href="/login" className="text-primary hover:underline font-semibold transition-colors inline-flex items-center gap-1">
                 <ArrowLeft className="h-3 w-3" />
@@ -210,7 +210,7 @@ export default function ForgotPasswordPage() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
+        { }
         <div className="mt-4 sm:mt-6 text-center">
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1">
             ← العودة إلى الصفحة الرئيسية

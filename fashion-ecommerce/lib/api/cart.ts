@@ -32,7 +32,7 @@ export const cartApi = {
       }
       return response as Cart
     } catch (error: any) {
-      // Re-throw with additional context
+      
       if (error instanceof Error) {
         const enhancedError = new Error(`Failed to get cart: ${error.message}`);
         (enhancedError as any).status = (error as any).status;

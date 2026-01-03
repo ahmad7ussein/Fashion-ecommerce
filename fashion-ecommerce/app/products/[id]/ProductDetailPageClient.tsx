@@ -48,13 +48,13 @@ export default function ProductDetailPageClient() {
   const { formatPrice } = useRegion()
   const router = useRouter()
 
-  // Load product when productId changes
+  
   useEffect(() => {
     if (!productId) return
     const load = async () => {
       setIsLoading(true)
       setProductNotFound(false)
-      setSelectedImage(0) // Reset to first image when loading new product
+      setSelectedImage(0) 
       setLoadError(null)
       try {
         const p = await getProductById(productId)
@@ -68,7 +68,7 @@ export default function ProductDetailPageClient() {
         }
       } catch (error: any) {
         console.error("Error loading product:", error)
-        // Check if it's a 404 error (product not found)
+        
         if (error?.status === 404 || error?.message?.includes("not found") || error?.errorMessage?.includes("not found")) {
           setProductNotFound(true)
           setProduct(null)
@@ -84,7 +84,7 @@ export default function ProductDetailPageClient() {
     load()
   }, [productId])
 
-  // Load favorite status
+  
   useEffect(() => {
     if (!isAuthenticated || !user || !product) {
       setIsFavorite(false)
@@ -110,7 +110,7 @@ export default function ProductDetailPageClient() {
     checkFavorite()
   }, [product, isAuthenticated, user])
 
-  // Handle favorite toggle
+  
   const handleToggleFavorite = async () => {
     if (loadError || !product) return
     if (!isAuthenticated || !user) {
@@ -163,18 +163,18 @@ export default function ProductDetailPageClient() {
     }
   }
 
-  // Load related products when product is loaded
+  
   useEffect(() => {
     if (!product) return
     const loadRelated = async () => {
       setIsLoadingRelated(true)
       try {
-        // Get products from same category or gender, excluding current product
+        
         const related = await listProducts({
           category: product.category,
           gender: product.gender,
         })
-        // Filter out current product and limit to 8 products
+        
         const filtered = related
           .filter((p) => {
             const pId = p._id || p.id?.toString() || ""
@@ -192,7 +192,7 @@ export default function ProductDetailPageClient() {
     loadRelated()
   }, [product])
 
-  // Initialize selected color with first available color
+  
   useEffect(() => {
     if (!product) return
     const productColors = product.colors && product.colors.length > 0 
@@ -203,24 +203,24 @@ export default function ProductDetailPageClient() {
     }
   }, [product, selectedColor])
 
-  // Reset to first image when product changes
+  
   useEffect(() => {
     if (product) {
-      setSelectedImage(0) // Always start with first image (main image)
+      setSelectedImage(0) 
     }
   }, [product])
 
   const handleAddToCart = async () => {
     if (!product || loadError) return
     
-    // Check if user is authenticated
+    
     if (!isAuthenticated || !user) {
       toast({
         title: "Sign in required",
         description: "Please sign in or create an account to add items to your cart",
         variant: "default",
       })
-      // Redirect to login page after a short delay
+      
       setTimeout(() => {
         router.push("/login")
       }, 1500)
@@ -321,7 +321,7 @@ export default function ProductDetailPageClient() {
     )
   }
 
-  // Show product not found message
+  
   if (productNotFound || !product) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
@@ -367,13 +367,13 @@ export default function ProductDetailPageClient() {
   }
 
   const productData = product as Product
-  // Combine main image with additional images
+  
   const allImages = productData.image 
     ? [productData.image, ...(productData.images || [])]
     : [productData.image]
   const images = allImages.filter(img => img && img.trim() !== "")
   
-  // Get colors from product data or use defaults
+  
   const productColors = productData.colors && productData.colors.length > 0 
     ? productData.colors 
     : defaultColors
@@ -382,7 +382,7 @@ export default function ProductDetailPageClient() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12">
-        {/* Breadcrumb - Separated from Navbar */}
+        { }
         <nav className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6 md:mb-8 px-2" aria-label="Breadcrumb">
           <Link href="/" className="hover:text-rose-600 transition-colors">
             {language === "ar" ? "الرئيسية" : "Home"}
@@ -396,7 +396,7 @@ export default function ProductDetailPageClient() {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 md:gap-10 lg:gap-12 max-w-7xl mx-auto">
-          {/* Product Images */}
+          { }
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -419,7 +419,7 @@ export default function ProductDetailPageClient() {
                 }}
               />
             </div>
-            {/* Additional Images Slider */}
+            { }
             {images.length > 1 && (
               <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#fda4af #f3f4f6' }}>
                 {images.map((image, index) => (
@@ -447,7 +447,7 @@ export default function ProductDetailPageClient() {
             )}
           </motion.div>
 
-          {/* Product Info */}
+          { }
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -480,7 +480,7 @@ export default function ProductDetailPageClient() {
 
             <p className="text-gray-600 leading-relaxed text-xs sm:text-sm md:text-base">{description || "Premium cotton t-shirt with a classic fit. Perfect for everyday wear or as a canvas for your custom designs."}</p>
 
-            {/* Size Selection */}
+            { }
             {productData.sizes && productData.sizes.length > 0 ? (
               <div>
                 <label className="block text-xs sm:text-sm font-semibold mb-2 text-gray-700">
@@ -525,7 +525,7 @@ export default function ProductDetailPageClient() {
               </div>
             )}
 
-            {/* Color Selection */}
+            { }
             {productColors.length > 0 && (
               <div>
                 <label className="block text-xs sm:text-sm font-semibold mb-2 text-gray-700">
@@ -549,7 +549,7 @@ export default function ProductDetailPageClient() {
               </div>
             )}
 
-            {/* Quantity */}
+            { }
             <div>
               <label className="block text-xs sm:text-sm font-semibold mb-2 text-gray-700">
                 {language === "ar" ? "الكمية" : "Quantity"}
@@ -575,7 +575,7 @@ export default function ProductDetailPageClient() {
               </div>
             </div>
 
-            {/* Actions */}
+            { }
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
               <Button 
                 size="lg" 
@@ -608,7 +608,7 @@ export default function ProductDetailPageClient() {
               </Button>
             </div>
 
-            {/* Features */}
+            { }
             <Card className="p-4 sm:p-5 md:p-6 bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl shadow-lg">
               <h3 className="font-semibold mb-3 sm:mb-4 text-gray-900 text-base sm:text-lg">
                 {language === "ar" ? "مميزات المنتج" : "Product Features"}
@@ -625,7 +625,7 @@ export default function ProductDetailPageClient() {
           </motion.div>
         </div>
 
-        {/* Related Products Section */}
+        { }
         {relatedProducts.length > 0 && (
           <div className="mt-16 md:mt-20 lg:mt-24 max-w-7xl mx-auto">
             <motion.div
@@ -699,7 +699,7 @@ export default function ProductDetailPageClient() {
                                 onClick={async (e) => {
                                   e.preventDefault()
                                   
-                                  // Check if user is authenticated
+                                  
                                   if (!isAuthenticated || !user) {
                                     toast({
                                       title: "Sign in required",

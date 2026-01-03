@@ -2,9 +2,9 @@
 
 import React, { useState } from "react"
 
-// Site-wide Logo component
-// Place your logo file in fashion-ecommerce/public as logo.svg, logo.png or logo.jpg
-// The component will try svg -> png -> jpg -> placeholder automatically.
+
+
+
 
 type LogoProps = { className?: string; alt?: string }
 

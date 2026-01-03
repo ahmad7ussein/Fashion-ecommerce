@@ -22,7 +22,7 @@ function OrderSuccessContent() {
     if (orderNum) {
       setOrderNumber(orderNum)
     } else {
-      // If no order number, redirect to home after 3 seconds
+      
       setTimeout(() => {
         router.push("/")
       }, 3000)
@@ -46,7 +46,7 @@ function OrderSuccessContent() {
       >
         <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl">
           <CardContent className="p-6 md:p-8">
-            {/* Success Icon */}
+            { }
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -59,7 +59,7 @@ function OrderSuccessContent() {
               </div>
             </motion.div>
 
-            {/* Main Message */}
+            { }
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -93,14 +93,14 @@ function OrderSuccessContent() {
               )}
             </motion.div>
 
-            {/* Action Buttons */}
+            { }
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
               className="space-y-3"
             >
-              {/* Leave Review Button */}
+              { }
               <Button
                 asChild
                 className="w-full bg-white text-black hover:bg-gray-200 rounded-full h-12 text-base font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
@@ -111,7 +111,7 @@ function OrderSuccessContent() {
                 </Link>
               </Button>
 
-              {/* Back to Home Button */}
+              { }
               <Button
                 asChild
                 variant="outline"
@@ -123,7 +123,7 @@ function OrderSuccessContent() {
                 </Link>
               </Button>
 
-              {/* View Orders Button */}
+              { }
               <Button
                 asChild
                 variant="outline"
@@ -135,7 +135,7 @@ function OrderSuccessContent() {
                 </Link>
               </Button>
 
-              {/* Logout Button */}
+              { }
               <Button
                 onClick={handleLogout}
                 variant="ghost"
@@ -146,7 +146,7 @@ function OrderSuccessContent() {
               </Button>
             </motion.div>
 
-            {/* Additional Info */}
+            { }
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

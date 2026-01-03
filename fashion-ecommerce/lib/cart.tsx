@@ -76,9 +76,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Load cart from database (only for authenticated users)
+  
   const loadCart = React.useCallback(async () => {
-    // Only load cart if user is authenticated
+    
     if (!isAuthenticated || !user) {
       setIsLoading(false)
       loadGuestCart()
@@ -87,10 +87,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     
     setIsLoading(true)
     try {
-      // Load from database (only for authenticated users)
+      
       const cart = await cartApi.getCart()
       
-      // Ensure cart and items exist
+      
       if (!cart) {
         logger.warn("Cart response is null or undefined")
         setItems([])
@@ -121,7 +121,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setItems(cartItems)
       logger.log("Cart loaded successfully:", { itemsCount: cartItems.length })
     } catch (error: any) {
-      // Always log detailed error information
+      
       const errorDetails = {
         message: error?.message || "Unknown error",
         name: error?.name || "Error",
@@ -136,19 +136,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         fullError: error,
       };
       
-      // Log full error details
+      
       logger.error("Failed to load cart from API", errorDetails);
       
-      // Also log to console for debugging
+      
       console.error("[CartProvider] Cart loading failed with details:", errorDetails);
       
-      // On error, set empty cart (graceful degradation)
+      
       setItems([])
       setIsLoading(false)
     }
   }, [isAuthenticated, user, loadGuestCart])
 
-  // Load cart only when user exists (not when user is null)
+  
   React.useEffect(() => {
     if (isAuthenticated && user) {
       loadCart()
@@ -160,7 +160,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = async (item: CartItem) => {
     try {
       if (isAuthenticated && user) {
-        // Extract product ID from item.id if it's a product (format: "productId-size-color")
+        
         const productId = parseProductIdFromItem(item)
         
         await cartApi.addItem({
@@ -178,7 +178,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Guest cart: update local state and persist
+      
       setItems((prev) => {
         const existingIndex = prev.findIndex((i) => i.id === item.id)
         const productId = parseProductIdFromItem(item)
@@ -194,7 +194,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       })
     } catch (error: any) {
       logger.error("Failed to add item to cart:", error)
-      // On other errors, update local state optimistically
+      
       setItems((prev) => {
         const idx = prev.findIndex((i) => i.id === item.id)
         if (idx !== -1) {
@@ -214,20 +214,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const item = items.find((i) => i.id === id || i._id === id)
       
-      // If user is authenticated and item has _id, remove from database
+      
       if (isAuthenticated && item?._id) {
         try {
           await cartApi.removeItem(item._id)
           await loadCart()
           return
         } catch (error: any) {
-          // If API call fails (e.g., user not authenticated), fallback to local removal
+          
           logger.warn("Failed to remove item from database, removing from local state:", error)
-          // Continue to local removal below
+          
         }
       }
       
-      // Remove from local state (for guest users or if API call failed)
+      
       setItems((prev) => {
         const next = prev.filter((i) => (i.id !== id && i._id !== id))
         if (!isAuthenticated) persistGuestCart(next)
@@ -235,7 +235,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       })
     } catch (error: any) {
       logger.error("Failed to remove item from cart:", error)
-      // Fallback: remove from local state anyway
+      
       setItems((prev) => {
         const next = prev.filter((i) => (i.id !== id && i._id !== id))
         if (!isAuthenticated) persistGuestCart(next)
@@ -249,24 +249,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const item = items.find((i) => i.id === id || i._id === id)
       
-      // If user is authenticated and item has _id, update in database
+      
       if (isAuthenticated && item?._id) {
         try {
-          // Update in database immediately
+          
           await cartApi.updateItemQuantity(item._id, finalQty)
-          // Update local state immediately for better UX
+          
           setItems((prev) => prev.map((i) => (i.id === id || i._id === id ? { ...i, quantity: finalQty } : i)))
-          // Reload from database to ensure sync
+          
           await loadCart()
           return
         } catch (error: any) {
-          // If API call fails (e.g., user not authenticated), fallback to local update
+          
           logger.warn("Failed to update item in database, updating local state:", error)
-          // Continue to local update below
+          
         }
       }
       
-      // Update local state (for guest users or if API call failed)
+      
       setItems((prev) => {
         const next = prev.map((i) => (i.id === id || i._id === id ? { ...i, quantity: finalQty } : i))
         if (!isAuthenticated) persistGuestCart(next)
@@ -274,7 +274,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       })
     } catch (error: any) {
       logger.error("Failed to update cart item:", error)
-      // Fallback: update local state anyway
+      
       setItems((prev) => {
         const next = prev.map((i) => (i.id === id || i._id === id ? { ...i, quantity: finalQty } : i))
         if (!isAuthenticated) persistGuestCart(next)
@@ -285,24 +285,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = async () => {
     try {
-      // If user is authenticated, clear from database
+      
       if (isAuthenticated) {
         try {
           await cartApi.clearCart()
           await loadCart()
           return
         } catch (error: any) {
-          // If API call fails, fallback to local clear
+          
           logger.warn("Failed to clear cart in database, clearing local state:", error)
         }
       }
       
-      // Clear local state (for guest users or if API call failed)
+      
       setItems([])
       if (!isAuthenticated) persistGuestCart([])
     } catch (error: any) {
       logger.error("Failed to clear cart:", error)
-      // Fallback: clear local state anyway
+      
       setItems([])
       if (!isAuthenticated) persistGuestCart([])
     }

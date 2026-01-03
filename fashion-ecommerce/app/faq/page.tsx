@@ -96,7 +96,7 @@ export default function FAQPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-12 sm:py-16">
-        {/* Header */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -116,7 +116,7 @@ export default function FAQPage() {
           </p>
         </motion.div>
 
-        {/* FAQ Items */}
+        { }
         <div className="max-w-4xl mx-auto space-y-4">
           {faqs.map((faq, index) => (
             <motion.div
@@ -163,7 +163,7 @@ export default function FAQPage() {
           ))}
         </div>
 
-        {/* Contact CTA */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
