@@ -64,7 +64,7 @@ const resolveColorMockups = async (value: unknown): Promise<Record<string, strin
   return resolved;
 };
 
-// Create studio product (admin)
+
 export const createStudioProduct = async (req: AuthRequest, res: Response) => {
   try {
     const payload: any = { ...req.body };
@@ -104,7 +104,7 @@ export const createStudioProduct = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Update studio product (admin)
+
 export const updateStudioProduct = async (req: AuthRequest, res: Response) => {
   try {
     const payload: any = { ...req.body };
@@ -145,7 +145,7 @@ export const updateStudioProduct = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Delete studio product (admin)
+
 export const deleteStudioProduct = async (req: AuthRequest, res: Response) => {
   try {
     const product = await StudioProduct.findByIdAndDelete(req.params.id);
@@ -158,7 +158,7 @@ export const deleteStudioProduct = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Get all (admin)
+
 export const getAllStudioProducts = async (_req: AuthRequest, res: Response) => {
   try {
     const products = await StudioProduct.find().sort({ createdAt: -1 });
@@ -168,7 +168,7 @@ export const getAllStudioProducts = async (_req: AuthRequest, res: Response) => 
   }
 };
 
-// Get active (public)
+
 export const getActiveStudioProducts = async (req: AuthRequest, res: Response) => {
   try {
     const products = await StudioProduct.find({ active: true }).sort({ createdAt: -1 });
@@ -178,7 +178,7 @@ export const getActiveStudioProducts = async (req: AuthRequest, res: Response) =
   }
 };
 
-// Get one (admin)
+
 export const getStudioProduct = async (req: AuthRequest, res: Response) => {
   try {
     const product = await StudioProduct.findById(req.params.id);

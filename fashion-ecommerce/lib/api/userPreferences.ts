@@ -46,13 +46,13 @@ export const userPreferencesApi = {
       }
       return response as UserPreferences
     } catch (error: any) {
-      // Safe error handling - return default preferences instead of crashing
+      
       try {
         console.warn("[WARNING] Failed to get preferences, using defaults")
       } catch {
-        // Silent fail
+        
       }
-      // Return default preferences to prevent UI crashes
+      
       return {
         _id: '',
         user: '',
@@ -64,7 +64,7 @@ export const userPreferencesApi = {
 
   async updatePreferences(preferences: Partial<UserPreferences>): Promise<UserPreferences> {
     try {
-      // Helper function to remove undefined values
+      
       const removeUndefined = (obj: any): any => {
         if (obj === null || obj === undefined) return undefined;
         if (Array.isArray(obj)) return obj.map(removeUndefined);
@@ -82,10 +82,10 @@ export const userPreferencesApi = {
         return Object.keys(cleaned).length > 0 ? cleaned : undefined;
       };
 
-      // Clean preferences before sending
+      
       const cleanedPreferences = removeUndefined(preferences);
 
-      // If cleanedPreferences is undefined or empty, send at least an empty object
+      
       const dataToSend = cleanedPreferences && Object.keys(cleanedPreferences).length > 0 
         ? cleanedPreferences 
         : {};
@@ -97,28 +97,28 @@ export const userPreferencesApi = {
       }
       return response as UserPreferences
     } catch (error: any) {
-      // Log error safely - preferences saving is not critical
-      // Use try-catch to ensure UI doesn't crash
+      
+      
       try {
         const errorMessage = error?.message || "Unknown error"
         const errorStatus = error?.status
         const errorName = error?.name || "Error"
         
-        // Safe logging - never throw
+        
         try {
           console.warn("[WARNING] Failed to update preferences (non-critical)")
           console.warn("Error Message:", errorMessage)
           if (errorStatus) console.warn("Error Status:", errorStatus)
           console.warn("Error Name:", errorName)
         } catch {
-          // Silent fail for logging
+          
         }
       } catch {
-        // Ultimate fallback - do nothing
+        
       }
       
-      // Return a mock preferences object to prevent errors
-      // This ensures the UI continues to work even if preferences save fails
+      
+      
       return {
         _id: '',
         user: '',

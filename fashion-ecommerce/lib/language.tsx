@@ -15,17 +15,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("en")
   const [mounted, setMounted] = useState(false)
 
-  // Load language from localStorage on mount
+  
   useEffect(() => {
     setMounted(true)
     const saved = localStorage.getItem("language") as Language
     if (saved && (saved === "ar" || saved === "en")) {
       setLanguageState(saved)
-      // Keep direction always LTR, only change language attribute
+      
       document.documentElement.dir = "ltr"
       document.documentElement.lang = saved
     } else {
-      // Set default language and direction
+      
       document.documentElement.dir = "ltr"
       document.documentElement.lang = "en"
     }
@@ -34,11 +34,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem("language", lang)
-    // Keep direction always LTR, only change language attribute
+    
     if (typeof document !== "undefined") {
       document.documentElement.dir = "ltr"
       document.documentElement.lang = lang
-      // Force a re-render by triggering a resize event
+      
       window.dispatchEvent(new Event("resize"))
     }
   }

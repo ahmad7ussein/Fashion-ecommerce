@@ -47,7 +47,7 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       required: function(this: IUser) {
-        return !this.googleId; // Password required only if not using Google OAuth
+        return !this.googleId; 
       },
       minlength: [6, 'Password must be at least 6 characters'],
       select: false,
@@ -55,7 +55,7 @@ const userSchema = new Schema<IUser>(
     googleId: {
       type: String,
       unique: true,
-      sparse: true, // Allows multiple null values
+      sparse: true, 
     },
     provider: {
       type: String,
@@ -83,18 +83,18 @@ const userSchema = new Schema<IUser>(
   }
 );
 
-// Hash password before saving (only if password exists and is modified)
+
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
   
-  // Increased salt rounds from 10 to 12 for enhanced security
-  // Higher rounds = stronger security but slightly slower hashing
+  
+  
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Compare password method
+
 userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);

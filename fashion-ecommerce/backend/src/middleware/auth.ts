@@ -11,7 +11,7 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   try {
     let token: string | undefined;
 
-    // Check for token in Authorization header
+    
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
@@ -24,10 +24,10 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     }
 
     try {
-      // Verify token - JWT_SECRET is validated at startup in env.ts
+      
       const decoded = jwt.verify(token, env.jwtSecret) as { id: string };
 
-      // Get user from token
+      
       const user = await User.findById(decoded.id).select('-password');
 
       if (!user) {
@@ -53,45 +53,45 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
   }
 };
 
-// Optional authentication - sets req.user if token is valid, but doesn't reject if token is missing
+
 export const optionalAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     let token: string | undefined;
 
-    // Check for token in Authorization header
+    
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
-    // If no token, continue without setting req.user (for guest users)
+    
     if (!token) {
       return next();
     }
 
     try {
-      // Verify token - JWT_SECRET is validated at startup in env.ts
+      
       const decoded = jwt.verify(token, env.jwtSecret) as { id: string };
 
-      // Get user from token
+      
       const user = await User.findById(decoded.id).select('-password');
 
       if (user) {
         req.user = user;
       }
-      // Continue even if user not found (invalid token, but allow as guest)
+      
       next();
     } catch (error) {
-      // Invalid token, but continue as guest user
+      
       console.log('Optional auth: Invalid token, continuing as guest');
       next();
     }
   } catch (error) {
-    // Continue on error (allow as guest)
+    
     next();
   }
 };
 
-// Authorize specific roles
+
 export const authorize = (...roles: string[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     if (!req.user) {

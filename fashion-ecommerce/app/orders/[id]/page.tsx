@@ -64,7 +64,7 @@ export default function OrderTrackingPage() {
       try {
         setIsLoading(true)
         const orderData = await ordersApi.getOrder(orderId)
-        // Check if order belongs to current user
+        
         if (typeof orderData.user === "object" && user?.id && orderData.user._id !== user.id) {
           toast({
             title: language === "ar" ? "غير مصرح" : "Unauthorized",
@@ -120,7 +120,7 @@ export default function OrderTrackingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-8 sm:py-12">
-        {/* Header */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -150,14 +150,14 @@ export default function OrderTrackingPage() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Order Details */}
+          { }
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             className="lg:col-span-2 space-y-6"
           >
-            {/* Tracking Timeline */}
+            { }
             <Card className="p-6 bg-white border-2 border-gray-200 shadow-lg">
               <h2 className="text-xl font-bold mb-6 text-gray-900">
                 {language === "ar" ? "سجل التتبع" : "Tracking History"}
@@ -208,7 +208,7 @@ export default function OrderTrackingPage() {
               )}
             </Card>
 
-            {/* Order Items */}
+            { }
             <Card className="p-6 bg-white border-2 border-gray-200 shadow-lg">
               <h2 className="text-xl font-bold mb-6 text-gray-900">
                 {language === "ar" ? "عناصر الطلب" : "Order Items"}
@@ -241,14 +241,14 @@ export default function OrderTrackingPage() {
             </Card>
           </motion.div>
 
-          {/* Order Summary */}
+          { }
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="space-y-6"
           >
-            {/* Tracking Info */}
+            { }
             {order.trackingNumber && (
               <Card className="p-6 bg-white border-2 border-gray-200 shadow-lg">
                 <h3 className="font-bold mb-4 text-gray-900">{language === "ar" ? "معلومات التتبع" : "Tracking Information"}</h3>
@@ -277,7 +277,7 @@ export default function OrderTrackingPage() {
               </Card>
             )}
 
-            {/* Shipping Address */}
+            { }
             <Card className="p-6 bg-white border-2 border-gray-200 shadow-lg">
               <h3 className="font-bold mb-4 text-gray-900">{language === "ar" ? "عنوان الشحن" : "Shipping Address"}</h3>
               <div className="space-y-2 text-gray-700">
@@ -289,7 +289,7 @@ export default function OrderTrackingPage() {
               </div>
             </Card>
 
-            {/* Order Summary */}
+            { }
             <Card className="p-6 bg-white border-2 border-gray-200 shadow-lg">
               <h3 className="font-bold mb-4 text-gray-900">{language === "ar" ? "ملخص الطلب" : "Order Summary"}</h3>
               <div className="space-y-2">

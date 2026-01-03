@@ -25,7 +25,7 @@ export default function EmployeeLoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Validate employee ID format (6 digits)
+    
     if (!/^\d{6}$/.test(employeeId)) {
       toast({
         title: "Invalid Employee ID",

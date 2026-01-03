@@ -63,7 +63,7 @@ const contactMessageSchema = new Schema<IContactMessage>(
   }
 );
 
-// Index for efficient queries
+
 contactMessageSchema.index({ status: 1, createdAt: -1 });
 contactMessageSchema.index({ email: 1 });
 

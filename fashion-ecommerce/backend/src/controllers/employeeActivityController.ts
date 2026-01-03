@@ -3,9 +3,9 @@ import EmployeeActivity from '../models/EmployeeActivity';
 import { AuthRequest } from '../middleware/auth';
 import mongoose from 'mongoose';
 
-// @desc    Get all employee activities
-// @route   GET /api/admin/employee-activities
-// @access  Private/Admin
+
+
+
 export const getAllEmployeeActivities = async (req: AuthRequest, res: Response) => {
   try {
     const { employeeId, page = 1, limit = 50 } = req.query;
@@ -28,7 +28,7 @@ export const getAllEmployeeActivities = async (req: AuthRequest, res: Response) 
 
     const total = await EmployeeActivity.countDocuments(query);
 
-    // Get employee statistics
+    
     const employeeStats = await EmployeeActivity.aggregate([
       { $group: {
         _id: '$employee',
@@ -74,9 +74,9 @@ export const getAllEmployeeActivities = async (req: AuthRequest, res: Response) 
   }
 };
 
-// @desc    Log employee activity (internal helper)
-// @route   POST /api/admin/employee-activities/log
-// @access  Private/Admin/Employee
+
+
+
 export const logEmployeeActivity = async (
   employeeId: mongoose.Types.ObjectId,
   action: string,
@@ -96,7 +96,7 @@ export const logEmployeeActivity = async (
     });
   } catch (error: any) {
     console.error('❌ Error logging employee activity:', error);
-    // Don't throw - activity logging should not break main operations
+    
   }
 };
 

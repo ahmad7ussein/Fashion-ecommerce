@@ -6,7 +6,7 @@ import { ProfessionalNavbar } from "./professional-navbar"
 export function ConditionalHeader() {
   const pathname = usePathname()
 
-  // Hide header on login, signup, home, admin, employee, and order-success pages
+  
   const hideHeader = 
     pathname === "/login" || 
     pathname === "/signup" || 

@@ -41,7 +41,7 @@ function isMobileDevice(): boolean {
 
 export function WelcomeScreen() {
   const [showWelcome, setShowWelcome] = useState(false)
-  const [isMobileDeviceState, setIsMobileDeviceState] = useState<boolean | null>(null) // null = checking
+  const [isMobileDeviceState, setIsMobileDeviceState] = useState<boolean | null>(null) 
   const router = useRouter()
 
   useEffect(() => {
@@ -120,11 +120,11 @@ export function WelcomeScreen() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[9999] bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden"
+          className="fixed inset-0 z-[9999] bg-rose-50 bg-gradient-to-br from-rose-50 via-white to-amber-50 overflow-hidden text-gray-900"
         >
           <div className="absolute inset-0 overflow-hidden">
             <motion.div
-              className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"
+              className="absolute top-0 left-1/4 w-96 h-96 bg-rose-200/45 rounded-full blur-3xl"
               animate={{
                 scale: [1, 1.2, 1],
                 x: [0, 50, 0],
@@ -137,7 +137,7 @@ export function WelcomeScreen() {
               }}
             />
             <motion.div
-              className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl"
+              className="absolute bottom-0 right-1/4 w-96 h-96 bg-amber-200/45 rounded-full blur-3xl"
               animate={{
                 scale: [1, 1.3, 1],
                 x: [0, -50, 0],
@@ -150,18 +150,18 @@ export function WelcomeScreen() {
               }}
             />
             
-            <div className="absolute inset-0 opacity-[0.03]">
+            <div className="absolute inset-0 opacity-[0.08]">
               <div
                 className="absolute inset-0"
                 style={{
-                  backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
-                  backgroundSize: "50px 50px",
+                  backgroundImage: "radial-gradient(circle at 2px 2px, rgba(120, 85, 70, 0.25) 1px, transparent 0)",
+                  backgroundSize: "56px 56px",
                 }}
               />
             </div>
           </div>
 
-          <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 py-12">
+          <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 py-12 text-gray-900">
             <motion.div
               initial={{ opacity: 0, y: -30, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -181,9 +181,9 @@ export function WelcomeScreen() {
                   }}
                   className="relative"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/50 via-pink-500/50 to-cyan-500/50 rounded-full blur-2xl scale-150 animate-pulse" />
-                  <div className="relative">
-                    <Logo className="scale-[1.8]" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-rose-200/70 via-amber-100/70 to-rose-100/70 rounded-full blur-2xl scale-150 animate-pulse" />
+                  <div className="relative flex items-center justify-center rounded-full bg-white/85 ring-1 ring-rose-200/70 p-5 shadow-xl">
+                    <Logo className="h-20 w-auto sm:h-24" />
                   </div>
                 </motion.div>
               </div>
@@ -192,7 +192,7 @@ export function WelcomeScreen() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="text-5xl md:text-6xl font-bold text-center mb-4 text-white leading-tight"
+                className="text-4xl sm:text-5xl md:text-6xl font-bold text-center mb-4 text-gray-900 leading-tight"
               >
                 Welcome to
                 <br />
@@ -205,7 +205,7 @@ export function WelcomeScreen() {
                     repeat: Infinity,
                     ease: "linear",
                   }}
-                  className="bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent bg-[length:200%_auto]"
+                  className="text-rose-600 sm:text-transparent bg-gradient-to-r from-rose-500 via-amber-500 to-rose-600 bg-clip-text bg-[length:200%_auto]"
                 >
                   FashionHub
                 </motion.span>
@@ -215,7 +215,7 @@ export function WelcomeScreen() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="text-center text-gray-300 text-xl max-w-sm mx-auto font-light"
+                className="text-center text-gray-600 text-base sm:text-lg max-w-md mx-auto font-light"
               >
                 Design. Create. Wear Your Vision
               </motion.p>
@@ -225,7 +225,7 @@ export function WelcomeScreen() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
-              className="w-full max-w-sm space-y-4 px-4"
+              className="w-full max-w-md space-y-4 px-4"
             >
               <motion.div
                 whileHover={{ scale: 1.02, y: -2 }}
@@ -237,9 +237,9 @@ export function WelcomeScreen() {
                 <Button
                   onClick={handleSignIn}
                   size="lg"
-                  className="w-full bg-white text-black hover:bg-gray-100 h-16 text-lg font-semibold rounded-full shadow-2xl transition-all duration-300 group relative overflow-hidden"
+                  className="w-full bg-rose-600 bg-gradient-to-r from-rose-500 via-rose-600 to-amber-500 text-white hover:from-rose-600 hover:via-rose-700 hover:to-amber-600 h-16 text-lg font-semibold rounded-full shadow-2xl shadow-rose-200/60 transition-all duration-300 group relative overflow-hidden"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative flex items-center justify-center">
                     <LogIn className="mr-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     Sign In
@@ -259,9 +259,9 @@ export function WelcomeScreen() {
                   onClick={handleSignUp}
                   size="lg"
                   variant="outline"
-                  className="w-full border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/50 h-16 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 group relative overflow-hidden"
+                  className="w-full border-2 border-rose-200 text-rose-700 bg-white/80 hover:bg-rose-50 hover:border-rose-300 h-16 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 group relative overflow-hidden"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-rose-100/50 via-amber-100/40 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative flex items-center justify-center">
                     <UserPlus className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
                     Sign Up
@@ -280,9 +280,9 @@ export function WelcomeScreen() {
                   onClick={handleBrowse}
                   size="lg"
                   variant="outline"
-                  className="w-full border-2 border-white/20 text-white hover:bg-white/10 hover:border-white/40 h-16 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 group relative overflow-hidden"
+                  className="w-full border-2 border-amber-200 text-amber-800 bg-amber-50/80 hover:bg-amber-100 hover:border-amber-300 h-16 text-lg font-semibold rounded-full backdrop-blur-sm transition-all duration-300 group relative overflow-hidden"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-amber-100/50 via-rose-100/30 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="relative flex items-center justify-center">
                     <ShoppingBag className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
                     Browse Products

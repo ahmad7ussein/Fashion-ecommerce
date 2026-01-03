@@ -45,7 +45,7 @@ export function CustomerReviewsSection() {
 
   return (
     <section className="py-20 sm:py-24 md:py-32 bg-gradient-to-b from-white via-rose-50/30 to-white relative overflow-hidden">
-      {/* Decorative Background Elements */}
+      { }
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-rose-200/20 rounded-full blur-3xl" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-200/20 rounded-full blur-3xl" />
@@ -53,7 +53,7 @@ export function CustomerReviewsSection() {
 
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 relative z-10">
         <div className="max-w-7xl mx-auto">
-          {/* Header Section */}
+          { }
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -81,14 +81,14 @@ export function CustomerReviewsSection() {
             </p>
           </motion.div>
 
-          {/* Reviews Grid - New Design */}
+          { }
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {reviews.map((review, index) => {
               const userName = review.user
                 ? `${review.user.firstName} ${review.user.lastName}`
                 : "Anonymous"
               
-              // Alternate card styles for visual variety
+              
               const isLarge = index === 0 || index === reviews.length - 1
               const cardVariants = [
                 "bg-gradient-to-br from-white to-rose-50/50",
@@ -115,12 +115,12 @@ export function CustomerReviewsSection() {
                   className={`${isLarge && index === 0 ? "md:col-span-2 lg:col-span-1" : ""} ${isLarge && index === reviews.length - 1 ? "md:col-span-2 lg:col-span-1 lg:col-start-2" : ""}`}
                 >
                   <div className={`relative h-full ${cardVariants[index % cardVariants.length]} rounded-3xl p-6 sm:p-8 border-2 border-rose-100/50 hover:border-rose-300 hover:shadow-2xl transition-all duration-300 group`}>
-                    {/* Quote Icon */}
+                    { }
                     <div className="absolute top-6 right-6 opacity-10 group-hover:opacity-20 transition-opacity">
                       <Quote className="h-16 w-16 text-rose-500" />
                     </div>
 
-                    {/* Rating Stars */}
+                    { }
                     <div className="flex gap-1 mb-4 relative z-10">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
@@ -134,20 +134,20 @@ export function CustomerReviewsSection() {
                       ))}
                     </div>
 
-                    {/* Review Title */}
+                    { }
                     <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 relative z-10 line-clamp-2 group-hover:text-rose-600 transition-colors">
                       {review.title}
                     </h3>
 
-                    {/* Review Comment */}
+                    { }
                     <p className="text-gray-600 text-sm sm:text-base leading-relaxed mb-6 relative z-10 line-clamp-5">
                       "{review.comment}"
                     </p>
 
-                    {/* User Info Section */}
+                    { }
                     <div className="mt-auto pt-6 border-t border-rose-200/50 relative z-10">
                       <div className="flex items-center gap-4">
-                        {/* Avatar Circle */}
+                        { }
                         <div className="w-12 h-12 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
                           {userName.charAt(0).toUpperCase()}
                         </div>
@@ -173,7 +173,7 @@ export function CustomerReviewsSection() {
                       )}
                     </div>
 
-                    {/* Decorative Corner Element */}
+                    { }
                     <div className="absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-br from-rose-200/20 to-transparent rounded-tl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                 </motion.div>
@@ -181,7 +181,7 @@ export function CustomerReviewsSection() {
             })}
           </div>
 
-          {/* Bottom CTA */}
+          { }
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}

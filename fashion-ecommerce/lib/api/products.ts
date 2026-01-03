@@ -4,21 +4,21 @@ export type Product = {
   _id?: string
   id?: string | number
   name: string
-  nameAr?: string // Arabic name (optional)
+  nameAr?: string 
   price: number
   image: string
   category: string
-  categoryAr?: string // Arabic category (optional)
+  categoryAr?: string 
   gender: string
-  genderAr?: string // Arabic gender (optional)
+  genderAr?: string 
   season: string
-  seasonAr?: string // Arabic season (optional)
+  seasonAr?: string 
   style: string
-  styleAr?: string // Arabic style (optional)
+  styleAr?: string 
   occasion: string
-  occasionAr?: string // Arabic occasion (optional)
+  occasionAr?: string 
   description?: string
-  descriptionAr?: string // Arabic description (optional)
+  descriptionAr?: string 
   images?: string[]
   sizes?: string[]
   colors?: string[]
@@ -30,8 +30,8 @@ export type Product = {
   inCollection?: boolean
 }
 
-// Fallback catalog for offline mode (will be replaced by MongoDB)
-// Note: Similar products to the new ones (Men's Summer T-Shirts, Polo Shirts, Tops) have been removed
+
+
 const CATALOG: Product[] = [
   { id: 11, name: "Urban Black Hoodie", price: 59.99, image: "/black-hoodie-streetwear.png", category: "Hoodies", gender: "Men", season: "Winter", style: "Plain", occasion: "Casual" },
   { id: 12, name: "Oversized Hoodie", price: 64.99, image: "/black-hoodie-streetwear.png", category: "Hoodies", gender: "Men", season: "Winter", style: "Plain", occasion: "Casual" },
@@ -154,14 +154,14 @@ const filterCatalog = (filters: ProductFilters): Product[] => {
   return results
 }
 
-// Try to fetch from backend API, fallback to local catalog if offline
+
 export async function listProducts(filters: ProductFilters = {}): Promise<Product[]> {
   try {
     const params = buildProductQueryParams(filters)
 
     const response = await apiClient.get<{ data: Product[]; total?: number; page?: number; pages?: number } | Product[]>(`/products?${params.toString()}`)
-    // Backend returns { success: true, data: [...], total, page, pages }
-    // apiClient extracts data for paginated responses, but we need to handle it
+    
+    
     if (Array.isArray(response)) {
       return response
     }
@@ -178,10 +178,10 @@ export async function listProducts(filters: ProductFilters = {}): Promise<Produc
                           error?.message?.includes('timeout') ||
                           error?.errorMessage?.includes('timeout')
     
-    // If it's a timeout or connection error, throw it to let the UI handle it properly
-    // instead of silently falling back to empty catalog
+    
+    
     if (isNetworkError && (error?.status === 503 || error?.status === 504 || error?.message?.includes('timeout'))) {
-      throw error; // Re-throw to let UI show proper error message
+      throw error; 
     }
     
     if (!isNetworkError || process.env.NODE_ENV === 'development') {
@@ -253,51 +253,51 @@ export async function listProductsPaginated(filters: ProductFilters = {}): Promi
 }
 
 export async function getProductById(id: string | number): Promise<Product | null> {
-  // Convert to string for API call
+  
   const idString = String(id)
   
-  // Check if it's a numeric ID (from fallback catalog)
+  
   const isNumericId = /^\d+$/.test(idString)
   
-  // If it's a numeric ID, check fallback catalog first (faster and expected)
+  
   if (isNumericId) {
     const fallbackProduct = CATALOG.find((p) => p.id === id || p._id === id)
     if (fallbackProduct) {
-      // Also try to fetch from backend in the background (for updated data)
-      // But don't wait for it or log errors if it fails
+      
+      
       apiClient.get<Product | { data: Product }>(`/products/${idString}`).catch(() => {
-        // Silently fail - we already have fallback product
+        
       })
       return fallbackProduct
     }
   }
   
   try {
-    // Try backend API for ObjectId or if numeric ID not in catalog
+    
     const response = await apiClient.get<Product | { data: Product }>(`/products/${idString}`)
     
-    // Backend returns { success: true, data: {...} }
+    
     if (response && typeof response === 'object' && 'data' in response && !('_id' in response)) {
       return (response as { data: Product }).data || null
     }
     return (response as Product) || null
   } catch (error: any) {
-    // If it's a 404 error (product not found), throw it so the component can handle it properly
-    // This is especially important for ObjectId products that have been deleted
+    
+    
     if (error?.status === 404 || 
         error?.errorMessage?.toLowerCase().includes("not found") || 
         error?.errorBody?.toLowerCase().includes("not found") ||
         error?.message?.toLowerCase().includes("not found")) {
-      // Re-throw 404 errors so the component can show "Product not found" message
+      
       throw error
     }
-    // If it's a 400 error and ID is numeric, use fallback catalog silently
+    
     if (error?.status === 400 && isNumericId) {
-      // Silently use fallback catalog for numeric IDs (expected behavior)
+      
       return CATALOG.find((p) => p.id === id || p._id === id) ?? null
     }
     
-    // For other errors or non-numeric IDs, try fallback but log only in development
+    
     if (process.env.NODE_ENV === 'development') {
       console.warn("Backend API unavailable, using fallback catalog", error?.message || error)
     }

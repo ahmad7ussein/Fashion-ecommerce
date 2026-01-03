@@ -26,7 +26,7 @@ import { useLanguage } from "@/lib/language"
 import { listProducts, type Product } from "@/lib/api/products"
 import { FeaturedProductsSkeleton } from "@/components/skeletons"
 
-// Lazy load 3D background for better performance
+
 const Background3DSimple = dynamic(
   () => import("@/components/3d-background").then((mod) => mod.Background3DSimple),
   { ssr: false }
@@ -43,7 +43,7 @@ const sliderImages = [
     buttonText: "Shop Now",
     buttonLink: "/products",
     bgGradient: "linear-gradient(135deg, #fff1f2 0%, #fdf2f8 50%, #ffe4e6 100%)",
-    bgImage: "/white-t-shirt-model.png", // Background image for subtle blend
+    bgImage: "/white-t-shirt-model.png", 
   },
   {
     id: 2,
@@ -54,7 +54,7 @@ const sliderImages = [
     buttonText: "Explore Collection",
     buttonLink: "/products?category=Hoodies",
     bgGradient: "linear-gradient(135deg, #fffbeb 0%, #fff7ed 50%, #fef3c7 100%)",
-    bgImage: "/black-hoodie-streetwear.png", // Background image for subtle blend
+    bgImage: "/black-hoodie-streetwear.png", 
   },
   {
     id: 3,
@@ -65,7 +65,7 @@ const sliderImages = [
     buttonText: "Shop Casual",
     buttonLink: "/products?category=Sweatshirts",
     bgGradient: "linear-gradient(135deg, #eff6ff 0%, #eef2ff 50%, #dbeafe 100%)",
-    bgImage: "/gray-sweatshirt-casual.jpg", // Background image for subtle blend
+    bgImage: "/gray-sweatshirt-casual.jpg", 
   },
   {
     id: 4,
@@ -76,7 +76,7 @@ const sliderImages = [
     buttonText: "View Collection",
     buttonLink: "/products?category=T-Shirts",
     bgGradient: "linear-gradient(135deg, #faf5ff 0%, #fdf2f8 50%, #f3e8ff 100%)",
-    bgImage: "/graphic-t-shirt-fashion.jpg", // Background image for subtle blend
+    bgImage: "/graphic-t-shirt-fashion.jpg", 
   },
 ]
 
@@ -132,32 +132,32 @@ export default function HomePage() {
   const [newCollectionSlideIndex, setNewCollectionSlideIndex] = useState(0)
   const activeVirtualTryOnSlide = virtualTryOnSlidesData[virtualTryOnSlide] || virtualTryOnSlidesData[0]
 
-  // Auto-slide effect for hero section
+  
   useEffect(() => {
     if (isPaused) return
     
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % sliderImages.length)
-    }, 5000) // Change slide every 5 seconds
+    }, 5000) 
 
     return () => clearInterval(interval)
   }, [isPaused, sliderImages.length])
 
-  // Auto-slide effect for Virtual Try-On section
+  
   useEffect(() => {
     const interval = setInterval(() => {
       setVirtualTryOnSlide((prev) => (prev + 1) % virtualTryOnSlidesData.length)
-    }, 6000) // Change slide every 6 seconds
+    }, 6000) 
 
     return () => clearInterval(interval)
   }, [])
 
-  // Load products for sliders
+  
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoadingProducts(true)
       try {
-        // Load products sequentially with smaller limits to avoid timeout
+        
         const men = await listProducts({ gender: "Men", limit: 8 }).catch(() => [])
         setMenProducts(men.slice(0, 8))
         
@@ -171,7 +171,7 @@ export default function HomePage() {
         setNewCollectionProducts(newCollection.slice(0, 12))
       } catch (error) {
         console.error("Error loading products:", error)
-        // Set empty arrays on error to prevent UI issues
+        
         setMenProducts([])
         setWomenProducts([])
         setKidsProducts([])
@@ -183,7 +183,7 @@ export default function HomePage() {
     loadProducts()
   }, [])
 
-  // Load featured products separately
+  
   useEffect(() => {
     const loadFeaturedProducts = async () => {
       setIsLoadingFeatured(true)
@@ -200,7 +200,7 @@ export default function HomePage() {
     loadFeaturedProducts()
   }, [])
 
-  // Auto-slide for product sliders
+  
   useEffect(() => {
     if (menProducts.length === 0 && womenProducts.length === 0 && kidsProducts.length === 0 && newCollectionProducts.length === 0) return
     
@@ -223,12 +223,12 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white">
-      {/* Professional Navbar */}
+      { }
       <ProfessionalNavbar />
 
-      {/* Hero Slider Section */}
+      { }
       <section className="relative overflow-hidden min-h-screen flex items-center pt-20">
-        {/* Slider Container */}
+        { }
         <div 
           className="relative w-full h-screen"
           onMouseEnter={() => setIsPaused(true)}
@@ -246,7 +246,7 @@ export default function HomePage() {
               className="absolute inset-0 flex items-center overflow-hidden"
               style={{ backgroundImage: sliderImages[currentSlide].bgGradient }}
             >
-              {/* Subtle Background Clothing Images */}
+              { }
               <div className="absolute inset-0 opacity-[0.45]">
                 <div
                   className="absolute inset-0 bg-center bg-no-repeat"
@@ -260,7 +260,7 @@ export default function HomePage() {
                 />
               </div>
               
-              {/* Additional subtle clothing images for depth */}
+              { }
               <div className="absolute inset-0 opacity-[0.3]">
                 <div
                   className="absolute top-1/4 right-1/4 w-96 h-96 bg-center rounded-full"
@@ -282,9 +282,9 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* Animated Background Elements */}
+              { }
               <div className="absolute inset-0">
-                {/* Floating Orbs */}
+                { }
                 <motion.div
                   className="absolute top-20 right-20 w-96 h-96 bg-rose-200/20 rounded-full"
                   animate={{
@@ -314,7 +314,7 @@ export default function HomePage() {
                   style={{ filter: "blur(64px)" }}
                 />
                 
-                {/* Subtle Pattern */}
+                { }
                 <div className="absolute inset-0 opacity-[0.02]">
                   <div
                     className="absolute inset-0"
@@ -326,10 +326,10 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Content Container */}
+              { }
               <div className="relative z-20 container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 w-full">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-                  {/* Text Content - Enhanced */}
+                  { }
                   <motion.div
                     key={`content-${currentSlide}`}
                     initial={{ opacity: 0, x: -50 }}
@@ -338,7 +338,7 @@ export default function HomePage() {
                     transition={{ duration: 0.8, delay: 0.2 }}
                     className="text-center lg:text-left space-y-6 lg:space-y-8"
                   >
-                    {/* Badge - Logo */}
+                    { }
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -349,7 +349,7 @@ export default function HomePage() {
                       </div>
                     </motion.div>
 
-                    {/* Title - Enhanced */}
+                    { }
                     <motion.h1
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -359,7 +359,7 @@ export default function HomePage() {
                       <span className="text-gray-900 block mb-2">{sliderImages[currentSlide].title}</span>
                     </motion.h1>
 
-                    {/* Description - Enhanced */}
+                    { }
                     <motion.p
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -369,7 +369,7 @@ export default function HomePage() {
                       {sliderImages[currentSlide].description}
                     </motion.p>
 
-                    {/* CTA Button - Enhanced */}
+                    { }
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -390,7 +390,7 @@ export default function HomePage() {
                     </motion.div>
                   </motion.div>
 
-                  {/* Image Content - Enhanced */}
+                  { }
                   <motion.div
                     key={`image-${currentSlide}`}
                     initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
@@ -399,13 +399,13 @@ export default function HomePage() {
                     transition={{ duration: 0.8, delay: 0.3 }}
                     className="relative h-[450px] lg:h-[650px] flex items-center justify-center"
                   >
-                    {/* Multiple Glow Layers */}
+                    { }
                     <div className="absolute inset-0">
                       <div className="absolute inset-0 bg-gradient-to-br from-rose-300/30 to-pink-300/30 rounded-[3rem] blur-3xl transform rotate-6" />
                       <div className="absolute inset-0 bg-gradient-to-br from-pink-200/20 to-rose-200/20 rounded-[3rem] blur-2xl transform -rotate-6" />
                     </div>
                     
-                    {/* Main Image Container */}
+                    { }
                     <div className="relative w-full h-full max-w-lg mx-auto">
                       <motion.div
                         animate={{ 
@@ -418,7 +418,7 @@ export default function HomePage() {
                         }}
                         className="relative bg-white/90 backdrop-blur-md rounded-[2.5rem] p-10 shadow-2xl border-2 border-white/80 overflow-hidden"
                       >
-                        {/* Decorative Elements */}
+                        { }
                         <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-rose-200/30 to-pink-200/30 rounded-full blur-2xl" />
                         <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200/30 to-rose-200/30 rounded-full blur-xl" />
                         
@@ -440,7 +440,7 @@ export default function HomePage() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Navigation Arrows */}
+          { }
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -462,7 +462,7 @@ export default function HomePage() {
             <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors" />
           </button>
 
-          {/* Dots Indicator */}
+          { }
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex gap-2 items-center">
             {sliderImages.map((_, index) => (
               <button
@@ -482,7 +482,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Scroll Indicator */}
+        { }
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -501,7 +501,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* New Collection Slider */}
+      { }
       {isLoadingProducts ? (
         <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-16">
           <FeaturedProductsSkeleton />
@@ -569,15 +569,15 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Virtual Camera Feature Section - Redesigned */}
+      { }
       <section className="py-24 bg-gradient-to-b from-white to-rose-50/30 relative overflow-hidden">
         <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 relative z-10">
           <div className="max-w-7xl mx-auto">
-            {/* Main Content - Left Aligned Layout */}
+            { }
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
-              {/* Left Side - Content (3 columns) */}
+              { }
               <div className="lg:col-span-3 space-y-8">
-                {/* Badge */}
+                { }
                 <motion.div
                   initial={{ opacity: 0, x: -30 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -589,7 +589,7 @@ export default function HomePage() {
                   <span>Try it before you buy</span>
                 </motion.div>
 
-                {/* Main Heading */}
+                { }
                 <motion.h2
                   initial={{ opacity: 0, x: -30 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -600,7 +600,7 @@ export default function HomePage() {
                   <span className="bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">Seamless Virtual Try-On</span>
                 </motion.h2>
 
-                {/* Description */}
+                { }
                 <motion.div
                   initial={{ opacity: 0, x: -30 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -618,7 +618,7 @@ export default function HomePage() {
                   </p>
                 </motion.div>
 
-                {/* Features Grid */}
+                { }
                 <motion.div
                   initial={{ opacity: 0, x: -30 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -648,7 +648,7 @@ export default function HomePage() {
                   ))}
                 </motion.div>
 
-                {/* CTA Button */}
+                { }
                 <motion.div
                   initial={{ opacity: 0, x: -30 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -664,7 +664,7 @@ export default function HomePage() {
                 </motion.div>
               </div>
 
-              {/* Right Side - Interactive Card (2 columns) */}
+              { }
               <div className="lg:col-span-2 relative">
                 <motion.div
                   initial={{ opacity: 0, x: 30 }}
@@ -673,7 +673,7 @@ export default function HomePage() {
                   transition={{ duration: 0.8 }}
                   className="relative"
                 >
-                  {/* Main Card */}
+                  { }
                   <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200/60">
                     <div className="absolute inset-0">
                       <AnimatePresence mode="wait">
@@ -694,7 +694,7 @@ export default function HomePage() {
                       <div className="absolute inset-0 backdrop-blur-[1.5px]" />
                     </div>
 
-                    {/* Card Content */}
+                    { }
                     <div className="relative z-10 p-8 md:p-10 space-y-6">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
@@ -762,9 +762,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Product Sliders Section - After Virtual Camera */}
+      { }
       <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-white to-rose-50/30 space-y-16">
-        {/* Men's Collection Slider */}
+        { }
         {isLoadingProducts ? (
           <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 mb-8">
             <FeaturedProductsSkeleton />
@@ -823,7 +823,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Women's Collection Slider - Reversed Direction */}
+        { }
         {womenProducts.length > 0 && (
           <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
             <motion.div
@@ -878,7 +878,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Kids Collection Slider */}
+        { }
         {kidsProducts.length > 0 && (
           <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
             <motion.div
@@ -934,7 +934,7 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Features Section - Left Aligned */}
+      { }
       <section className="relative overflow-hidden py-16 sm:py-24 md:py-32 bg-gradient-to-br from-white via-rose-50/40 to-amber-50/30">
         <div className="absolute inset-0">
           <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl" />
@@ -943,7 +943,7 @@ export default function HomePage() {
         </div>
         <div className="container relative mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
           <div className="max-w-7xl mx-auto">
-            {/* Section Header - Left Aligned */}
+            { }
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -976,7 +976,7 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            {/* Features Grid - Left Aligned */}
+            { }
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl">
               {[
                 {
@@ -1030,7 +1030,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Products - Professional Grid */}
+      { }
       {isLoadingFeatured ? (
         <section className="py-32 bg-gradient-to-b from-white to-rose-50/50">
           <div className="container mx-auto px-6 md:px-12 lg:px-24">
@@ -1139,7 +1139,7 @@ export default function HomePage() {
       </section>
       )}
 
-      {/* CTA Section - Professional */}
+      { }
       <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-white via-rose-50/50 to-white">
         <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
           <motion.div
@@ -1168,10 +1168,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Customer Reviews Section - At the End of Content */}
+      { }
       <CustomerReviewsSection />
 
-      {/* Footer */}
+      { }
       <footer className="border-t border-border py-8 sm:py-12 bg-white">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">

@@ -5,12 +5,12 @@ import Cart from '../models/Cart';
 import { AuthRequest } from '../middleware/auth';
 import mongoose from 'mongoose';
 
-// @desc    Create new design
-// @route   POST /api/designs
-// @access  Private
+
+
+
 export const createDesign = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Ensure user is authenticated
+    
     if (!req.user?._id) {
       return res.status(401).json({
         success: false,
@@ -20,7 +20,7 @@ export const createDesign = async (req: AuthRequest, res: Response) => {
 
     const { name, baseProduct, baseProductId, elements, thumbnail, designImageURL, designMetadata, userDescription } = req.body;
 
-    // VALIDATION: Validate status enum
+    
     const validStatuses = ['draft', 'published', 'archived'];
     const designStatus = 'draft';
 
@@ -43,7 +43,7 @@ export const createDesign = async (req: AuthRequest, res: Response) => {
       designImageURL,
       designMetadata,
       userDescription,
-      price: studioProduct.price, // server-side price
+      price: studioProduct.price, 
       status: designStatus,
       type: 'manual',
     });
@@ -61,9 +61,9 @@ export const createDesign = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get user designs
-// @route   GET /api/designs/my-designs
-// @access  Private
+
+
+
 export const getMyDesigns = async (req: AuthRequest, res: Response) => {
   try {
     const { status } = req.query;
@@ -88,9 +88,9 @@ export const getMyDesigns = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Add design to cart
-// @route   POST /api/designs/:id/add-to-cart
-// @access  Private
+
+
+
 export const addDesignToCart = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?._id) {
@@ -154,12 +154,12 @@ export const addDesignToCart = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get single design
-// @route   GET /api/designs/:id
-// @access  Private
+
+
+
 export const getDesign = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -176,7 +176,7 @@ export const getDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user owns this design or is admin
+    
     if (
       design.user._id.toString() !== (req.user?._id as any)?.toString() &&
       req.user?.role !== 'admin'
@@ -199,12 +199,12 @@ export const getDesign = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update design
-// @route   PUT /api/designs/:id
-// @access  Private
+
+
+
 export const updateDesign = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -221,7 +221,7 @@ export const updateDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user owns this design
+    
     if (design.user.toString() !== (req.user?._id as any)?.toString()) {
       return res.status(403).json({
         success: false,
@@ -247,12 +247,12 @@ export const updateDesign = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Delete design
-// @route   DELETE /api/designs/:id
-// @access  Private
+
+
+
 export const deleteDesign = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -269,7 +269,7 @@ export const deleteDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user owns this design
+    
     if (design.user.toString() !== (req.user?._id as any)?.toString()) {
       return res.status(403).json({
         success: false,
@@ -291,9 +291,9 @@ export const deleteDesign = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get all designs (Admin)
-// @route   GET /api/designs
-// @access  Private/Admin
+
+
+
 export const getAllDesigns = async (req: AuthRequest, res: Response) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -332,12 +332,12 @@ export const getAllDesigns = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Publish design
-// @route   PUT /api/designs/:id/publish
-// @access  Private
+
+
+
 export const publishDesign = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -354,7 +354,7 @@ export const publishDesign = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user owns this design
+    
     if (design.user.toString() !== (req.user?._id as any)?.toString()) {
       return res.status(403).json({
         success: false,

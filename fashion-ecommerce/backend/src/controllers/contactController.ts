@@ -3,14 +3,14 @@ import ContactMessage from '../models/ContactMessage';
 import { AuthRequest } from '../middleware/auth';
 import { logEmployeeActivity } from './employeeActivityController';
 
-// @desc    Create a new contact message
-// @route   POST /api/contact
-// @access  Public
+
+
+
 export const createContactMessage = async (req: Request, res: Response) => {
   try {
     const { name, email, subject, message } = req.body;
 
-    // Validation
+    
     if (!name || !email || !subject || !message) {
       return res.status(400).json({
         success: false,
@@ -18,7 +18,7 @@ export const createContactMessage = async (req: Request, res: Response) => {
       });
     }
 
-    // Email validation
+    
     const emailRegex = /^\S+@\S+\.\S+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({
@@ -48,9 +48,9 @@ export const createContactMessage = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Get all contact messages
-// @route   GET /api/contact
-// @access  Private/Admin/Employee
+
+
+
 export const getContactMessages = async (req: AuthRequest, res: Response) => {
   try {
     const {
@@ -60,7 +60,7 @@ export const getContactMessages = async (req: AuthRequest, res: Response) => {
       search,
     } = req.query;
 
-    // Build query
+    
     const query: any = {};
 
     if (status && status !== 'all') {
@@ -76,7 +76,7 @@ export const getContactMessages = async (req: AuthRequest, res: Response) => {
       ];
     }
 
-    // Pagination
+    
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -90,7 +90,7 @@ export const getContactMessages = async (req: AuthRequest, res: Response) => {
 
     const total = await ContactMessage.countDocuments(query);
 
-    // Count by status
+    
     const statusCounts = {
       new: await ContactMessage.countDocuments({ status: 'new' }),
       read: await ContactMessage.countDocuments({ status: 'read' }),
@@ -115,9 +115,9 @@ export const getContactMessages = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get single contact message
-// @route   GET /api/contact/:id
-// @access  Private/Admin/Employee
+
+
+
 export const getContactMessage = async (req: AuthRequest, res: Response) => {
   try {
     const message = await ContactMessage.findById(req.params.id).populate(
@@ -132,7 +132,7 @@ export const getContactMessage = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Mark as read if it's new
+    
     if (message.status === 'new') {
       message.status = 'read';
       message.readAt = new Date();
@@ -151,9 +151,9 @@ export const getContactMessage = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update contact message status
-// @route   PUT /api/contact/:id
-// @access  Private/Admin/Employee
+
+
+
 export const updateContactMessage = async (req: AuthRequest, res: Response) => {
   try {
     const { status, replyMessage } = req.body;
@@ -167,7 +167,7 @@ export const updateContactMessage = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update status
+    
     if (status) {
       message.status = status;
       if (status === 'read' && !message.readAt) {
@@ -175,7 +175,7 @@ export const updateContactMessage = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Add reply
+    
     if (replyMessage) {
       message.status = 'replied';
       message.repliedAt = new Date();
@@ -185,7 +185,7 @@ export const updateContactMessage = async (req: AuthRequest, res: Response) => {
 
     await message.save();
 
-    // Log employee activity
+    
     if (req.user?._id && (req.user.role === 'admin' || req.user.role === 'employee')) {
       await logEmployeeActivity(
         req.user._id as any,
@@ -210,9 +210,9 @@ export const updateContactMessage = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Delete contact message
-// @route   DELETE /api/contact/:id
-// @access  Private/Admin
+
+
+
 export const deleteContactMessage = async (req: AuthRequest, res: Response) => {
   try {
     const message = await ContactMessage.findById(req.params.id);
@@ -224,7 +224,7 @@ export const deleteContactMessage = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Log employee activity before deletion
+    
     if (req.user?._id && (req.user.role === 'admin' || req.user.role === 'employee')) {
       await logEmployeeActivity(
         req.user._id as any,

@@ -32,7 +32,7 @@ export function ProductPreview({
 
   return (
     <div className="flex flex-col h-full bg-muted/30">
-      {/* Product Preview */}
+      { }
       <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
         <div
           className="relative"
@@ -41,7 +41,7 @@ export function ProductPreview({
             transformOrigin: "center",
           }}
         >
-          {/* Base Product Image with Color Overlay */}
+          { }
           <div
             className="relative"
             style={{
@@ -60,7 +60,7 @@ export function ProductPreview({
               }}
             />
 
-            {/* Safe Area Overlay */}
+            { }
             {safeArea && safeArea.width > 0 && safeArea.height > 0 && (
               <div
                 className="absolute pointer-events-none border-2 border-dashed border-rose-400/80 bg-rose-200/10"
@@ -74,7 +74,7 @@ export function ProductPreview({
               />
             )}
 
-            {/* Design Elements Overlay */}
+            { }
             <div className="absolute inset-0 pointer-events-none">
               {currentSideElements.map((element) => {
                 if (element.type === "text") {

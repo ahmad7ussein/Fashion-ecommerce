@@ -48,7 +48,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
       <div className="container mx-auto px-6 md:px-12 lg:px-24 py-12">
-        {/* Hero Section */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -62,7 +62,7 @@ export default function AboutPage() {
           </p>
         </motion.div>
 
-        {/* Stats Section */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -85,7 +85,7 @@ export default function AboutPage() {
           ))}
         </motion.div>
 
-        {/* Story Section */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -111,7 +111,7 @@ export default function AboutPage() {
           </div>
         </motion.div>
 
-        {/* Features Grid */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,7 +146,7 @@ export default function AboutPage() {
           </div>
         </motion.div>
 
-        {/* CTA Section */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}

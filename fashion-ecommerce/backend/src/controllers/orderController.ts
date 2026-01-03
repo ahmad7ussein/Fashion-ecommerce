@@ -6,9 +6,9 @@ import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import { logEmployeeActivity } from './employeeActivityController';
 
-// @desc    Create new order
-// @route   POST /api/orders
-// @access  Private
+
+
+
 export const createOrder = async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
   try {
@@ -21,7 +21,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const { items, shippingAddress, paymentInfo } = req.body;
 
-    // Validate required fields (client pricing is ignored)
+    
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
@@ -52,13 +52,13 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       const validatedItems: any[] = [];
       let subtotal = 0;
 
-      // Use server-side product data/pricing only
+      
       for (const item of items) {
         const productId = item.product;
         const designId = item.design;
         const quantity = Math.max(1, Number(item.quantity) || 0);
 
-        // Validate product or design reference
+        
         if (!productId && !designId) {
           throw Object.assign(new Error('Item must include product or design'), { statusCode: 400 });
         }
@@ -131,12 +131,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         }
       }
 
-      // Server-side totals (tax/shipping sanitized)
+      
       const sanitizedTax = Math.max(Number(req.body.tax) || 0, 0);
       const sanitizedShipping = Math.max(Number(req.body.shipping) || 0, 0);
       const total = subtotal + sanitizedTax + sanitizedShipping;
 
-      // Decrement stock atomically inside the transaction
+      
       for (const item of validatedItems) {
         if (item.product) {
           const stockUpdate = await Product.updateOne(
@@ -196,9 +196,9 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get user orders
-// @route   GET /api/orders/my-orders
-// @access  Private
+
+
+
 export const getMyOrders = async (req: AuthRequest, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -228,9 +228,9 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get single order
-// @route   GET /api/orders/:id
-// @access  Private
+
+
+
 export const getOrder = async (req: AuthRequest, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -240,7 +240,7 @@ export const getOrder = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -261,7 +261,7 @@ export const getOrder = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user owns this order or is admin/employee
+    
     if (
       order.user._id.toString() !== (req.user?._id as any)?.toString() &&
       req.user?.role !== 'admin' &&
@@ -285,9 +285,9 @@ export const getOrder = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get all orders (Admin/Employee)
-// @route   GET /api/orders
-// @access  Private/Admin/Employee
+
+
+
 export const getAllOrders = async (req: AuthRequest, res: Response) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -297,7 +297,7 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
       query.status = status;
     }
 
-    // Only show orders from customers (exclude admin and employee orders)
+    
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -309,11 +309,11 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // First, get all customer user IDs
+    
     const customerUsers = await User.find({ role: 'customer' }).select('_id').maxTimeMS(20000);
     const customerIds = customerUsers.map(u => u._id);
 
-    // Filter orders to only include customer orders
+    
     query.user = { $in: customerIds };
 
     const orders = await Order.find(query)
@@ -342,14 +342,14 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update order status with tracking
-// @route   PUT /api/orders/:id/status
-// @access  Private/Admin/Employee
+
+
+
 export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { status, trackingNumber, carrier, estimatedDelivery, location, note } = req.body;
 
-    // VALIDATION: Validate status enum value
+    
     const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({
@@ -358,7 +358,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -384,7 +384,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 
     const oldStatus = order.status;
 
-    // Update order fields
+    
     if (status) {
       order.status = status;
     }
@@ -398,7 +398,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       order.estimatedDelivery = new Date(estimatedDelivery);
     }
 
-    // Add tracking history entry
+    
     if (status && status !== oldStatus) {
       if (!order.trackingHistory) {
         order.trackingHistory = [];
@@ -414,7 +414,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 
     await order.save();
 
-    // FIXED: Log employee activity for order status update
+    
     if (req.user?._id && (req.user.role === 'admin' || req.user.role === 'employee')) {
       await logEmployeeActivity(
         req.user._id as any,
@@ -426,7 +426,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // Create notification for customer
+    
     if (status && status !== oldStatus && order.user) {
       const statusMessages: Record<string, { title: string; message: string; type: string }> = {
         processing: {
@@ -477,9 +477,9 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update payment status
-// @route   PUT /api/orders/:id/payment
-// @access  Private/Admin
+
+
+
 export const updatePaymentStatus = async (req: AuthRequest, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) {
@@ -491,7 +491,7 @@ export const updatePaymentStatus = async (req: AuthRequest, res: Response) => {
 
     const { status, transactionId } = req.body;
 
-    // VALIDATION: Validate payment status enum value
+    
     const validPaymentStatuses = ['pending', 'completed', 'failed', 'refunded'];
     if (status && !validPaymentStatuses.includes(status)) {
       return res.status(400).json({
@@ -500,7 +500,7 @@ export const updatePaymentStatus = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -539,12 +539,12 @@ export const updatePaymentStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Delete order (Admin only)
-// @route   DELETE /api/orders/:id
-// @access  Private/Admin
+
+
+
 export const deleteOrder = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -582,9 +582,9 @@ export const deleteOrder = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get order statistics (Admin)
-// @route   GET /api/orders/stats/overview
-// @access  Private/Admin
+
+
+
 export const getOrderStats = async (req: AuthRequest, res: Response) => {
   try {
     if (mongoose.connection.readyState !== 1) {

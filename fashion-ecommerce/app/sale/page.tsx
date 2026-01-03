@@ -40,7 +40,7 @@ export default function SalePage() {
       <ProfessionalNavbar />
       
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-8 sm:py-12 pt-24 sm:pt-28">
-        {/* Page Header */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -68,7 +68,7 @@ export default function SalePage() {
           </p>
         </motion.div>
 
-        {/* Products Grid */}
+        { }
         {isLoading ? (
           <ProductGridSkeleton count={10} />
         ) : products.length > 0 ? (
@@ -97,7 +97,7 @@ export default function SalePage() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           loading="lazy"
                         />
-                        {/* Sale Badge */}
+                        { }
                         <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
                           <Badge className="bg-red-500 text-white border-0 rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-bold shadow-lg">
                             {language === "ar" ? `خصم ${salePercentage}%` : `${salePercentage}% OFF`}

@@ -7,38 +7,38 @@ import { AuthRequest } from '../middleware/auth';
 import { logEmployeeActivity } from './employeeActivityController';
 import mongoose from 'mongoose';
 
-// @desc    Get dashboard statistics
-// @route   GET /api/admin/dashboard/stats
-// @access  Private/Admin
+
+
+
 export const getDashboardStats = async (req: AuthRequest, res: Response) => {
   try {
-    // Total counts - Only count customers (exclude admin and employee)
+    
     const totalUsers = await User.countDocuments({ role: 'customer' });
     const totalOrders = await Order.countDocuments();
     const totalProducts = await Product.countDocuments();
     const totalDesigns = await Design.countDocuments();
 
-    // Revenue
+    
     const revenueData = await Order.aggregate([
       { $match: { 'paymentInfo.status': 'completed' } },
       { $group: { _id: null, total: { $sum: '$total' } } },
     ]);
     const totalRevenue = revenueData[0]?.total || 0;
 
-    // Orders by status
+    
     const pendingOrders = await Order.countDocuments({ status: 'pending' });
     const processingOrders = await Order.countDocuments({ status: 'processing' });
     const shippedOrders = await Order.countDocuments({ status: 'shipped' });
     const deliveredOrders = await Order.countDocuments({ status: 'delivered' });
 
-    // Recent orders
+    
     const recentOrders = await Order.find()
       .sort({ createdAt: -1 })
       .allowDiskUse(true)
       .limit(5)
       .populate('user', 'firstName lastName email');
 
-    // Top products
+    
     const topProducts = await Order.aggregate([
       { $unwind: '$items' },
       {
@@ -80,9 +80,9 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get all users
-// @route   GET /api/admin/users
-// @access  Private/Admin
+
+
+
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
     const { role, page = 1, limit = 20, search } = req.query;
@@ -90,14 +90,14 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
     console.log('🔍 getAllUsers called with params:', { role, page, limit, search });
 
     const query: any = {};
-    // Filter by role if specified
+    
     if (role && role !== 'all') {
       query.role = role;
       console.log('✅ Filtering by role:', role);
     } else {
       console.log('ℹ️ No role filter, showing all users');
     }
-    // If role is 'all' or not specified, show all users (including admins for admin panel)
+    
 
     if (search) {
       query.$or = [
@@ -147,12 +147,12 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get single user
-// @route   GET /api/admin/users/:id
-// @access  Private/Admin
+
+
+
 export const getUser = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -169,10 +169,10 @@ export const getUser = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get user's orders
+    
     const orders = await Order.find({ user: user._id }).sort({ createdAt: -1 }).allowDiskUse(true).limit(10);
 
-    // Get user's designs
+    
     const designs = await Design.find({ user: user._id }).sort({ createdAt: -1 }).allowDiskUse(true).limit(10);
 
     res.status(200).json({
@@ -191,14 +191,14 @@ export const getUser = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update user role
-// @route   PUT /api/admin/users/:id/role
-// @access  Private/Admin
+
+
+
 export const updateUserRole = async (req: AuthRequest, res: Response) => {
   try {
     const { role } = req.body;
 
-    // VALIDATION: Validate role enum
+    
     const validRoles = ['customer', 'employee', 'admin'];
     if (!role || !validRoles.includes(role)) {
       return res.status(400).json({
@@ -207,7 +207,7 @@ export const updateUserRole = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -240,12 +240,12 @@ export const updateUserRole = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Delete user
-// @route   DELETE /api/admin/users/:id
-// @access  Private/Admin
+
+
+
 export const deleteUser = async (req: AuthRequest, res: Response) => {
   try {
-    // VALIDATION: Validate ObjectId format
+    
     if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -262,7 +262,7 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Prevent deleting yourself
+    
     if (req.user && (user._id as any).toString() === (req.user._id as any).toString()) {
       return res.status(400).json({
         success: false,
@@ -284,14 +284,14 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Create employee
-// @route   POST /api/admin/employees
-// @access  Private/Admin
+
+
+
 export const createEmployee = async (req: AuthRequest, res: Response) => {
   try {
     const { firstName, lastName, email, password, phone } = req.body;
 
-    // Validate required fields
+    
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -299,7 +299,7 @@ export const createEmployee = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user already exists
+    
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({
@@ -308,7 +308,7 @@ export const createEmployee = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Create employee
+    
     const employee = await User.create({
       firstName,
       lastName,
@@ -318,7 +318,7 @@ export const createEmployee = async (req: AuthRequest, res: Response) => {
       phone,
     });
 
-    // FIXED: Log employee creation activity
+    
     if (req.user?._id) {
       await logEmployeeActivity(
         req.user._id as any,
@@ -330,7 +330,7 @@ export const createEmployee = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // Remove password from response
+    
     const employeeResponse = employee.toObject();
     const { password: _password, ...employeeWithoutPassword } = employeeResponse as any;
 
@@ -347,9 +347,9 @@ export const createEmployee = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Get sales report
-// @route   GET /api/admin/reports/sales
-// @access  Private/Admin
+
+
+
 export const getSalesReport = async (req: AuthRequest, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
@@ -379,7 +379,7 @@ export const getSalesReport = async (req: AuthRequest, res: Response) => {
       { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } },
     ]);
 
-    // FIXED: Log employee activity for report generation
+    
     if (req.user?._id) {
       await logEmployeeActivity(
         req.user._id as any,

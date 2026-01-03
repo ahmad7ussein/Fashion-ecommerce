@@ -11,7 +11,7 @@ type OrderTrackerProps = {
   points: Point[]
   width?: number
   height?: number
-  /** Seconds to go from start to end */
+   
   durationSeconds?: number
 }
 
@@ -27,7 +27,7 @@ function buildSmoothPath(points: Point[]): string {
     const next = points[i + 1]
     const midX = (current.x + next.x) / 2
     const midY = (current.y + next.y) / 2
-    // Quadratic curves between midpoints for a smooth S-curve look
+    
     if (i === 0) {
       d.push(`Q ${current.x} ${current.y} ${midX} ${midY}`)
     } else {
@@ -57,7 +57,7 @@ export function OrderTracker({
 
   const pathD = useMemo(() => buildSmoothPath(points), [points])
 
-  // Pre-calc straight-line segment ratios to highlight points as we pass them
+  
   const segmentRatios = useMemo(() => {
     if (points.length < 2) return points.map(() => 0)
     const lengths: number[] = []
@@ -128,7 +128,7 @@ export function OrderTracker({
           </filter>
         </defs>
 
-        {/* Path */}
+        { }
         <motion.path
           ref={pathRef}
           d={pathD}
@@ -143,7 +143,7 @@ export function OrderTracker({
           transition={{ duration: 1.2, ease: "easeInOut" }}
         />
 
-        {/* Points */}
+        { }
         {points.map((p, idx) => {
           const isPassed = progress.get() >= segmentRatios[idx] - 0.001
           return (
@@ -172,7 +172,7 @@ export function OrderTracker({
           )
         })}
 
-        {/* Car icon following the path */}
+        { }
         <motion.g
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

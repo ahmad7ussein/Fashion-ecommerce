@@ -67,10 +67,10 @@ export default function LoginPage() {
   const router = useRouter()
   const { login, register, user, isLoading } = useAuth()
   
-  // Redirect if already logged in (only once)
+  
   const hasRedirected = useRef(false)
   useEffect(() => {
-    // Prevent multiple redirects
+    
     if (hasRedirected.current) return
     if (isLoading) return
     
@@ -96,7 +96,7 @@ export default function LoginPage() {
     }
   }, [user, isLoading, router])
 
-  // Sign Up Form State
+  
   const [signUpData, setSignUpData] = useState({
     firstName: "",
     lastName: "",
@@ -106,14 +106,14 @@ export default function LoginPage() {
     acceptTerms: false,
   })
 
-  // Sign In Form State
+  
   const [signInData, setSignInData] = useState({
-    identifier: "", // Email only
+    identifier: "", 
     password: "",
     rememberMe: false,
   })
 
-  // Validation Errors
+  
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validateSignUp = () => {
@@ -161,18 +161,18 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = async (e?: React.MouseEvent) => {
-    // Prevent any default behavior
+    
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    // Prevent multiple simultaneous requests
+    
     if (isGoogleLoading) {
       return;
     }
 
-    // Check for Google Client ID first (before doing anything else)
+    
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!googleClientId || googleClientId.trim() === '' || googleClientId.includes('your-google-client-id') || googleClientId.includes('placeholder')) {
       toast({
@@ -185,7 +185,7 @@ export default function LoginPage() {
       return;
     }
 
-    // Check current origin for debugging
+    
     if (typeof window !== 'undefined') {
       const currentOrigin = window.location.origin;
       const fullUrl = window.location.href;
@@ -204,7 +204,7 @@ export default function LoginPage() {
       logger.log("🔍 Current Origin:", currentOrigin);
       logger.log("🔑 Google Client ID:", googleClientId);
       
-      // Always show toast with current origin
+      
       toast({
         title: "معلومات Origin",
         description: `Origin الحالي: ${currentOrigin}. تأكد من إضافة هذا بالضبط في Google Cloud Console → Authorized JavaScript origins`,
@@ -216,22 +216,22 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
 
     try {
-      // Wait for Google Identity Services to load
+      
       if (typeof window === 'undefined') {
         setIsGoogleLoading(false);
         return;
       }
       
-      // Load Google Identity Services script dynamically only when needed
+      
       if (!(window as any).google) {
-        // Create and load script
+        
         const script = document.createElement('script');
         script.src = 'https://accounts.google.com/gsi/client';
         script.async = true;
         script.defer = true;
         document.head.appendChild(script);
         
-        // Wait for script to load (max 10 seconds)
+        
         let attempts = 0;
         while (!(window as any).google && attempts < 20) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -243,13 +243,13 @@ export default function LoginPage() {
         }
       }
 
-      // Google login callback handler
+      
       const handleGoogleCallback = async (response: any) => {
         try {
-          setIsGoogleLoading(false); // Reset loading state
+          setIsGoogleLoading(false); 
           const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
           
-          // Show loading toast
+          
           toast({
             title: "جاري تسجيل الدخول...",
             description: "يرجى الانتظار",
@@ -272,18 +272,18 @@ export default function LoginPage() {
             throw new Error(data.message || 'Google login failed');
           }
 
-          // Save token
+          
           if (data.data.token) {
             localStorage.setItem('auth_token', data.data.token);
           }
 
-          // Show success message
+          
           toast({
             title: "تم تسجيل الدخول بنجاح! 🎉",
             description: `مرحباً ${data.data.user.firstName}!`,
           });
 
-          // Redirect based on role
+          
           const role = String(data.data.user.role || "").toLowerCase().trim();
           const redirectUrl = role === "admin" 
             ? "/admin" 
@@ -291,12 +291,12 @@ export default function LoginPage() {
             ? "/employee" 
             : "/";
           
-          // Small delay for better UX
+          
           setTimeout(() => {
             window.location.href = redirectUrl;
           }, 500);
         } catch (error: any) {
-          setIsGoogleLoading(false); // Reset loading state on error
+          setIsGoogleLoading(false); 
           logger.error("❌ Google login error:", error);
           toast({
             title: "فشل تسجيل الدخول",
@@ -306,9 +306,9 @@ export default function LoginPage() {
         }
       };
 
-      // Check if already initialized to prevent multiple initializations
+      
       if (!(window as any).google.accounts?.id?._clientId) {
-        // Initialize Google Identity Services with better UX
+        
         (window as any).google.accounts.id.initialize({
           client_id: googleClientId,
           callback: handleGoogleCallback,
@@ -318,11 +318,11 @@ export default function LoginPage() {
         });
       }
 
-      // Use One Tap for better UX (more elegant than prompt)
+      
       try {
         (window as any).google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed()) {
-            // If One Tap is not displayed, fallback to button click
+            
             logger.log("One Tap not displayed, using button");
           } else if (notification.isSkippedMoment()) {
             logger.log("One Tap skipped");
@@ -332,7 +332,7 @@ export default function LoginPage() {
         });
       } catch (promptError: any) {
         logger.warn("Google One Tap error:", promptError);
-        // Fallback: just show the button is ready
+        
       }
     } catch (error: any) {
       logger.error("❌ Google login initialization error:", error);
@@ -388,7 +388,7 @@ export default function LoginPage() {
         return
       }
       
-      // Get role and redirect IMMEDIATELY (before toast)
+      
       const userRole = String(loggedInUser.role || "").toLowerCase().trim()
       logger.log("🔍 Final role check:", userRole)
       logger.log("🔍 Role comparison:", {
@@ -398,13 +398,13 @@ export default function LoginPage() {
         isEmployee: userRole === "employee",
       })
       
-      // Show toast (non-blocking)
+      
       toast({
         title: "Welcome back! 🎉",
         description: "You have successfully logged in.",
       })
       
-      // Force redirect immediately - use absolute URL
+      
       const redirectUrl = userRole === "admin" 
         ? "/admin" 
         : userRole === "employee" 
@@ -415,17 +415,17 @@ export default function LoginPage() {
       logger.log("📍 Current location:", window.location.href)
       logger.log("📍 User role confirmed:", userRole)
       
-      // Use router for faster navigation
+      
       router.replace(redirectUrl)
       
-      return // Exit early
+      return 
     } catch (error: any) {
       logger.error("❌ Login error caught:", error)
       let errorMessage = error?.message || "Invalid email or password"
       let errorTitle = "Login failed"
       let errorDetails = ""
       
-      // Determine error type and provide detailed messages
+      
       if (errorMessage.includes("Cannot connect to the server") || 
           errorMessage.includes("Failed to fetch") || 
           errorMessage.includes("Network Error") ||
@@ -457,11 +457,11 @@ export default function LoginPage() {
         errorMessage = "Database connection timeout"
         errorDetails = "The database is not responding. Please make sure MongoDB is running and the backend server has connected to it."
       } else {
-        // For other errors, show the actual error message
+        
         errorDetails = "An unexpected error occurred. Please try again."
       }
       
-      // Show detailed error toast
+      
       toast({
         title: errorTitle,
         description: (
@@ -517,12 +517,12 @@ export default function LoginPage() {
     } catch (error: any) {
       logger.error("❌ Registration error:", error)
       
-      // Extract error message properly
+      
       let errorMessage = "Registration failed. Please try again."
       
-      // Try to extract from different error structures
+      
       if (error?.message) {
-        // Check if message is a JSON string
+        
         if (typeof error.message === 'string' && error.message.startsWith('{')) {
           try {
             const parsed = JSON.parse(error.message)
@@ -535,7 +535,7 @@ export default function LoginPage() {
         }
       }
       
-      // Try to extract from responseBody if available
+      
       if (error?.responseBody) {
         try {
           const parsed = typeof error.responseBody === 'string' 
@@ -545,11 +545,11 @@ export default function LoginPage() {
             errorMessage = parsed.message
           }
         } catch {
-          // Ignore parse errors
+          
         }
       }
       
-      // Check for specific error messages
+      
       if (errorMessage.includes("User already exists") || 
           errorMessage.includes("already exists with this email") ||
           errorMessage.includes("email already")) {
@@ -559,7 +559,7 @@ export default function LoginPage() {
       let errorTitle = "Registration Failed"
       let errorDetails: string | React.ReactNode = ""
       
-      // Determine error type and provide detailed messages
+      
       if (errorMessage.includes("Cannot connect to the server") || 
           errorMessage.includes("Failed to fetch") || 
           errorMessage.includes("Network Error") ||
@@ -612,7 +612,7 @@ export default function LoginPage() {
         errorDetails = "An unexpected error occurred. Please try again."
       }
       
-      // Show detailed error toast
+      
       toast({
         title: errorTitle,
         description: (
@@ -639,10 +639,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8 space-y-3 sm:space-y-4">
-          <Link href="/" className="inline-block mb-3 sm:mb-4 transition-transform hover:scale-105">
-            <Logo className="mx-auto scale-90 sm:scale-100" />
+        { }
+        <div className="text-center mb-6 sm:mb-8 space-y-4 sm:space-y-5">
+          <Link href="/" className="inline-flex items-center justify-center mb-3 sm:mb-4 transition-transform hover:scale-105">
+            <span className="inline-flex items-center justify-center rounded-full bg-white/85 ring-1 ring-rose-200/70 px-5 py-3 shadow-lg">
+              <Logo className="h-16 w-auto sm:h-20 md:h-24" />
+            </span>
           </Link>
           <div className="space-y-2">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -656,7 +658,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Main Card */}
+        { }
         <Card className="shadow-lg border-2">
           <CardHeader className="space-y-1 pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
             <CardTitle className="text-xl sm:text-2xl">{isSignUp ? "Sign Up" : "Sign In"}</CardTitle>
@@ -667,7 +669,7 @@ export default function LoginPage() {
           <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
             {isSignUp ? (
               <form onSubmit={onRegisterSubmit} className="space-y-4">
-                  {/* Name Fields */}
+                  { }
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
@@ -703,7 +705,7 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Email */}
+                  { }
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <div className="relative">
@@ -721,7 +723,7 @@ export default function LoginPage() {
                     {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                   </div>
 
-                  {/* Password */}
+                  { }
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <div className="relative">
@@ -749,7 +751,7 @@ export default function LoginPage() {
                     {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                   </div>
 
-                  {/* Confirm Password */}
+                  { }
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
                     <div className="relative">
@@ -774,7 +776,7 @@ export default function LoginPage() {
                     {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword}</p>}
                   </div>
 
-                  {/* Terms */}
+                  { }
                   <div className="space-y-2">
                     <div className="flex flex-row items-start space-x-3">
                       <Checkbox
@@ -796,14 +798,14 @@ export default function LoginPage() {
                     {errors.acceptTerms && <p className="text-sm text-destructive">{errors.acceptTerms}</p>}
                   </div>
 
-                  {/* Submit Button */}
+                  { }
                   <Button type="submit" className="w-full h-11 text-base font-semibold">
                     Create Account
                   </Button>
                 </form>
             ) : (
               <form onSubmit={onLoginSubmit} className="space-y-4">
-                {/* Email */}
+                { }
                 <div className="space-y-2">
                   <Label htmlFor="loginIdentifier">Email</Label>
                   <div className="relative">
@@ -821,7 +823,7 @@ export default function LoginPage() {
                   {errors.identifier && <p className="text-sm text-destructive">{errors.identifier}</p>}
                 </div>
 
-                {/* Password */}
+                { }
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="loginPassword">Password</Label>
@@ -851,7 +853,7 @@ export default function LoginPage() {
                   {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
                 </div>
 
-                {/* Remember Me */}
+                { }
                 <div className="flex flex-row items-center space-x-3">
                   <Checkbox
                     id="rememberMe"
@@ -863,14 +865,14 @@ export default function LoginPage() {
                   </Label>
                 </div>
 
-                {/* Submit Button */}
+                { }
                 <Button type="submit" className="w-full h-11 sm:h-12 text-base font-semibold">
                   Sign In
                 </Button>
               </form>
             )}
 
-            {/* Divider */}
+            { }
             <div className="relative my-4 sm:my-6">
               <div className="absolute inset-0 flex items-center">
                 <Separator />
@@ -880,7 +882,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Social Login */}
+            { }
             <Button 
               variant="outline" 
               type="button" 
@@ -924,7 +926,7 @@ export default function LoginPage() {
               </div>
             </Button>
 
-            {/* Toggle Sign Up/In */}
+            { }
             <div className="text-center text-xs sm:text-sm pt-4 border-t">
               <span className="text-muted-foreground">
                 {isSignUp ? "Already have an account? " : "Don't have an account? "}
@@ -945,7 +947,7 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
+        { }
         <div className="mt-4 sm:mt-6 text-center">
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1">
             ← Back to home

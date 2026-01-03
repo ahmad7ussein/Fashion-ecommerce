@@ -17,7 +17,7 @@ export interface IOrderItem {
 
 export interface IOrder extends Document {
   user: mongoose.Types.ObjectId;
-  orderNumber?: string; // Optional in interface, will be auto-generated
+  orderNumber?: string; 
   items: IOrderItem[];
   shippingAddress: {
     firstName: string;
@@ -48,8 +48,8 @@ export interface IOrder extends Document {
     updatedBy?: mongoose.Types.ObjectId;
     updatedAt: Date;
   }>;
-  carrier?: string; // Shipping carrier name
-  estimatedDelivery?: Date; // Estimated delivery date
+  carrier?: string; 
+  estimatedDelivery?: Date; 
   notes?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -64,9 +64,9 @@ const orderSchema = new Schema<IOrder>(
     },
     orderNumber: {
       type: String,
-      required: false, // Will be auto-generated in pre-save hook
+      required: false, 
       unique: true,
-      sparse: true, // Allow multiple null values for uniqueness
+      sparse: true, 
     },
     items: [
       {
@@ -151,26 +151,26 @@ const orderSchema = new Schema<IOrder>(
   }
 );
 
-// Generate order number before saving
-// FIXED: Use atomic operation to prevent race conditions
+
+
 orderSchema.pre('save', async function (next) {
-  // Only generate if orderNumber doesn't exist (for new orders)
+  
   if (!this.orderNumber || this.orderNumber === '') {
     try {
-      // Use timestamp + random string for guaranteed uniqueness (atomic operation)
-      // This prevents race conditions that could occur with countDocuments()
+      
+      
       const timestamp = Date.now();
       const randomStr = Math.random().toString(36).substring(2, 11).toUpperCase();
       this.orderNumber = `ORD-${timestamp}-${randomStr}`;
       
-      // Verify uniqueness (retry if collision - extremely rare)
+      
       let attempts = 0;
       while (attempts < 5) {
         const existing = await mongoose.model('Order').findOne({ orderNumber: this.orderNumber });
         if (!existing) {
-          break; // Unique, proceed
+          break; 
         }
-        // Collision detected, generate new one
+        
         const newTimestamp = Date.now();
         const newRandomStr = Math.random().toString(36).substring(2, 11).toUpperCase();
         this.orderNumber = `ORD-${newTimestamp}-${newRandomStr}`;
@@ -180,7 +180,7 @@ orderSchema.pre('save', async function (next) {
       console.log('📝 Generated order number:', this.orderNumber);
     } catch (error) {
       console.error('❌ Error generating order number:', error);
-      // Fallback: use timestamp + random string
+      
       this.orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
     }
   }

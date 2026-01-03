@@ -5,30 +5,30 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 
-// Use optionalAuth for all cart routes (supports both authenticated and guest users)
+
 router.use(optionalAuth);
 
-// Helper function to validate userId (must be truthy and not null)
+
 function isValidUserId(userId: any): boolean {
   return userId !== null && userId !== undefined && userId !== '';
 }
 
-// Helper function to get or create guest session ID
+
 function getGuestSessionId(req: express.Request): string {
-  // Check if guest session ID exists in cookies
+  
   let guestSessionId = req.cookies?.guestSessionId;
   
   if (!guestSessionId) {
-    // Generate new guest session ID
+    
     guestSessionId = uuidv4();
-    // Set cookie (will be set in response)
+    
     (req as any).newGuestSessionId = guestSessionId;
   }
   
   return guestSessionId;
 }
 
-// Get user's or guest's cart
+
 router.get('/', async (req: express.Request, res: express.Response) => {
   try {
     const authReq = req as AuthRequest;
@@ -36,7 +36,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
     
     console.log('🛒 GET /cart - userId:', userId ? userId.toString() : 'guest');
     
-    // If userId is missing (null/undefined), return null cart instead of creating one
+    
     if (!isValidUserId(userId)) {
       console.log('🛒 No user session - returning null cart');
       return res.status(200).json({
@@ -48,23 +48,23 @@ router.get('/', async (req: express.Request, res: express.Response) => {
     
     let cart;
     
-    // Authenticated user - userId is guaranteed to be valid here
+    
     cart = await Cart.findOne({ user: userId })
       .populate({
         path: 'items.product',
         select: 'name price images',
-        strictPopulate: false, // Don't throw error if product doesn't exist
+        strictPopulate: false, 
       })
       .populate({
         path: 'items.design',
         select: 'name thumbnail',
-        strictPopulate: false, // Don't throw error if design doesn't exist
+        strictPopulate: false, 
       });
 
-    // If cart doesn't exist, create an empty one (only for authenticated users)
+    
     if (!cart) {
       console.log('🛒 Creating new cart for user:', userId);
-      // Validate userId one more time before creating
+      
       if (!isValidUserId(userId)) {
         return res.status(400).json({
           success: false,
@@ -78,18 +78,18 @@ router.get('/', async (req: express.Request, res: express.Response) => {
       });
     }
 
-    // Ensure cart has required fields
+    
     if (!cart) {
       throw new Error('Failed to create or retrieve cart');
     }
 
-    // Convert to plain object and ensure all fields are present
+    
     const cartData = {
       _id: (cart._id as any)?.toString() || cart._id,
       user: cart.user ? cart.user.toString() : undefined,
       guestSessionId: cart.guestSessionId,
       items: (cart.items || []).map((item: any) => {
-        // Safely handle product reference
+        
         let productId = undefined;
         if (item.product) {
           if (typeof item.product === 'object' && item.product._id) {
@@ -101,7 +101,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
           }
         }
         
-        // Safely handle design reference
+        
         let designId = undefined;
         if (item.design) {
           if (typeof item.design === 'object' && item.design._id) {
@@ -152,7 +152,7 @@ router.get('/', async (req: express.Request, res: express.Response) => {
   }
 });
 
-// Add item to cart
+
 router.post('/items', async (req: express.Request, res: express.Response) => {
   try {
     const authReq = req as AuthRequest;
@@ -160,7 +160,7 @@ router.post('/items', async (req: express.Request, res: express.Response) => {
 
     const { product, design, name, price, quantity, size, color, image, isCustom } = req.body;
 
-    // Validate required fields
+    
     if (!name || !price || !quantity || !size || !color || !image) {
       return res.status(400).json({
         success: false,
@@ -168,7 +168,7 @@ router.post('/items', async (req: express.Request, res: express.Response) => {
       });
     }
 
-    // Validate userId - if missing, reject the request
+    
     if (!isValidUserId(userId)) {
       return res.status(400).json({
         success: false,
@@ -176,10 +176,10 @@ router.post('/items', async (req: express.Request, res: express.Response) => {
       });
     }
 
-    // Find or create cart for authenticated user
+    
     let cart = await Cart.findOne({ user: userId });
     if (!cart) {
-      // Validate userId again before creating
+      
       if (!isValidUserId(userId)) {
         return res.status(400).json({
           success: false,
@@ -193,7 +193,7 @@ router.post('/items', async (req: express.Request, res: express.Response) => {
       });
     }
 
-    // Check if item already exists in cart
+    
     const existingItemIndex = cart.items.findIndex(
       (item) =>
         item.product?.toString() === product &&
@@ -203,10 +203,10 @@ router.post('/items', async (req: express.Request, res: express.Response) => {
     );
 
     if (existingItemIndex > -1) {
-      // Update quantity if item exists
+      
       cart.items[existingItemIndex].quantity += quantity;
     } else {
-      // Add new item
+      
       cart.items.push({
         product,
         design,
@@ -222,7 +222,7 @@ router.post('/items', async (req: express.Request, res: express.Response) => {
 
     await cart.save();
 
-    // Populate and return updated cart
+    
     cart = await Cart.findById(cart._id)
       .populate('items.product')
       .populate('items.design');
@@ -241,13 +241,13 @@ router.post('/items', async (req: express.Request, res: express.Response) => {
   }
 });
 
-// Update cart item quantity
+
 router.put('/items/:itemId', async (req: express.Request, res: express.Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?._id;
 
-    // VALIDATION: Only authenticated users can update cart items
+    
     if (!isValidUserId(userId)) {
       return res.status(400).json({
         success: false,
@@ -258,7 +258,7 @@ router.put('/items/:itemId', async (req: express.Request, res: express.Response)
     const { itemId } = req.params;
     const { quantity } = req.body;
 
-    // VALIDATION: Validate itemId format
+    
     if (!itemId || !itemId.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -282,7 +282,7 @@ router.put('/items/:itemId', async (req: express.Request, res: express.Response)
       });
     }
 
-    // FIXED: Use find instead of .id() for TypeScript compatibility
+    
     const item = cart.items.find((item: any) => 
       item._id && item._id.toString() === itemId
     );
@@ -297,7 +297,7 @@ router.put('/items/:itemId', async (req: express.Request, res: express.Response)
     item.quantity = quantity;
     await cart.save();
 
-    // Populate and return updated cart
+    
     const updatedCart = await Cart.findById(cart._id)
       .populate('items.product')
       .populate('items.design');
@@ -316,13 +316,13 @@ router.put('/items/:itemId', async (req: express.Request, res: express.Response)
   }
 });
 
-// Remove item from cart
+
 router.delete('/items/:itemId', async (req: express.Request, res: express.Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?._id;
 
-    // VALIDATION: Only authenticated users can remove cart items
+    
     if (!isValidUserId(userId)) {
       return res.status(400).json({
         success: false,
@@ -332,7 +332,7 @@ router.delete('/items/:itemId', async (req: express.Request, res: express.Respon
 
     const { itemId } = req.params;
 
-    // VALIDATION: Validate itemId format
+    
     if (!itemId || !itemId.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
         success: false,
@@ -346,13 +346,13 @@ router.delete('/items/:itemId', async (req: express.Request, res: express.Respon
       return res.status(404).json({ message: 'Cart not found' });
     }
 
-    // FIXED: Remove item using filter instead of pull for TypeScript compatibility
+    
     cart.items = cart.items.filter((item: any) => 
       !item._id || item._id.toString() !== itemId
     ) as any;
     await cart.save();
 
-    // Populate and return updated cart
+    
     const updatedCart = await Cart.findById(cart._id)
       .populate('items.product')
       .populate('items.design');
@@ -371,13 +371,13 @@ router.delete('/items/:itemId', async (req: express.Request, res: express.Respon
   }
 });
 
-// Clear cart
+
 router.delete('/', async (req: express.Request, res: express.Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?._id;
 
-    // VALIDATION: Only authenticated users can clear cart
+    
     if (!isValidUserId(userId)) {
       return res.status(400).json({
         success: false,

@@ -146,7 +146,7 @@ export default function CheckoutPage() {
 
       clear()
       
-      // Redirect to success page with order number
+      
       router.push(`/order-success?order=${order.orderNumber || order._id}`)
     } catch (error: any) {
       logger.error("Order creation error:", error)
@@ -174,9 +174,9 @@ export default function CheckoutPage() {
 
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Checkout Form */}
+              { }
               <div className="lg:col-span-2 space-y-6">
-                {/* Shipping Information */}
+                { }
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -235,7 +235,7 @@ export default function CheckoutPage() {
                   </CardContent>
                 </Card>
 
-                {/* Payment Information */}
+                { }
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -275,7 +275,7 @@ export default function CheckoutPage() {
                 </Card>
               </div>
 
-              {/* Order Summary */}
+              { }
               <div className="lg:col-span-1">
                 <Card className="sticky top-24">
                   <CardHeader>

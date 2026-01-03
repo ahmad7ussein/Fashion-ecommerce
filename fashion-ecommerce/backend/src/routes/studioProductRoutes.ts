@@ -11,10 +11,10 @@ import {
 
 const router = express.Router();
 
-// Public active list
+
 router.get('/active', getActiveStudioProducts);
 
-// Admin
+
 router.use(protect, authorize('admin'));
 router.get('/', getAllStudioProducts);
 router.get('/:id', getStudioProduct);

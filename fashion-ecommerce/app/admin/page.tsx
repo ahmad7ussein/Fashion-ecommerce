@@ -28,7 +28,6 @@ import {
   TrendingDown,
   X,
   UserPlus,
-  Menu,
   Activity,
   MessageSquare,
   Mail,
@@ -61,6 +60,7 @@ import { useTheme } from "next-themes"
 import { useLanguage } from "@/lib/language"
 import { t } from "@/lib/i18n"
 import { AdminSidebar } from "@/components/admin/AdminSidebar"
+import { AdminTopbar } from "@/components/admin/AdminTopbar"
 import {
   LineChart,
   Line,
@@ -112,7 +112,7 @@ const getColorLabel = (colorId: string, language: string) => {
   return language === "ar" ? option.label.ar : option.label.en
 }
 
-// Helper function for Excel export
+
 const exportToExcel = (data: any[], reportType: string, language: string) => {
   if (!data || data.length === 0) {
     return
@@ -183,7 +183,7 @@ export default function AdminDashboard() {
   const [newColor, setNewColor] = useState("")
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([])
-  // Studio products state
+  
   const [studioProducts, setStudioProducts] = useState<StudioProduct[]>([])
   const [studioLoading, setStudioLoading] = useState(false)
   const [showStudioModal, setShowStudioModal] = useState(false)
@@ -202,10 +202,6 @@ export default function AdminDashboard() {
     safeArea: { x: 60, y: 80, width: 280, height: 300 },
   })
   const [showEmployeeModal, setShowEmployeeModal] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [sidebarHovered, setSidebarHovered] = useState(false)
-  const [sidebarManuallyClosed, setSidebarManuallyClosed] = useState(false)
-  const sidebarTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [chartSettings, setChartSettings] = useState({
     revenueChartType: 'bar' as 'line' | 'bar' | 'area',
     ordersChartType: 'pie' as 'pie' | 'bar' | 'line',
@@ -227,7 +223,7 @@ export default function AdminDashboard() {
   const [editEstimatedDelivery, setEditEstimatedDelivery] = useState("")
   const [editLocation, setEditLocation] = useState("")
   const [editNote, setEditNote] = useState("")
-  // Order tracking state variables
+  
   const [orderTrackingLoading, setOrderTrackingLoading] = useState(false)
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all")
   const { user, logout, isLoading: authLoading } = useAuth()
@@ -241,7 +237,7 @@ export default function AdminDashboard() {
   const studioColorList = parseColorList(studioForm.colors)
   const studioColorSet = new Set(studioColorList.map(normalizeColorKey))
 
-  // Convert file to base64 string
+  
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -251,12 +247,12 @@ export default function AdminDashboard() {
     })
   }
 
-  // Handle main image upload
+  
   const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
+    
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Error",
@@ -266,7 +262,7 @@ export default function AdminDashboard() {
       return
     }
 
-    // Validate file size (max 5MB)
+    
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "Error",
@@ -289,12 +285,12 @@ export default function AdminDashboard() {
     }
   }
 
-  // Handle additional images upload (exactly 3 images required)
+  
   const handleAdditionalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
-    // Limit to 3 additional images
+    
     const maxImages = 3
     const currentImagesCount = productForm.images.length
     const remainingSlots = maxImages - currentImagesCount
@@ -322,7 +318,7 @@ export default function AdminDashboard() {
       const newBase64Images: string[] = []
 
       for (const file of filesToProcess) {
-        // Validate file type
+        
         if (!file.type.startsWith('image/')) {
           toast({
             title: "Error",
@@ -332,7 +328,7 @@ export default function AdminDashboard() {
           continue
         }
 
-        // Validate file size (max 5MB)
+        
         if (file.size > 5 * 1024 * 1024) {
           toast({
             title: "Error",
@@ -358,7 +354,7 @@ export default function AdminDashboard() {
     }
   }
 
-  // Remove additional image
+  
   const removeAdditionalImage = (index: number) => {
     const newImages = productForm.images.filter((_, i) => i !== index)
     const newFiles = additionalImageFiles.filter((_, i) => i !== index)
@@ -366,15 +362,15 @@ export default function AdminDashboard() {
     setAdditionalImageFiles(newFiles)
   }
 
-  // Redirect if not admin (only check once)
+  
   const hasCheckedAuth = useRef(false)
   useEffect(() => {
-    // Wait for auth to load
+    
     if (authLoading) {
       return
     }
     
-    // Only check once
+    
     if (hasCheckedAuth.current) return
     hasCheckedAuth.current = true
     
@@ -387,45 +383,41 @@ export default function AdminDashboard() {
       return
     }
     
-    // If no user and auth finished loading, redirect to login
+    
     if (!user && !authLoading) {
       console.log("⚠️ No user found, redirecting to login")
       window.location.href = "/login"
       return
     }
     
-    // If user is admin, everything is good
+    
     if (user && user.role === "admin") {
       console.log("✅ Admin user confirmed, showing dashboard")
     }
   }, [user, authLoading, router])
 
-  // FIXED: Load dashboard data and preferences - also load staff immediately
+  
   useEffect(() => {
     if (user && user.role === 'admin') {
       loadDashboardData()
       loadProducts()
       loadUserPreferences()
-      // FIXED: Load staff immediately on page load
+      
       loadStaff()
       loadStudioProducts()
     }
   }, [user])
 
-  // FIXED: Load user preferences from database with proper validation
+  
   const loadUserPreferences = async () => {
     try {
       const preferences = await userPreferencesApi.getPreferences()
       if (preferences) {
-        // FIXED: Validate and restore active tab with safe defaults
+        
         if (!tabParam && preferences.dashboardPreferences?.activeTab) {
           setActiveTab(preferences.dashboardPreferences.activeTab)
         }
-        // FIXED: Validate and restore sidebar state
-        if (preferences.sidebarPreferences?.collapsed !== undefined) {
-          setSidebarOpen(!preferences.sidebarPreferences.collapsed)
-        }
-        // FIXED: Validate chartSettings exists and has required properties
+        
         const chartSettings = preferences.dashboardPreferences?.chartSettings
         if (chartSettings && typeof chartSettings === 'object') {
           setChartSettings({
@@ -438,50 +430,50 @@ export default function AdminDashboard() {
             dateRange: chartSettings.dateRange || '30d',
           })
         }
-        // Restore theme
+        
         if (preferences.theme && preferences.theme !== 'system') {
           const themeValue = preferences.theme as 'light' | 'dark' | 'system'
           if (themeValue === 'light' || themeValue === 'dark' || themeValue === 'system') {
             setTheme(themeValue)
           }
         }
-        // Restore language
+        
         if (preferences.language) {
           setLanguage(preferences.language)
         }
       }
     } catch (error: any) {
       console.error("Failed to load user preferences:", error)
-      // Continue with default values - preferences are not critical
+      
     }
   }
 
-  // Load customers when customers tab is opened
+  
   useEffect(() => {
     if (activeTab === "customers" && user) {
       loadCustomers()
     }
   }, [activeTab, user])
 
-  // FIXED: Load staff (admins and employees) when staff tab is opened
+  
   useEffect(() => {
     if (activeTab === "staff" && user) {
       loadStaff()
     }
   }, [activeTab, user])
 
-  // FIXED: Load employee tracking when tracking tab is opened
+  
 
-  // FIXED: Function to load staff (admins and employees) from database
+  
   const loadStaff = async () => {
     try {
       setLoading(true)
       console.log("🔄 Loading staff from database...")
       
-      // Load all users with admin or employee role
+      
       const staffData = await adminApi.getAllUsers({ role: 'all', limit: 100 })
       
-      // Filter to only admins and employees
+      
       const staff = (staffData.data || []).filter((u: User) => 
         u.role === 'admin' || u.role === 'employee'
       )
@@ -492,7 +484,7 @@ export default function AdminDashboard() {
         employees: staff.filter((u: User) => u.role === 'employee').length,
       })
       
-      // Update users state with staff data
+      
       setUsers(staff)
     } catch (error: any) {
       console.error("❌ Error loading staff:", error)
@@ -506,14 +498,14 @@ export default function AdminDashboard() {
     }
   }
 
-  // Load reviews when reviews tab is opened
+  
   useEffect(() => {
     if (activeTab === "reviews" && user) {
       loadReviews()
     }
   }, [activeTab, reviewStatusFilter, user])
 
-  // Load contact messages function
+  
   const loadContactMessages = async () => {
     try {
       setMessagesLoading(true)
@@ -533,35 +525,35 @@ export default function AdminDashboard() {
     }
   }
 
-  // Load messages when messages tab is opened
+  
   useEffect(() => {
     if (activeTab === "messages" && user) {
       loadContactMessages()
     }
   }, [activeTab, messageStatusFilter, user])
 
-  // Load orders when tracking tab is opened
+  
   useEffect(() => {
     if (activeTab === "tracking" && user) {
       loadOrderTracking()
     }
   }, [activeTab, orderStatusFilter, user])
 
-  // Redirect if not admin - use router for faster navigation (must be before any returns)
+  
   useEffect(() => {
     if (!authLoading && (!user || user.role !== "admin")) {
       router.replace("/")
     }
   }, [user, authLoading, router])
 
-  // FIXED: Save preferences to database when they change with proper validation
+  
   useEffect(() => {
     if (!user) return
     
     const savePreferences = async () => {
       try {
-        // FIXED: Ensure all objects exist and are valid before saving - no undefined values
-        // FIXED: Type-safe preferences object
+        
+        
         const preferencesToSave: Partial<UserPreferences> = {
           dashboardPreferences: {
             activeTab: activeTab || 'overview',
@@ -582,7 +574,7 @@ export default function AdminDashboard() {
             },
           },
           sidebarPreferences: {
-            collapsed: !sidebarOpen,
+            collapsed: false,
             width: 256,
           },
           theme: (theme === 'light' || theme === 'dark' || theme === 'system') 
@@ -593,79 +585,20 @@ export default function AdminDashboard() {
         
         await userPreferencesApi.updatePreferences(preferencesToSave)
       } catch (error: any) {
-        // Silently fail - preferences saving is not critical
-        // Only log in development
+        
+        
         if (process.env.NODE_ENV === 'development') {
           console.error("Failed to save preferences:", error?.message || error)
         }
       }
     }
 
-    // Debounce saving preferences
+    
     const timeoutId = setTimeout(savePreferences, 1000)
     return () => clearTimeout(timeoutId)
-  }, [activeTab, sidebarOpen, theme, language, chartSettings, user])
+  }, [activeTab, theme, language, chartSettings, user])
 
-  // Auto open/close sidebar on hover (desktop only)
-  useEffect(() => {
-    if (window.innerWidth >= 1024 && !sidebarManuallyClosed) {
-      if (sidebarHovered) {
-        // Clear any existing timeout
-        if (sidebarTimeoutRef.current) {
-          clearTimeout(sidebarTimeoutRef.current)
-        }
-        // Open sidebar after delay
-        sidebarTimeoutRef.current = setTimeout(() => {
-          setSidebarOpen(true)
-        }, 200) // 200ms delay
-      } else if (!sidebarHovered && sidebarOpen) {
-        // Clear any existing timeout
-        if (sidebarTimeoutRef.current) {
-          clearTimeout(sidebarTimeoutRef.current)
-        }
-        // Close sidebar after delay only if not manually closed
-        sidebarTimeoutRef.current = setTimeout(() => {
-          if (!sidebarManuallyClosed) {
-            setSidebarOpen(false)
-          }
-        }, 500) // 500ms delay before closing
-      }
-    }
-
-    return () => {
-      if (sidebarTimeoutRef.current) {
-        clearTimeout(sidebarTimeoutRef.current)
-      }
-    }
-  }, [sidebarHovered, sidebarManuallyClosed, sidebarOpen])
-
-  // Handle mouse enter/leave for sidebar area
-  const handleSidebarMouseEnter = () => {
-    if (window.innerWidth >= 1024) {
-      setSidebarHovered(true)
-    }
-  }
-
-  const handleSidebarMouseLeave = () => {
-    if (window.innerWidth >= 1024) {
-      setSidebarHovered(false)
-    }
-  }
-
-  // Handle mouse enter/leave for left edge trigger zone
-  const handleEdgeMouseEnter = () => {
-    if (window.innerWidth >= 1024) {
-      setSidebarHovered(true)
-      setSidebarManuallyClosed(false) // Reset manual close when hovering
-    }
-  }
-
-  const handleEdgeMouseLeave = () => {
-    if (window.innerWidth >= 1024) {
-      setSidebarHovered(false)
-    }
-  }
-
+  
   const handleStudioMockupUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -746,23 +679,13 @@ export default function AdminDashboard() {
     }
   }, [tabParam, activeTab])
 
-  const handleSidebarToggle = () => {
-    const newState = !sidebarOpen
-    setSidebarOpen(newState)
-    setSidebarHovered(false)
-    setSidebarManuallyClosed(!newState)
-    if (sidebarTimeoutRef.current) {
-      clearTimeout(sidebarTimeoutRef.current)
-    }
-  }
-
   const loadProducts = useCallback(async () => {
     try {
       setProductsLoading(true)
       console.log("🔄 Loading products...")
-      // Start with very small limit to ensure fast loading
+      
       const response = await productsAdminApi.getAllProducts({ 
-        limit: 10, // Very small limit to avoid timeout - start with 10
+        limit: 10, 
         page: 1 
       })
       const productsList = Array.isArray(response.data) ? response.data : []
@@ -770,12 +693,12 @@ export default function AdminDashboard() {
       setProducts(productsList)
       setProductsLoading(false)
       
-      // Only try to load more if we successfully got the first batch
+      
       if (productsList.length > 0 && response.total && response.total > 10) {
         console.log(`📦 Will load remaining ${response.total - 10} products in background...`)
-        // Load in very small chunks with delays
+        
         const chunks = Math.ceil((response.total - 10) / 10)
-        for (let i = 0; i < Math.min(chunks, 5); i++) { // Limit to 5 chunks max
+        for (let i = 0; i < Math.min(chunks, 5); i++) { 
           const page = i + 2
           const chunkLimit = 10
           
@@ -787,16 +710,16 @@ export default function AdminDashboard() {
               const chunkProducts = Array.isArray(chunkResponse.data) ? chunkResponse.data : []
               if (chunkProducts.length > 0) {
                 setProducts((prev) => {
-                  // Remove duplicates by creating a Map with unique IDs
+                  
                   const productMap = new Map<string, Product>()
                   
-                  // Add existing products
+                  
                   prev.forEach(product => {
                     const id = product._id?.toString() || product.id?.toString()
                     if (id) productMap.set(id, product)
                   })
                   
-                  // Add new products (will overwrite if duplicate)
+                  
                   chunkProducts.forEach(product => {
                     const id = product._id?.toString() || product.id?.toString()
                     if (id) productMap.set(id, product)
@@ -808,14 +731,14 @@ export default function AdminDashboard() {
               }
             }).catch((err) => {
               console.warn(`⚠️ Failed to load chunk ${page}:`, err)
-              // Stop loading more chunks if we hit timeout
+              
             })
-          }, (i + 1) * 1000) // 1 second delay between each chunk
+          }, (i + 1) * 1000) 
         }
       }
     } catch (error: any) {
       console.error("❌ Error loading products:", error)
-      // Check if it's a database timeout error
+      
       const isDatabaseTimeout = error.message?.includes("Database connection timeout") || 
                                 error.message?.includes("timeout") || 
                                 error.status === 503 ||
@@ -829,7 +752,7 @@ export default function AdminDashboard() {
             : "Database is taking too long. Retrying with fewer products...",
           variant: "destructive",
         })
-        // Retry with smaller limit after a short delay
+        
         setTimeout(async () => {
           try {
             const retryResponse = await productsAdminApi.getAllProducts({ limit: 25, page: 1 })
@@ -866,7 +789,7 @@ export default function AdminDashboard() {
     }
   }, [language, toast])
 
-  // Studio products helpers
+  
   const resetStudioForm = () => {
     setStudioForm({
       name: "",
@@ -986,9 +909,9 @@ export default function AdminDashboard() {
     }
   }
   
-  // Memoize filtered products to avoid recalculating on every render
+  
   const filteredProducts = useMemo(() => {
-    // First, remove any duplicates from products array
+    
     const uniqueProducts = products.filter((product, index, self) => {
       const id = product._id?.toString() || product.id?.toString()
       return id && index === self.findIndex(p => (p._id?.toString() || p.id?.toString()) === id)
@@ -1007,13 +930,13 @@ export default function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      // Check if user is authenticated and has admin role
+      
       if (!user || user.role !== 'admin') {
         console.warn("⚠️ Cannot load dashboard data: User is not admin")
         return
       }
 
-      // Check if token exists
+      
       const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
       if (!token) {
         console.warn("⚠️ Cannot load dashboard data: No token found")
@@ -1033,7 +956,7 @@ export default function AdminDashboard() {
       const [statsData, ordersData, usersData] = await Promise.all([
         adminApi.getDashboardStats(),
         ordersApi.getAllOrders({ limit: 50 }),
-        adminApi.getAllUsers({ role: 'all', limit: 100 }), // Load all users (customers, employees, admins)
+        adminApi.getAllUsers({ role: 'all', limit: 100 }), 
       ])
       
       console.log("✅ Dashboard data loaded:", {
@@ -1049,7 +972,7 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error("❌ Error loading dashboard data:", error)
       
-      // Handle 401 Unauthorized - token expired or invalid
+      
       if (error.status === 401 || error.message?.includes("Not authorized") || error.message?.includes("Unauthorized")) {
         toast({
           title: language === "ar" ? "انتهت صلاحية الجلسة" : "Session Expired",
@@ -1092,7 +1015,7 @@ export default function AdminDashboard() {
     }
   }
 
-  // View Order Details
+  
   const viewOrderDetails = async (orderId: string) => {
     try {
       const order = await ordersApi.getOrder(orderId)
@@ -1107,7 +1030,7 @@ export default function AdminDashboard() {
     }
   }
 
-  // Edit Order (Open dialog)
+  
   const openEditOrder = async (orderId: string) => {
     try {
       const order = await ordersApi.getOrder(orderId)
@@ -1124,7 +1047,7 @@ export default function AdminDashboard() {
     }
   }
 
-  // Update Order Status
+  
   const handleUpdateOrderStatus = async () => {
     if (!selectedOrder) return
     
@@ -1139,7 +1062,7 @@ export default function AdminDashboard() {
       })
       setShowEditOrder(false)
       setSelectedOrder(null)
-      loadDashboardData() // Reload orders
+      loadDashboardData() 
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1149,7 +1072,7 @@ export default function AdminDashboard() {
     }
   }
 
-  // Delete Order
+  
   const handleDeleteOrder = async (orderId: string) => {
     if (!confirm(language === "ar" ? "هل أنت متأكد من حذف هذا الطلب؟" : "Are you sure you want to delete this order?")) {
       return
@@ -1161,7 +1084,7 @@ export default function AdminDashboard() {
         title: "Success",
         description: language === "ar" ? "تم حذف الطلب بنجاح" : "Order deleted successfully",
       })
-      loadDashboardData() // Reload orders
+      loadDashboardData() 
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1171,7 +1094,7 @@ export default function AdminDashboard() {
     }
   }
 
-  // Export Orders to CSV/Excel
+  
   const exportOrders = () => {
     if (orders.length === 0) {
       toast({
@@ -1182,7 +1105,7 @@ export default function AdminDashboard() {
       return
     }
 
-    // Create CSV content
+    
     const headers = [
       language === "ar" ? "رقم الطلب" : "Order ID",
       language === "ar" ? "العميل" : "Customer",
@@ -1208,7 +1131,7 @@ export default function AdminDashboard() {
       ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
     ].join("\n")
 
-    // Create and download file
+    
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
     const link = document.createElement("a")
     const url = URL.createObjectURL(blob)
@@ -1251,7 +1174,7 @@ export default function AdminDashboard() {
         })
       }
       
-      // Update users state with customers only
+      
       setUsers(customersData.data || [])
     } catch (error: any) {
       console.error("❌ Error loading customers:", error)
@@ -1314,7 +1237,7 @@ export default function AdminDashboard() {
     try {
       await adminApi.deleteUser(id)
       toast({ title: "Success", description: "User deleted successfully" })
-      // Reload customers if we're on customers tab, otherwise reload dashboard
+      
       if (activeTab === "customers") {
         loadCustomers()
       } else {
@@ -1330,7 +1253,7 @@ export default function AdminDashboard() {
   }
 
 
-  // Prepare chart data from stats
+  
   const revenueChartData = stats ? [
     { name: language === "ar" ? "اليوم" : "Today", revenue: stats.overview.totalRevenue * 0.1 },
     { name: language === "ar" ? "هذا الأسبوع" : "This Week", revenue: stats.overview.totalRevenue * 0.3 },
@@ -1345,7 +1268,7 @@ export default function AdminDashboard() {
     { name: language === "ar" ? "تم التسليم" : "Delivered", value: stats.ordersByStatus.delivered },
   ] : []
 
-  // Show loading while checking auth or loading dashboard data
+  
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -1364,52 +1287,18 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      {/* Mobile Menu Button */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 left-4 z-[60] lg:hidden shadow-lg"
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-
-      {/* Overlay for mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-[55] lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Left Edge Trigger Zone (for auto-open on hover) */}
-      <div
-        className="hidden lg:block fixed left-0 top-0 h-full w-4 z-[54] hover:z-[56] transition-all"
-        onMouseEnter={handleEdgeMouseEnter}
-        onMouseLeave={handleEdgeMouseLeave}
-      />
-
-      {/* Sidebar */}
-      <div
-        className={`fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-background via-background to-muted/30 border-r border-border/50 backdrop-blur-sm z-[55] shadow-xl transition-all duration-300 ease-in-out flex flex-col ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-        onMouseEnter={handleSidebarMouseEnter}
-        onMouseLeave={handleSidebarMouseLeave}
-      >
-        <AdminSidebar
-          activeTab={activeTab}
-          pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}
-          sidebarOpen={sidebarOpen}
-          onToggleCollapse={handleSidebarToggle}
-          onMobileClose={() => setSidebarOpen(false)}
-        />
-      </div>
-
-      {/* Main Content */}
-      <div className={`transition-all duration-300 ease-in-out p-4 lg:p-8 animate-in fade-in duration-500 ${
-        sidebarOpen ? "lg:ml-64" : "lg:ml-0"
-      } min-h-screen`}>
+      <div className="flex min-h-screen">
+        <aside className="w-64 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
+          <AdminSidebar
+            activeTab={activeTab}
+            pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}
+          />
+        </aside>
+        <div className="flex-1 min-w-0">
+          <div className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
+            <AdminTopbar />
+          </div>
+          <div className="p-4 lg:p-8 animate-in fade-in duration-500">
         {loading ? (
           <div className="flex items-center justify-center h-screen">
             <div className="text-center">
@@ -1419,7 +1308,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-        {/* Overview Tab */}
+        { }
             {activeTab === "overview" && stats && (
           <div className="space-y-8">
             <div>
@@ -1429,7 +1318,7 @@ export default function AdminDashboard() {
                   </p>
             </div>
 
-            {/* Stats Grid */}
+            { }
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <Card className="border-2 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10">
                   <CardContent className="p-6">
@@ -1484,7 +1373,7 @@ export default function AdminDashboard() {
                   </Card>
                 </div>
 
-                {/* New Modules */}
+                { }
                 <div className="space-y-3">
                   <h2 className="text-xl font-semibold">
                     {language === "ar" ? "موديولات جديدة" : "New Modules"}
@@ -1591,7 +1480,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Charts Row */}
+                { }
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="border-2 shadow-lg">
                     <CardHeader className="flex flex-row items-center justify-between">
@@ -1709,7 +1598,7 @@ export default function AdminDashboard() {
                   </Card>
             </div>
 
-            {/* Recent Orders */}
+            { }
             <Card>
               <CardHeader>
                     <CardTitle>{language === "ar" ? "الطلبات الأخيرة" : "Recent Orders"}</CardTitle>
@@ -1778,7 +1667,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Orders Tab */}
+        { }
         {activeTab === "orders" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1867,7 +1756,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Products Tab */}
+        { }
         {activeTab === "products" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1918,7 +1807,7 @@ export default function AdminDashboard() {
 
             <Card className="border-2 shadow-lg">
               <CardContent className="p-6">
-                {/* Search Bar */}
+                { }
                 <div className="mb-6">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1955,7 +1844,7 @@ export default function AdminDashboard() {
                     </TableHeader>
                     <TableBody>
                       {filteredProducts.map((product, index) => {
-                        // Ensure unique key - use both ID and index as fallback
+                        
                         const productId = product._id?.toString() || product.id?.toString() || `product-${index}`
                         return (
                         <TableRow key={productId}>
@@ -2095,11 +1984,11 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Add/Edit Product Modal */}
+            { }
             <Dialog open={showProductModal} onOpenChange={(open) => {
               setShowProductModal(open)
               if (!open) {
-                // Reset file states when modal closes
+                
                 setMainImageFile(null)
                 setAdditionalImageFiles([])
               }
@@ -2189,7 +2078,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Main Image Upload (Required) */}
+                  { }
                   <div className="space-y-2">
                     <Label htmlFor="main-image">{language === "ar" ? "الصورة الرئيسية" : "Main Image"} *</Label>
                     <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
@@ -2237,7 +2126,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Additional Images Upload (3 images required) */}
+                  { }
                   <div className="space-y-2">
                     <Label htmlFor="additional-images">
                       {language === "ar" ? "الصور الإضافية (3 صور مطلوبة)" : "Additional Images (3 images required)"}
@@ -2441,7 +2330,7 @@ export default function AdminDashboard() {
                     </Label>
                   </div>
 
-                  {/* Sale Options */}
+                  { }
                   <div className="border-t pt-4 space-y-4">
                     <div className="flex items-center space-x-2">
                       <input
@@ -2589,7 +2478,7 @@ export default function AdminDashboard() {
                         return
                       }
 
-                      // Validate that we have exactly 3 additional images
+                      
                       if (productForm.images.length !== 3) {
                         toast({
                           title: "Error",
@@ -2601,17 +2490,17 @@ export default function AdminDashboard() {
 
                       try {
                         if (isEditingProduct && selectedProduct) {
-                          // FIXED: Convert productForm to match Product type
-                          // Use File objects if available, otherwise use URLs from productForm
+                          
+                          
                           const updateData = {
                             name: productForm.name,
                             nameAr: productForm.nameAr || undefined,
                             description: productForm.description || undefined,
                             descriptionAr: productForm.descriptionAr || undefined,
                             price: parseFloat(productForm.price) || 0,
-                            // Use File object if available, otherwise use the image URL/string
+                            
                             image: mainImageFile || productForm.image || undefined,
-                            // Use File objects if available, otherwise use image URLs/strings
+                            
                             images: additionalImageFiles.length > 0 
                               ? additionalImageFiles 
                               : (productForm.images.length > 0 ? productForm.images : undefined),
@@ -2635,16 +2524,16 @@ export default function AdminDashboard() {
                             description: language === "ar" ? "تم تحديث المنتج بنجاح" : "Product updated successfully",
                           })
                         } else {
-                          // Pass File objects if available, otherwise use URLs from productForm
+                          
                           await productsAdminApi.createProduct({
                             name: productForm.name,
                             nameAr: productForm.nameAr || undefined,
                             description: productForm.description || undefined,
                             descriptionAr: productForm.descriptionAr || undefined,
                             price: parseFloat(productForm.price),
-                            // Use File object if available, otherwise use the image URL/string
+                            
                             image: mainImageFile || productForm.image || undefined,
-                            // Use File objects if available, otherwise use image URLs/strings
+                            
                             images: additionalImageFiles.length > 0 
                               ? additionalImageFiles 
                               : (productForm.images.length > 0 ? productForm.images : undefined),
@@ -2687,7 +2576,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Studio Products Tab */}
+        { }
         {activeTab === "studioProducts" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -2973,7 +2862,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Customers Tab */}
+        { }
         {activeTab === "customers" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -3052,7 +2941,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Analytics Tab */}
+        { }
             {activeTab === "analytics" && stats && (
           <div className="space-y-6">
             <div>
@@ -3110,7 +2999,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-            {/* Staff Tab */}
+            { }
         {activeTab === "staff" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -3138,7 +3027,7 @@ export default function AdminDashboard() {
                   </Button>
             </div>
 
-            {/* FIXED: Add refresh button and ensure data persists */}
+            { }
             <div className="flex justify-end mb-4">
               <Button onClick={loadStaff} variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
@@ -3218,7 +3107,7 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Add Employee Modal */}
+            { }
             <Dialog open={showEmployeeModal} onOpenChange={setShowEmployeeModal}>
               <DialogContent className="border-2 shadow-2xl">
                 <DialogHeader>
@@ -3307,7 +3196,7 @@ export default function AdminDashboard() {
                           description: language === "ar" ? "تم إضافة الموظف بنجاح" : "Employee created successfully",
                         })
                         setShowEmployeeModal(false)
-                        // FIXED: Reload staff data after creating employee
+                        
                         loadStaff()
                         loadDashboardData()
                       } catch (error: any) {
@@ -3327,7 +3216,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Reviews Tab */}
+        { }
         {activeTab === "reviews" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -3446,7 +3335,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Messages Tab */}
+        { }
         {activeTab === "messages" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -3462,7 +3351,7 @@ export default function AdminDashboard() {
               </Button>
             </div>
 
-            {/* Status Filter */}
+            { }
             <Card>
               <CardContent className="p-4">
                 <div className="flex gap-2 flex-wrap">
@@ -3510,7 +3399,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Messages List */}
+            { }
             <Card>
               <CardContent className="p-6">
                 {messagesLoading ? (
@@ -3624,7 +3513,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Message Details Dialog */}
+        { }
         <Dialog open={showMessageDetails} onOpenChange={setShowMessageDetails}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -3741,7 +3630,7 @@ export default function AdminDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Order Tracking Tab */}
+        { }
         {activeTab === "tracking" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -3775,7 +3664,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Orders Table */}
+            { }
             <Card>
               <CardHeader>
                 <CardTitle>{language === "ar" ? "قائمة الطلبات" : "Orders List"}</CardTitle>
@@ -3808,7 +3697,7 @@ export default function AdminDashboard() {
                       <TableBody>
                         {orders
                           .filter((order, index, self) => {
-                            // Remove duplicates by ID
+                            
                             const orderId = order._id?.toString()
                             return orderId && index === self.findIndex(o => o._id?.toString() === orderId)
                           })
@@ -3914,7 +3803,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Order Statistics */}
+            { }
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-3">
@@ -3968,7 +3857,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Reports Tab */}
+        { }
         {activeTab === "reports" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -3982,14 +3871,14 @@ export default function AdminDashboard() {
                 onClick={async () => {
                   try {
                     setLoading(true)
-                    // Export all reports
+                    
                     const [salesReport, productsData, customersData] = await Promise.all([
                       adminApi.getSalesReport().catch(() => ({ salesByDay: [], summary: { total: 0, count: 0 } })),
                       productsAdminApi.getAllProducts({ limit: 1000 }).catch(() => ({ data: [] })),
                       adminApi.getAllUsers({ role: 'customer', limit: 1000 }).catch(() => ({ data: [] })),
                     ])
                     
-                    // Combine all data
+                    
                     const allData = {
                       sales: salesReport,
                       inventory: Array.isArray(productsData.data) ? productsData.data : productsData,
@@ -3997,7 +3886,7 @@ export default function AdminDashboard() {
                       exportDate: new Date().toISOString(),
                     }
                     
-                    // Export as JSON
+                    
                     const jsonContent = JSON.stringify(allData, null, 2)
                     const blob = new Blob([jsonContent], { type: 'application/json' })
                     const url = URL.createObjectURL(blob)
@@ -4043,7 +3932,7 @@ export default function AdminDashboard() {
                           onClick={async () => {
                             try {
                               const report = await adminApi.getSalesReport()
-                              // FIXED: Convert SalesReport to array format for exportToExcel
+                              
                               const salesData = report.salesByDay?.map((day: any) => ({
                                 Date: day._id,
                                 'Total Sales': `$${day.totalSales?.toFixed(2) || 0}`,
@@ -4157,7 +4046,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Settings Tab */}
+        { }
         {activeTab === "settings" && (
           <div className="space-y-6">
             <div>
@@ -4211,7 +4100,7 @@ export default function AdminDashboard() {
           </>
         )}
 
-        {/* Order Details Modal */}
+        { }
         <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -4222,7 +4111,7 @@ export default function AdminDashboard() {
             </DialogHeader>
             {selectedOrder && (
               <div className="space-y-6">
-                {/* Order Info */}
+                { }
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium">{language === "ar" ? "العميل" : "Customer"}</Label>
@@ -4254,7 +4143,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Items */}
+                { }
                 <div>
                   <Label className="text-sm font-medium mb-2 block">{language === "ar" ? "المنتجات" : "Items"}</Label>
                   <div className="space-y-2">
@@ -4273,7 +4162,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Shipping Address */}
+                { }
                 <div>
                   <Label className="text-sm font-medium mb-2 block">{language === "ar" ? "عنوان الشحن" : "Shipping Address"}</Label>
                   <div className="p-3 border rounded text-sm">
@@ -4285,7 +4174,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Payment Info */}
+                { }
                 <div>
                   <Label className="text-sm font-medium mb-2 block">{language === "ar" ? "معلومات الدفع" : "Payment Information"}</Label>
                   <div className="grid grid-cols-2 gap-4">
@@ -4302,7 +4191,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Totals */}
+                { }
                 <div className="border-t pt-4">
                   <div className="flex justify-between mb-2">
                     <span className="text-sm text-muted-foreground">{language === "ar" ? "المجموع الفرعي" : "Subtotal"}</span>
@@ -4331,7 +4220,7 @@ export default function AdminDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Order Modal */}
+        { }
         <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
           <DialogContent>
             <DialogHeader>
@@ -4378,7 +4267,7 @@ export default function AdminDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Order Tracking Update Dialog */}
+        { }
         <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -4451,7 +4340,7 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Tracking History */}
+                { }
                 {selectedOrder.trackingHistory && selectedOrder.trackingHistory.length > 0 && (
                   <div>
                     <Label>{language === "ar" ? "سجل التتبع" : "Tracking History"}</Label>
@@ -4499,6 +4388,8 @@ export default function AdminDashboard() {
             )}
           </DialogContent>
         </Dialog>
+          </div>
+        </div>
       </div>
     </div>
   )

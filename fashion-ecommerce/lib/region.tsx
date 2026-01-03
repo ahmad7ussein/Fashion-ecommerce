@@ -9,7 +9,7 @@ export interface RegionInfo {
   name: string
   currency: string
   currencySymbol: string
-  exchangeRate: number // Exchange rate from USD
+  exchangeRate: number 
   flag: string
 }
 
@@ -27,7 +27,7 @@ const regions: Record<Region, RegionInfo> = {
     name: "Saudi Arabia",
     currency: "SAR",
     currencySymbol: "ر.س",
-    exchangeRate: 3.75, // 1 USD = 3.75 SAR
+    exchangeRate: 3.75, 
     flag: "🇸🇦",
   },
   AE: {
@@ -35,7 +35,7 @@ const regions: Record<Region, RegionInfo> = {
     name: "United Arab Emirates",
     currency: "AED",
     currencySymbol: "د.إ",
-    exchangeRate: 3.67, // 1 USD = 3.67 AED
+    exchangeRate: 3.67, 
     flag: "🇦🇪",
   },
   EG: {
@@ -43,7 +43,7 @@ const regions: Record<Region, RegionInfo> = {
     name: "Egypt",
     currency: "EGP",
     currencySymbol: "ج.م",
-    exchangeRate: 30.9, // 1 USD = 30.9 EGP
+    exchangeRate: 30.9, 
     flag: "🇪🇬",
   },
   GB: {
@@ -51,7 +51,7 @@ const regions: Record<Region, RegionInfo> = {
     name: "United Kingdom",
     currency: "GBP",
     currencySymbol: "£",
-    exchangeRate: 0.79, // 1 USD = 0.79 GBP
+    exchangeRate: 0.79, 
     flag: "🇬🇧",
   },
   EU: {
@@ -59,7 +59,7 @@ const regions: Record<Region, RegionInfo> = {
     name: "Europe",
     currency: "EUR",
     currencySymbol: "€",
-    exchangeRate: 0.92, // 1 USD = 0.92 EUR
+    exchangeRate: 0.92, 
     flag: "🇪🇺",
   },
   PS: {
@@ -67,7 +67,7 @@ const regions: Record<Region, RegionInfo> = {
     name: "Palestine",
     currency: "ILS",
     currencySymbol: "₪",
-    exchangeRate: 3.65, // 1 USD = 3.65 ILS (Israeli Shekel)
+    exchangeRate: 3.65, 
     flag: "🇵🇸",
   },
 }
@@ -90,11 +90,11 @@ export function RegionProvider({ children }: { children: React.ReactNode }) {
   const detectRegion = useCallback(async () => {
     setIsDetecting(true)
     try {
-      // Try to detect region from IP geolocation
+      
       const response = await fetch("https://ipapi.co/json/")
       const data = await response.json()
       
-      // Map country codes to our regions
+      
       const countryCode = data.country_code
       let detectedRegion: Region = "US"
 
@@ -151,7 +151,7 @@ export function RegionProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("region", detectedRegion)
     } catch (error) {
       console.error("Failed to detect region:", error)
-      // Default to US if detection fails
+      
       setRegionState("US")
       localStorage.setItem("region", "US")
     } finally {
@@ -159,13 +159,13 @@ export function RegionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Load region from localStorage on mount
+  
   useEffect(() => {
     const saved = localStorage.getItem("region") as Region
     if (saved && regions[saved]) {
       setRegionState(saved)
     } else {
-      // Auto-detect on first load
+      
       detectRegion()
     }
   }, [detectRegion])

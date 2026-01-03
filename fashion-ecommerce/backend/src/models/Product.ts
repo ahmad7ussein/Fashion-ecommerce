@@ -1,23 +1,23 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IProduct extends Document {
-  name: string; // English name (default)
-  nameAr?: string; // Arabic name (optional)
+  name: string; 
+  nameAr?: string; 
   description?: string;
-  descriptionAr?: string; // Arabic description (optional)
+  descriptionAr?: string; 
   price: number;
   image: string;
   images?: string[];
   category: string;
-  categoryAr?: string; // Arabic category (optional)
+  categoryAr?: string; 
   gender: string;
-  genderAr?: string; // Arabic gender (optional)
+  genderAr?: string; 
   season: string;
-  seasonAr?: string; // Arabic season (optional)
+  seasonAr?: string; 
   style: string;
-  styleAr?: string; // Arabic style (optional)
+  styleAr?: string; 
   occasion: string;
-  occasionAr?: string; // Arabic occasion (optional)
+  occasionAr?: string; 
   sizes: string[];
   colors: string[];
   stock: number;
@@ -130,31 +130,31 @@ const productSchema = new Schema<IProduct>(
   }
 );
 
-/**
- * MongoDB Indexes for Product Queries
- * 
- * Simplified index strategy - only 3 indexes to cover all query patterns:
- * 1. Default: { active: 1, createdAt: -1 } - All products, sorted by newest
- * 2. Gender filter: { active: 1, gender: 1, createdAt: -1 } - Gender filtered, sorted by newest
- * 3. Featured: { active: 1, featured: 1, createdAt: -1 } - Featured products, sorted by newest
- * 
- * All queries:
- * - Filter by active: true
- * - Sort by createdAt: -1 (newest first)
- * - Use .limit() and .lean()
- */
 
-// Index 1: Default listing (all active products, newest first)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 productSchema.index({ active: 1, createdAt: -1 });
-// Usage: GET /api/products (no filters)
 
-// Index 2: Gender filter (active + gender, newest first)
+
+
 productSchema.index({ active: 1, gender: 1, createdAt: -1 });
-// Usage: GET /api/products?gender=Men
 
-// Index 3: Featured products (active + featured, newest first)
+
+
 productSchema.index({ active: 1, featured: 1, createdAt: -1 });
-// Usage: GET /api/products?featured=true
+
 
 export default mongoose.model<IProduct>('Product', productSchema);
 

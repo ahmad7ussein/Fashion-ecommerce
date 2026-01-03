@@ -66,8 +66,8 @@ export const adminApi = {
       data: User[]
     }>(`/admin/users?${queryParams.toString()}`)
     
-    // Handle response structure - apiClient extracts data.data, but we need the full object
-    // If response is already the full object, use it; otherwise wrap it
+    
+    
     if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
       return {
         data: response.data,
@@ -77,7 +77,7 @@ export const adminApi = {
       }
     }
     
-    // Fallback: if response is just the array, wrap it
+    
     if (Array.isArray(response)) {
       return {
         data: response,
@@ -87,7 +87,7 @@ export const adminApi = {
       }
     }
     
-    // Default fallback
+    
     return {
       data: [],
       total: 0,
@@ -127,15 +127,15 @@ export const adminApi = {
     if (startDate) params.append("startDate", startDate)
     if (endDate) params.append("endDate", endDate)
 
-    // FIXED: Backend returns { success: true, data: { salesByDay, summary } }
+    
     const response = await apiClient.get<{ data: SalesReport } | SalesReport>(`/admin/reports/sales?${params.toString()}`)
     
-    // If response has data property, extract it
+    
     if (response && typeof response === 'object' && 'data' in response && 'salesByDay' in (response as any).data) {
       return (response as { data: SalesReport }).data
     }
     
-    // Otherwise, assume response is already the SalesReport
+    
     return response as SalesReport
   },
 
@@ -155,7 +155,7 @@ export const adminApi = {
     if (params?.page) queryParams.append("page", params.page.toString())
     if (params?.limit) queryParams.append("limit", params.limit.toString())
 
-    // FIXED: Handle response structure correctly
+    
     const response = await apiClient.get<{
       success: boolean
       count: number
@@ -166,8 +166,8 @@ export const adminApi = {
       statistics: any[]
     }>(`/admin/employee-activities?${queryParams.toString()}`)
     
-    // FIXED: apiClient extracts data.data, but we need the full object with statistics
-    // If response is the full object, use it directly
+    
+    
     if (response && typeof response === 'object' && 'data' in response && 'statistics' in response) {
       return {
         data: Array.isArray(response.data) ? response.data : [],
@@ -178,7 +178,7 @@ export const adminApi = {
       }
     }
     
-    // Fallback
+    
     return {
       data: [],
       statistics: [],

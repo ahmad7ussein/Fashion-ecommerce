@@ -1,15 +1,15 @@
-/**
- * Test Cloudinary Connection
- * 
- * This script tests the Cloudinary connection and configuration.
- * Run with: npx ts-node src/scripts/testCloudinary.ts
- */
+
+
+
+
+
+
 
 import { v2 as cloudinary } from 'cloudinary';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables
+
 const parentEnvPath = path.resolve(__dirname, '../../../.env.local');
 dotenv.config({ path: parentEnvPath });
 
@@ -18,7 +18,7 @@ dotenv.config({ path: backendEnvLocalPath });
 
 dotenv.config();
 
-// Get credentials
+
 const cloudName = (process.env.CLOUDINARY_CLOUD_NAME || '').trim();
 const apiKey = (process.env.CLOUDINARY_API_KEY || '').trim();
 const apiSecret = (process.env.CLOUDINARY_API_SECRET || '').trim();
@@ -28,7 +28,7 @@ console.log('☁️  Cloudinary Connection Test');
 console.log('☁️  ========================================');
 console.log('');
 
-// Check if credentials are set
+
 if (!cloudName || !apiKey || !apiSecret) {
   console.error('❌ Missing Cloudinary credentials!');
   console.log('');
@@ -45,14 +45,14 @@ console.log(`✅ API Key: ${apiKey ? 'Set (' + apiKey.length + ' chars)' : 'Not 
 console.log(`✅ API Secret: ${apiSecret ? 'Set (' + apiSecret.length + ' chars)' : 'Not set'}`);
 console.log('');
 
-// Configure Cloudinary
+
 cloudinary.config({
   cloud_name: cloudName,
   api_key: apiKey,
   api_secret: apiSecret,
 });
 
-// Test connection
+
 console.log('Testing Cloudinary connection...');
 console.log('');
 

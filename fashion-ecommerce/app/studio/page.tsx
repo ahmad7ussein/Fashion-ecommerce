@@ -101,14 +101,14 @@ type DesignElement = {
 }
 
 const defaultProductTemplates = {
-  // Intentionally empty: Studio uses DB-driven products only.
+  
 }
 
-// Removed built-in templates/assets to avoid broken local images.
+
 const clipartLibrary: Array<{ id: string; url: string; name: string; category: string }> = []
 const backgroundPatterns: Array<{ id: string; url: string; name: string }> = []
 
-// Enhanced font families
+
 const fontFamilies = [
   { value: "Arial", label: "Arial", category: "Sans-serif" },
   { value: "Helvetica", label: "Helvetica", category: "Sans-serif" },
@@ -124,7 +124,7 @@ const fontFamilies = [
   { value: "Baskerville", label: "Baskerville", category: "Serif" },
 ]
 
-// Design templates
+
 const designTemplates: Array<{
   id: string
   name: string
@@ -250,10 +250,10 @@ export default function DesignStudioPage() {
     initRotation: number
   } | null>(null)
 
-  // Get elements for current side
+  
   const currentSideElements = designElements.filter((el) => (el.side || "front") === currentSide && (el.visible !== false))
 
-  // Load saved designs
+  
   useEffect(() => {
     if (user) {
       designsApi.getMyDesigns().then(setSavedDesigns).catch(() => {})
@@ -305,7 +305,7 @@ export default function DesignStudioPage() {
   const colorMockupUrl = selectedColorKey ? activeStudioProduct?.colorMockups?.[selectedColorKey] : undefined
   const rawMockupUrl = colorMockupUrl || activeStudioProduct?.baseMockupUrl || activeProduct?.image || "/placeholder-logo.png"
   const mockupUrl = getOptimizedCloudinaryUrl(rawMockupUrl)
-  // Ensure selected product is always a real StudioProduct (no local defaults)
+  
   useEffect(() => {
     if (studioProducts.length === 0) return
     const allowed = new Set(studioProducts.map((p) => p.type))
@@ -380,7 +380,7 @@ export default function DesignStudioPage() {
     return snapped
   }, [getSafeArea, gridSize, snapToGrid])
 
-  // Keyboard shortcuts
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
@@ -616,14 +616,14 @@ export default function DesignStudioPage() {
       return
     }
 
-    // Check if user is authenticated
+    
     if (!user || !isAuthenticated) {
       toast({
         title: "Sign in required",
         description: "Please sign in or create an account to add designs to your cart",
         variant: "default",
       })
-      // Redirect to login page after a short delay
+      
       setTimeout(() => {
         router.push("/login")
       }, 1500)
@@ -932,7 +932,7 @@ export default function DesignStudioPage() {
       return
     }
 
-    // Align all elements on current side
+    
     const elementsToAlign = [...currentSideElements]
     const newElements = [...designElements]
     
@@ -1096,14 +1096,14 @@ export default function DesignStudioPage() {
   }
 
   const handleAddToCart = async () => {
-    // Check if user is authenticated
+    
     if (!user || !isAuthenticated) {
       toast({
         title: "Sign in required",
         description: "Please sign in or create an account to add designs to your cart",
         variant: "default",
       })
-      // Redirect to login page after a short delay
+      
       setTimeout(() => {
         router.push("/login")
       }, 1500)
@@ -1176,7 +1176,7 @@ export default function DesignStudioPage() {
 
     ctx.drawImage(baseImg, 0, 0, baseWidth, baseHeight)
 
-    const editBaseWidth = 400 // preview uses 400px width
+    const editBaseWidth = 400 
     const scaleX = baseWidth / editBaseWidth
     const scaleY = baseHeight / editBaseWidth
     const safe = getSafeArea()
@@ -1210,7 +1210,7 @@ export default function DesignStudioPage() {
           const img = await loadImage(el.content)
           ctx.drawImage(img, -width / 2, -height / 2, width, height)
         } catch {
-          // skip failed image
+          
         }
       } else if (el.type === "text") {
         ctx.font = `${el.fontWeight || "600"} ${(el.fontSize || 32) * scaleX}px ${el.fontFamily || "Arial"}`
@@ -1324,7 +1324,7 @@ export default function DesignStudioPage() {
     }
 
     try {
-      // Create a canvas to export the design
+      
       const canvas = document.createElement("canvas")
       canvas.width = 1000
       canvas.height = 1200
@@ -1339,11 +1339,11 @@ export default function DesignStudioPage() {
         return
       }
 
-      // Draw background
+      
       ctx.fillStyle = productColorHex
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      // Draw elements - we need to load images first
+      
       const imagePromises: Promise<void>[] = []
       
       for (const element of currentSideElements) {
@@ -1376,10 +1376,10 @@ export default function DesignStudioPage() {
         ctx.restore()
       }
 
-      // Wait for all images to load
+      
       await Promise.all(imagePromises)
 
-      // Download
+      
       canvas.toBlob((blob) => {
         if (blob) {
           const url = URL.createObjectURL(blob)
@@ -1439,13 +1439,13 @@ export default function DesignStudioPage() {
     }
   }, [selectedElementData])
 
-  // Snap to grid helper
+  
   const snapValue = (value: number) => {
     if (!snapToGrid) return value
     return Math.round(value / gridSize) * gridSize
   }
 
-  // DB-driven studio only: if there are no active studio products, show a clear empty state.
+  
   if (!isLoadingProducts && studioProducts.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
@@ -1470,7 +1470,7 @@ export default function DesignStudioPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
+        { }
         <div className="w-80 border-r border-gray-200 bg-white overflow-hidden flex flex-col shadow-xl flex-shrink-0">
           <div className="flex-1 overflow-y-auto p-4 space-y-6 studio-theme font-tajawal">
             <div className="space-y-3">
@@ -1547,11 +1547,11 @@ export default function DesignStudioPage() {
             />
           </div>
         </div>
-        {/* Main Canvas Area */}
+        { }
         <div className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden">
           <div className="bg-background/95 backdrop-blur-sm border-b border-border px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-sm flex-shrink-0 gap-4 h-[48px]">
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Grid & Move Tools */}
+              { }
               <div className="flex items-center gap-1">
                 <Button 
                   variant={showGrid ? "default" : "ghost"} 
@@ -1575,7 +1575,7 @@ export default function DesignStudioPage() {
               
               <div className="w-px h-6 bg-border" />
               
-              {/* Undo/Redo */}
+              { }
               <div className="flex items-center gap-1">
                 <Button 
                   variant="ghost" 
@@ -1601,7 +1601,7 @@ export default function DesignStudioPage() {
               
               <div className="w-px h-6 bg-border" />
               
-              {/* Zoom Controls */}
+              { }
               <div className="flex items-center gap-1">
                 <Button 
                   variant="ghost" 
@@ -1635,7 +1635,7 @@ export default function DesignStudioPage() {
                 )}
               </div>
               
-              {/* Alignment Tools */}
+              { }
               {selectedElement && currentSideElements.length > 1 && (
                 <>
                   <div className="w-px h-6 bg-border" />
@@ -1672,7 +1672,7 @@ export default function DesignStudioPage() {
               )}
             </div>
 
-            {/* Action Buttons */}
+            { }
             <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 size="sm"
@@ -1744,7 +1744,7 @@ export default function DesignStudioPage() {
                     />
 
                     <div className="absolute inset-0">
-                      {/* Safe area overlay to visualize constraints */}
+                      { }
                       <div
                         className="absolute border-2 border-dashed border-primary/60 bg-primary/5 pointer-events-none"
                         style={{
@@ -1822,7 +1822,7 @@ export default function DesignStudioPage() {
                               )}
                             </div>
 
-                            {/* Resize handle (bottom-right) */}
+                            { }
                             {!element.locked && (
                               <div
                                 className="absolute -bottom-2 -right-2 h-4 w-4 bg-white border border-primary rounded-sm shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-se-resize"
@@ -1843,7 +1843,7 @@ export default function DesignStudioPage() {
                               />
                             )}
 
-                            {/* Rotation handle (top-center) */}
+                            { }
                             {!element.locked && (
                               <div
                                 className="absolute -top-6 left-1/2 -translate-x-1/2 h-3 w-3 bg-primary rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-alias"
@@ -1880,7 +1880,7 @@ export default function DesignStudioPage() {
               />
             </div>
 
-            {/* AI Results Modal */}
+            { }
             {showAIResults && (
                 <div className="mt-6 bg-background border border-border rounded-lg p-6 shadow-lg">
                   <div className="flex items-center justify-between mb-4">
@@ -1948,7 +1948,7 @@ export default function DesignStudioPage() {
           </div>
         </div>
 
-        {/* Right Panel - Settings */}
+        { }
         <div className="w-96 border-l border-border bg-background overflow-hidden flex flex-col shadow-sm flex-shrink-0">
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="p-4 space-y-4 overflow-y-auto bg-muted/20 flex-1 min-h-0">

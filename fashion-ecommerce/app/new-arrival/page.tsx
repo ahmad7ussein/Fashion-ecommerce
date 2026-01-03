@@ -35,7 +35,7 @@ export default function NewArrivalPage() {
       try {
         setIsLoading(true)
         const allProducts = await listProducts({ active: true })
-        // Filter products with newArrival flag
+        
         const newArrivals = allProducts.filter((p: any) => p.newArrival === true)
         setProducts(newArrivals)
       } catch (error) {
@@ -48,7 +48,7 @@ export default function NewArrivalPage() {
     loadNewArrivals()
   }, [])
 
-  // Load favorite status
+  
   useEffect(() => {
     if (!isAuthenticated || !user || products.length === 0) {
       setFavoriteIds(new Set())
@@ -70,10 +70,10 @@ export default function NewArrivalPage() {
           })
         )
 
-        // Build set only with products that are actually favorites (explicitly true)
+        
         const favoriteSet = new Set<string>()
         favoriteStatuses.forEach((status) => {
-          // Only add if status exists AND isFavorite is explicitly true
+          
           if (status && status.productId && status.isFavorite === true) {
             favoriteSet.add(status.productId)
           }
@@ -87,7 +87,7 @@ export default function NewArrivalPage() {
     loadFavorites()
   }, [products, isAuthenticated, user])
 
-  // Handle favorite toggle
+  
   const handleToggleFavorite = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -148,7 +148,7 @@ export default function NewArrivalPage() {
     }
   }
 
-  // Handle add to cart
+  
   const handleAddToCart = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -210,7 +210,7 @@ export default function NewArrivalPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-24 py-6 sm:py-8 md:py-12">
-        {/* Header */}
+        { }
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -238,7 +238,7 @@ export default function NewArrivalPage() {
           </p>
         </motion.div>
 
-        {/* Products Grid */}
+        { }
         {isLoading ? (
           <ProductGridSkeleton count={12} />
         ) : products.length === 0 ? (

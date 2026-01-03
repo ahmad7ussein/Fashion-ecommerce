@@ -5,7 +5,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Server-side route protection intentionally disabled (handled client-side)
+  
   matcher: [],
 }
 

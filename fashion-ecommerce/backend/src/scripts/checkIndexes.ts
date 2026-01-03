@@ -1,9 +1,9 @@
-/**
- * Check MongoDB Indexes for Products
- * 
- * This script verifies that all required indexes exist in the database.
- * Run with: npx ts-node src/scripts/checkIndexes.ts
- */
+
+
+
+
+
+
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
@@ -11,7 +11,7 @@ import path from 'path';
 import Product from '../models/Product';
 import connectDB from '../config/database';
 
-// Load environment variables
+
 const parentEnvPath = path.resolve(__dirname, '../../../.env.local');
 dotenv.config({ path: parentEnvPath });
 
@@ -22,16 +22,16 @@ dotenv.config();
 
 async function checkIndexes() {
   try {
-    // Connect to database
+    
     await connectDB();
     console.log('✅ Connected to database\n');
 
     console.log('📊 Checking indexes...\n');
 
-    // Get collection
+    
     const collection = Product.collection;
 
-    // Get all existing indexes
+    
     const existingIndexes = await collection.indexes();
     
     console.log(`📋 Found ${existingIndexes.length} indexes:\n`);
@@ -43,7 +43,7 @@ async function checkIndexes() {
       console.log(`  ${isTextIndex ? '🔍' : '📌'} ${indexName}: ${indexKey}`);
     });
 
-    // Required indexes (from Product.ts)
+    
     const requiredIndexes = [
       { active: 1, createdAt: -1 },
       { active: 1, featured: -1, createdAt: -1 },
@@ -77,7 +77,7 @@ async function checkIndexes() {
       }
     }
 
-    // Check text index
+    
     const hasTextIndex = existingIndexes.some((idx: any) => 
       idx.name.includes('text') || 
       (idx.key && typeof idx.key.name === 'string' && idx.key.name === 'text')
@@ -97,7 +97,7 @@ async function checkIndexes() {
     } else {
       console.log('\n✅ All required indexes are present!\n');
       
-      // Test a sample query
+      
       console.log('🧪 Testing sample query...');
       const testStartTime = Date.now();
       const testQuery = Product.find({ active: true, gender: 'Men' })

@@ -2,9 +2,9 @@ import { Response } from 'express';
 import Notification from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 
-// @desc    Get user notifications
-// @route   GET /api/notifications
-// @access  Private
+
+
+
 export const getNotifications = async (req: AuthRequest, res: Response) => {
   try {
     const { read, limit = 50, page = 1 } = req.query;
@@ -52,9 +52,9 @@ export const getNotifications = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Mark notification as read
-// @route   PUT /api/notifications/:id/read
-// @access  Private
+
+
+
 export const markAsRead = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?._id) {
@@ -93,9 +93,9 @@ export const markAsRead = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Mark all notifications as read
-// @route   PUT /api/notifications/read-all
-// @access  Private
+
+
+
 export const markAllAsRead = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?._id) {
@@ -122,9 +122,9 @@ export const markAllAsRead = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Delete notification
-// @route   DELETE /api/notifications/:id
-// @access  Private
+
+
+
 export const deleteNotification = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?._id) {

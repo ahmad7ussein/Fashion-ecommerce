@@ -48,7 +48,7 @@ export default function CartPage() {
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-            {/* Cart Items */}
+            { }
             <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               <AnimatePresence>
                 {cartItems.map((item, index) => (
@@ -131,7 +131,7 @@ export default function CartPage() {
               </AnimatePresence>
             </div>
 
-            {/* Order Summary */}
+            { }
             <div className="lg:col-span-1">
               <motion.div
                 initial={{ opacity: 0, x: 20 }}

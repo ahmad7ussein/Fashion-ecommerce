@@ -55,7 +55,7 @@ export default function CollectionsPage() {
     const loadCollection = async () => {
       try {
         setIsLoading(true)
-        // Fetch products with inCollection filter
+        
         const collectionProducts = await listProducts({ inCollection: true, active: true })
         setProducts(collectionProducts)
       } catch (error) {
@@ -68,7 +68,7 @@ export default function CollectionsPage() {
     loadCollection()
   }, [])
 
-  // Load favorite status
+  
   useEffect(() => {
     if (!isAuthenticated || !user || products.length === 0) {
       setFavoriteIds(new Set())
@@ -105,7 +105,7 @@ export default function CollectionsPage() {
     loadFavorites()
   }, [products, isAuthenticated, user])
 
-  // Handle favorite toggle
+  
   const handleToggleFavorite = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -167,7 +167,7 @@ export default function CollectionsPage() {
     }
   }
 
-  // Handle add to cart
+  
   const handleAddToCart = async (product: Product, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -226,7 +226,7 @@ export default function CollectionsPage() {
     }
   }
 
-  // Create staggered animation variants
+  
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -251,7 +251,7 @@ export default function CollectionsPage() {
     },
   }
 
-  // Group products by category for masonry layout
+  
   const groupedProducts = products.reduce((acc, product) => {
     const category = product.category || "Other"
     if (!acc[category]) {
@@ -302,7 +302,7 @@ export default function CollectionsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
-      {/* Hero Slider */}
+      { }
       <section className="relative overflow-hidden min-h-screen flex items-center">
         <div
           className="relative w-full h-screen"
@@ -322,7 +322,7 @@ export default function CollectionsPage() {
                 className="absolute inset-0 flex items-center overflow-hidden"
                 style={{ background: "linear-gradient(135deg, #fdeef4 0%, #fff6fb 45%, #fde0ea 100%)" }}
               >
-                {/* Blurred Background Image */}
+                { }
                 <div className="absolute inset-0 opacity-[0.45]">
                   <div
                     className="absolute inset-0 bg-center bg-no-repeat"
@@ -336,10 +336,10 @@ export default function CollectionsPage() {
                   />
                 </div>
 
-                {/* Soft Overlay */}
+                { }
                 <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/50 to-white/80" />
 
-                {/* Content */}
+                { }
                 <div className="relative z-20 mx-auto w-full max-w-[1600px] px-4 sm:px-6 md:px-10 lg:px-12">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
                     <motion.div
@@ -420,7 +420,7 @@ export default function CollectionsPage() {
             )}
           </AnimatePresence>
 
-          {/* Navigation */}
+          { }
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -444,7 +444,7 @@ export default function CollectionsPage() {
             <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors" />
           </button>
 
-          {/* Dots */}
+          { }
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex gap-2 items-center">
             {heroSlides.map((_, index) => (
               <button
@@ -463,7 +463,7 @@ export default function CollectionsPage() {
             ))}
           </div>
 
-          {/* Scroll Indicator */}
+          { }
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -485,7 +485,7 @@ export default function CollectionsPage() {
         </div>
       </section>
 
-      {/* Products Grid - Masonry Style */}
+      { }
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-12 sm:py-16 md:py-20">
         <motion.div
           variants={containerVariants}
@@ -499,7 +499,7 @@ export default function CollectionsPage() {
               variants={itemVariants}
               className="space-y-8"
             >
-              {/* Category Header */}
+              { }
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-1 w-12 bg-gradient-to-r from-rose-500 to-pink-500 rounded-full" />
@@ -513,7 +513,7 @@ export default function CollectionsPage() {
                 </Badge>
               </div>
 
-              {/* Masonry Grid */}
+              { }
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
                 {groupedProducts[category].map((product, index) => {
                   const productId = product._id || product.id || `product-${index}`
@@ -529,7 +529,7 @@ export default function CollectionsPage() {
                     >
                       <Link href={`/products/${productId}`}>
                         <Card className="overflow-hidden bg-white border-2 border-gray-200 hover:border-rose-300 hover:shadow-2xl transition-all duration-500 rounded-2xl h-full flex flex-col relative">
-                          {/* Image Container with Overlay */}
+                          { }
                           <div className="aspect-square overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 relative">
                             <Image
                               src={product.image || "/placeholder-logo.png"}
@@ -539,10 +539,10 @@ export default function CollectionsPage() {
                               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                             />
                             
-                            {/* Gradient Overlay */}
+                            { }
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                             
-                            {/* Badges */}
+                            { }
                             <div className="absolute top-3 left-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
                               {product.gender && (
                                 <Badge className="text-xs bg-rose-500 text-white border-0 rounded-full px-3 py-1">
@@ -556,7 +556,7 @@ export default function CollectionsPage() {
                               )}
                             </div>
 
-                            {/* Favorite Button */}
+                            { }
                             <Button
                               variant="ghost"
                               size="icon"
@@ -574,7 +574,7 @@ export default function CollectionsPage() {
                               />
                             </Button>
 
-                            {/* Quick Add Button - Appears on Hover */}
+                            { }
                             <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0">
                               <Button
                                 size="sm"
@@ -587,7 +587,7 @@ export default function CollectionsPage() {
                             </div>
                           </div>
 
-                          {/* Product Info */}
+                          { }
                           <CardContent className="p-4 sm:p-5 flex-1 flex flex-col">
                             <div className="mb-2">
                               <p className="text-xs sm:text-sm text-rose-500 font-medium uppercase tracking-wider">
@@ -598,7 +598,7 @@ export default function CollectionsPage() {
                               {product.name}
                             </h3>
                             
-                            {/* Price */}
+                            { }
                             <div className="mt-auto">
                               {(product as any).onSale && (product as any).salePercentage ? (
                                 <div className="space-y-1">
@@ -633,7 +633,7 @@ export default function CollectionsPage() {
           ))}
         </motion.div>
 
-        {/* Call to Action */}
+        { }
         {products.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}

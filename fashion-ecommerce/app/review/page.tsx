@@ -107,7 +107,7 @@ function ReviewFormContent() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Rating */}
+              { }
               <div>
                 <Label className="text-white mb-3 block">
                   {isArabic ? "التقييم" : "Rating"}
@@ -135,7 +135,7 @@ function ReviewFormContent() {
                 </p>
               </div>
 
-              {/* Title */}
+              { }
               <div>
                 <Label htmlFor="title" className="text-white mb-2 block">
                   {isArabic ? "عنوان الرأي" : "Review Title"}
@@ -152,7 +152,7 @@ function ReviewFormContent() {
                 <p className="text-xs text-gray-500 mt-1">{title.length}/100</p>
               </div>
 
-              {/* Comment */}
+              { }
               <div>
                 <Label htmlFor="comment" className="text-white mb-2 block">
                   {isArabic ? "رأيك" : "Your Review"}
@@ -169,7 +169,7 @@ function ReviewFormContent() {
                 <p className="text-xs text-gray-500 mt-1">{comment.length}/1000</p>
               </div>
 
-              {/* Submit Button */}
+              { }
               <Button
                 type="submit"
                 disabled={isSubmitting || !title.trim() || !comment.trim()}
