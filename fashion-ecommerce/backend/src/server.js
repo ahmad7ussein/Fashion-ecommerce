@@ -1,0 +1,325 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const helmet_1 = __importDefault(require("helmet"));
+const morgan_1 = __importDefault(require("morgan"));
+const compression_1 = __importDefault(require("compression"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const mongoose_1 = __importDefault(require("mongoose"));
+const database_1 = __importDefault(require("./config/database"));
+const errorHandler_1 = __importDefault(require("./middleware/errorHandler"));
+const env_1 = __importDefault(require("./config/env"));
+const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
+const productRoutes_1 = __importDefault(require("./routes/productRoutes"));
+const orderRoutes_1 = __importDefault(require("./routes/orderRoutes"));
+const designRoutes_1 = __importDefault(require("./routes/designRoutes"));
+const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+const cartRoutes_1 = __importDefault(require("./routes/cartRoutes"));
+const userPreferencesRoutes_1 = __importDefault(require("./routes/userPreferencesRoutes"));
+const reviewRoutes_1 = __importDefault(require("./routes/reviewRoutes"));
+const contactRoutes_1 = __importDefault(require("./routes/contactRoutes"));
+const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
+const favoriteRoutes_1 = __importDefault(require("./routes/favoriteRoutes"));
+const studioProductRoutes_1 = __importDefault(require("./routes/studioProductRoutes"));
+const supplierRoutes_1 = __importDefault(require("./routes/supplierRoutes"));
+const supplierProductRoutes_1 = __importDefault(require("./routes/supplierProductRoutes"));
+const partnerStoreRoutes_1 = __importDefault(require("./routes/partnerStoreRoutes"));
+const partnerProductRoutes_1 = __importDefault(require("./routes/partnerProductRoutes"));
+const partnerPanelRoutes_1 = __importDefault(require("./routes/partnerPanelRoutes"));
+const featureControlRoutes_1 = __importDefault(require("./routes/featureControlRoutes"));
+const customDesignRoutes_1 = __importDefault(require("./routes/customDesignRoutes"));
+const vendorRoutes_1 = __importDefault(require("./routes/vendorRoutes"));
+const roleAssignmentRoutes_1 = __importDefault(require("./routes/roleAssignmentRoutes"));
+const app = (0, express_1.default)();
+app.use((0, helmet_1.default)());
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin) {
+            if (env_1.default.nodeEnv === 'development') {
+                return callback(null, true);
+            }
+            return callback(null, true);
+        }
+        const allowedOrigins = [
+            env_1.default.frontendUrl,
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'capacitor://localhost',
+            'ionic://localhost',
+            'http://localhost',
+            'https://localhost',
+        ];
+        if (env_1.default.nodeEnv === 'development') {
+            if (origin.includes('localhost') ||
+                origin.includes('127.0.0.1') ||
+                origin.includes('192.168.') ||
+                origin.includes('10.0.') ||
+                origin.includes('capacitor://') ||
+                origin.includes('ionic://')) {
+                return callback(null, true);
+            }
+        }
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        }
+        else {
+            if (env_1.default.nodeEnv === 'development') {
+                console.warn('⚠️  CORS: Blocked origin:', origin);
+            }
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Authorization'],
+    maxAge: 86400,
+};
+app.use((0, cors_1.default)(corsOptions));
+const authLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    max: env_1.default.nodeEnv === 'development' ? 100 : 10,
+    message: {
+        success: false,
+        message: 'Too many login attempts, please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        res.status(429).json({
+            success: false,
+            message: 'Too many login attempts, please try again later.',
+        });
+    },
+});
+const apiLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    max: env_1.default.nodeEnv === 'development' ? 1000 : 100,
+    message: {
+        success: false,
+        message: 'Too many requests from this IP, please try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/', apiLimiter);
+app.use((0, cookie_parser_1.default)());
+app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
+app.use((0, compression_1.default)());
+if (env_1.default.nodeEnv === 'development') {
+    app.use((0, morgan_1.default)(':method :url :status :response-time ms'));
+}
+app.get('/health', (_req, res) => {
+    const dbStatus = mongoose_1.default.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.status(200).json({
+        success: true,
+        message: 'Server is running',
+        database: dbStatus,
+        timestamp: new Date().toISOString(),
+    });
+});
+app.use('/api', (req, res, next) => {
+    if (req.path === '/health') {
+        return next();
+    }
+    if (mongoose_1.default.connection.readyState !== 1) {
+        return res.status(503).json({
+            success: false,
+            message: 'Database connection not available. Please try again later.',
+            error: 'Database disconnected',
+        });
+    }
+    next();
+});
+mongoose_1.default.connection.on('error', (err) => {
+    if (err.message?.includes('timeout')) {
+        console.warn('⚠️  MongoDB connection timeout:', err.message);
+    }
+    else {
+        console.error('❌ MongoDB Error:', err);
+    }
+});
+mongoose_1.default.connection.on('disconnected', () => {
+    const isIntentional = mongoose_1.default.connection._intentionalDisconnect;
+    if (!isIntentional) {
+        console.warn('⚠️  MongoDB disconnected. Mongoose will attempt to reconnect automatically.');
+    }
+});
+app.use('/api/auth', authRoutes_1.default);
+app.use('/api/products', productRoutes_1.default);
+app.use('/api/orders', orderRoutes_1.default);
+app.use('/api/designs', designRoutes_1.default);
+app.use('/api/studio-products', studioProductRoutes_1.default);
+app.use('/api/admin', adminRoutes_1.default);
+app.use('/api/cart', cartRoutes_1.default);
+app.use('/api/user-preferences', userPreferencesRoutes_1.default);
+app.use('/api/reviews', reviewRoutes_1.default);
+app.use('/api/contact', contactRoutes_1.default);
+app.use('/api/notifications', notificationRoutes_1.default);
+app.use('/api/favorites', favoriteRoutes_1.default);
+app.use('/api/suppliers', supplierRoutes_1.default);
+app.use('/api/supplier-products', supplierProductRoutes_1.default);
+app.use('/api/partner-stores', partnerStoreRoutes_1.default);
+app.use('/api/partner-products', partnerProductRoutes_1.default);
+app.use('/api/partner', partnerPanelRoutes_1.default);
+app.use('/api/feature-controls', featureControlRoutes_1.default);
+app.use('/api/custom-design-requests', customDesignRoutes_1.default);
+app.use('/api/vendor', vendorRoutes_1.default);
+app.use('/api/role-assignments', roleAssignmentRoutes_1.default);
+app.use((req, res) => {
+    if (process.env.NODE_ENV === 'development') {
+        console.warn('⚠️  Route not found:', {
+            method: req.method,
+            path: req.path,
+            url: req.url,
+            originalUrl: req.originalUrl,
+        });
+    }
+    res.status(404).json({
+        success: false,
+        message: 'Route not found',
+        path: req.path,
+        method: req.method,
+    });
+});
+app.use(errorHandler_1.default);
+const startServer = async () => {
+    try {
+        await (0, database_1.default)();
+        if (mongoose_1.default.connection.readyState !== 1) {
+            throw new Error(`Database connection not ready. Current state: ${mongoose_1.default.connection.readyState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`);
+        }
+        try {
+            const dbName = mongoose_1.default.connection.name;
+            console.log(`✅ Database connection verified: ${dbName}`);
+            console.log(`✅ Connection state: ${mongoose_1.default.connection.readyState === 1 ? 'Connected' : 'Not Connected'}`);
+        }
+        catch (verifyError) {
+            console.warn('⚠️  Database verification warning:', verifyError.message);
+        }
+        const server = app.listen(env_1.default.port, () => {
+            console.log('');
+            console.log('🚀 ========================================');
+            console.log(`🚀 Server running in ${env_1.default.nodeEnv} mode`);
+            console.log(`🚀 Server listening on port ${env_1.default.port}`);
+            console.log(`🚀 API URL: http://localhost:${env_1.default.port}/api`);
+            console.log('🚀 ========================================');
+            console.log('');
+        });
+        server.timeout = 180000;
+        server.keepAliveTimeout = 65000;
+        server.headersTimeout = 66000;
+        server.on('error', async (err) => {
+            if (mongoose_1.default.connection.readyState === 1) {
+                console.log('');
+                console.log('🔄 Closing database connection...');
+                try {
+                    mongoose_1.default.connection._intentionalDisconnect = true;
+                    await mongoose_1.default.connection.close(false);
+                    console.log('✅ Database connection closed');
+                }
+                catch (closeError) {
+                    console.warn('⚠️  Error closing database connection:', closeError.message);
+                }
+            }
+            if (err.code === 'EADDRINUSE') {
+                console.error('');
+                console.error('❌ ========================================');
+                console.error(`❌ Port ${env_1.default.port} is already in use!`);
+                console.error('❌ ========================================');
+                console.error('');
+                console.error('⚠️  Note: Database connection was successful, but server cannot start');
+                console.error('⚠️  Another process is already using port', env_1.default.port);
+                console.error('');
+                console.error('💡 Solutions:');
+                console.error('');
+                console.error('   Option 1: Stop the process using port', env_1.default.port);
+                console.error('');
+                console.error('   On Windows:');
+                console.error(`     1. Find the process: netstat -ano | findstr :${env_1.default.port}`);
+                console.error('     2. Kill the process: taskkill /PID <PID> /F');
+                console.error('     Or use this one-liner:');
+                console.error(`        for /f "tokens=5" %a in ('netstat -ano ^| findstr :${env_1.default.port}') do taskkill /F /PID %a`);
+                console.error('');
+                console.error('   On Linux/Mac:');
+                console.error(`     lsof -ti:${env_1.default.port} | xargs kill -9`);
+                console.error('');
+                console.error('   Option 2: Change the port in .env file');
+                console.error(`     Change PORT=5000 to PORT=5001 (or any other available port)`);
+                console.error('');
+                console.error('   Option 3: Use a different terminal/process');
+                console.error('     Make sure you closed any previous server instances');
+                console.error('');
+                console.error('❌ ========================================');
+                console.error('');
+                process.exit(1);
+            }
+            else {
+                console.error('❌ Server error:', err);
+                process.exit(1);
+            }
+        });
+        process.on('unhandledRejection', (err) => {
+            console.error('❌ Unhandled Rejection:', err.message);
+            server.close(() => process.exit(1));
+        });
+        process.on('SIGTERM', () => {
+            console.log('👋 SIGTERM received, shutting down gracefully');
+            server.close(() => {
+                console.log('✅ Process terminated');
+            });
+        });
+    }
+    catch (error) {
+        if (mongoose_1.default.connection.readyState === 1) {
+            console.log('');
+            console.log('🔄 Closing database connection...');
+            try {
+                mongoose_1.default.connection._intentionalDisconnect = true;
+                await mongoose_1.default.connection.close(false);
+                console.log('✅ Database connection closed');
+            }
+            catch (closeError) {
+                console.warn('⚠️  Error closing database connection:', closeError.message);
+            }
+        }
+        console.error('');
+        console.error('❌ ========================================');
+        console.error('❌ Failed to start server');
+        console.error('❌ ========================================');
+        console.error('');
+        console.error('❌ Reason:', error.message);
+        console.error('');
+        if (error.message.includes('MongoDB') || error.message.includes('database') || error.message.includes('connection')) {
+            console.error('🔍 Issue: Database connection failed');
+            console.error('');
+            console.error('💡 Make sure:');
+            console.error('   1. ✅ MongoDB Atlas is running');
+            console.error('   2. ✅ MONGODB_URI is correct in .env file');
+            console.error('   3. ✅ Your IP is whitelisted in Network Access');
+            console.error('   4. ✅ Internet connection is working');
+            console.error('');
+            console.error('📖 Check MONGODB_SETUP.md for detailed instructions');
+        }
+        else {
+            console.error('💡 Make sure:');
+            console.error('   1. MongoDB is running');
+            console.error('   2. MONGODB_URI is correct in your .env file');
+            console.error('   3. Your network connection is stable');
+        }
+        console.error('');
+        console.error('❌ ========================================');
+        console.error('');
+        process.exit(1);
+    }
+};
+startServer();
+exports.default = app;

@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const adminController_1 = require("../controllers/adminController");
+const employeeActivityController_1 = require("../controllers/employeeActivityController");
+const auth_1 = require("../middleware/auth");
+const router = express_1.default.Router();
+router.use(auth_1.protect);
+router.get('/users', (0, auth_1.authorize)('admin', 'employee'), adminController_1.getAllUsers);
+router.get('/users/:id', (0, auth_1.authorize)('admin', 'employee'), adminController_1.getUser);
+router.get('/dashboard/stats', (0, auth_1.authorize)('admin'), adminController_1.getDashboardStats);
+router.put('/users/:id/role', (0, auth_1.authorize)('admin'), adminController_1.updateUserRole);
+router.delete('/users/:id', (0, auth_1.authorize)('admin'), adminController_1.deleteUser);
+router.post('/employees', (0, auth_1.authorize)('admin'), adminController_1.createEmployee);
+router.get('/reports/sales', (0, auth_1.authorize)('admin'), adminController_1.getSalesReport);
+router.get('/employee-activities', (0, auth_1.authorize)('admin'), employeeActivityController_1.getAllEmployeeActivities);
+exports.default = router;

@@ -2,13 +2,13 @@
   "name": "fashion-hub-backend",
   "version": "1.0.0",
   "description": "Backend API for fashion-hub Fashion Platform",
-  "main": "dist/server.js",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "seed": "ts-node src/scripts/seed.ts",
-    "create-admin": "ts-node src/scripts/createAdminAndEmployee.ts"
+    "dev": "nodemon src/server.js",
+    "build": "node -e \"console.log('No build step for JS backend')\"",
+    "start": "node src/server.js",
+    "seed": "node src/scripts/seed.js",
+    "create-admin": "node src/scripts/createAdminAndEmployee.js"
   },
   "keywords": [
     "fashion",
