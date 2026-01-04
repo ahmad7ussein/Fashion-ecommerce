@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const featureControlController_1 = require("../controllers/featureControlController");
+const auth_1 = require("../middleware/auth");
+const router = express_1.default.Router();
+router.get('/similar-products/recommendations', auth_1.optionalAuth, featureControlController_1.getSimilarProducts);
+router.use(auth_1.protect);
+router.get('/similar-products', (0, auth_1.authorize)('admin'), featureControlController_1.getSimilarProductsSettings);
+router.put('/similar-products', (0, auth_1.authorize)('admin'), featureControlController_1.updateSimilarProductsSettings);
+router.get('/virtual-experience', (0, auth_1.authorize)('admin'), featureControlController_1.getVirtualExperienceSettings);
+router.put('/virtual-experience', (0, auth_1.authorize)('admin'), featureControlController_1.updateVirtualExperienceSettings);
+router.post('/virtual-experience/usage', featureControlController_1.logVirtualExperienceUsage);
+router.post('/virtual-experience/conversion', featureControlController_1.logVirtualExperienceConversion);
+router.get('/custom-design', (0, auth_1.authorize)('admin'), featureControlController_1.getCustomDesignSettings);
+router.put('/custom-design', (0, auth_1.authorize)('admin'), featureControlController_1.updateCustomDesignSettings);
+exports.default = router;

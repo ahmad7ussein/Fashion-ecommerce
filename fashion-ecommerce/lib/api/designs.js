@@ -1,0 +1,28 @@
+import apiClient from "./client";
+export const designsApi = {
+    async getMyDesigns() {
+        const response = await apiClient.get("/designs/my-designs");
+        if (Array.isArray(response)) {
+            return response;
+        }
+        if (response && typeof response === 'object' && 'data' in response) {
+            return Array.isArray(response.data) ? response.data : [];
+        }
+        return [];
+    },
+    async getDesign(id) {
+        return await apiClient.get(`/designs/${id}`);
+    },
+    async createDesign(designData) {
+        return await apiClient.post("/designs", designData);
+    },
+    async updateDesign(id, designData) {
+        return await apiClient.put(`/designs/${id}`, designData);
+    },
+    async deleteDesign(id) {
+        return await apiClient.delete(`/designs/${id}`);
+    },
+    async publishDesign(id) {
+        return await apiClient.put(`/designs/${id}/publish`, {});
+    },
+};
