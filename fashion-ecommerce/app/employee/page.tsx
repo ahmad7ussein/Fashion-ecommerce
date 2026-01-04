@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, Fragment } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -131,6 +131,52 @@ export default function EmployeeDashboard() {
   const { toast } = useToast()
   const router = useRouter()
   const productColorSet = new Set(productForm.colors.map(normalizeColorKey))
+
+  const normalizeGender = (value?: string) => value?.toLowerCase().trim() || ""
+  const groupedProducts = useMemo(() => {
+    const groups = {
+      men: [] as Product[],
+      women: [] as Product[],
+      kids: [] as Product[],
+      unisex: [] as Product[],
+      other: [] as Product[],
+    }
+
+    products.forEach((product) => {
+      const gender = normalizeGender(product.gender)
+      if (["men", "man", "male"].includes(gender)) {
+        groups.men.push(product)
+      } else if (["women", "woman", "female"].includes(gender)) {
+        groups.women.push(product)
+      } else if (["kids", "kid", "children", "child", "boys", "girls"].includes(gender)) {
+        groups.kids.push(product)
+      } else if (["unisex", "all", "all gender", "all genders"].includes(gender)) {
+        groups.unisex.push(product)
+      } else {
+        groups.other.push(product)
+      }
+    })
+
+    return groups
+  }, [products])
+
+  const productSections = useMemo(() => {
+    const sections = [
+      { key: "men", label: language === "ar" ? "رجال" : "Men", items: groupedProducts.men },
+      { key: "women", label: language === "ar" ? "نساء" : "Women", items: groupedProducts.women },
+      { key: "kids", label: language === "ar" ? "أطفال" : "Kids", items: groupedProducts.kids },
+    ]
+
+    if (groupedProducts.unisex.length) {
+      sections.push({ key: "unisex", label: language === "ar" ? "للجميع" : "Unisex", items: groupedProducts.unisex })
+    }
+
+    if (groupedProducts.other.length) {
+      sections.push({ key: "other", label: language === "ar" ? "غير محدد" : "Unassigned", items: groupedProducts.other })
+    }
+
+    return sections
+  }, [groupedProducts, language])
 
   
   useEffect(() => {
@@ -1190,104 +1236,129 @@ export default function EmployeeDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {products.map((product) => (
-                        <TableRow key={product._id || product.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                                <Image
-                                  src={product.image || "/placeholder-logo.png"}
-                                  alt={product.name || "Product"}
-                                  fill
-                                  className="object-cover"
-                                  sizes="64px"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    if (target.src !== "/placeholder-logo.png") {
-                                      target.src = "/placeholder-logo.png";
-                                    }
-                                  }}
-                                />
+                      {productSections.map((section) => (
+                        <Fragment key={section.key}>
+                          <TableRow className="bg-muted/40">
+                            <TableCell colSpan={6} className="py-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-foreground">{section.label}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {section.items.length}
+                                </Badge>
                               </div>
-                              <span className="line-clamp-2">
-                                {language === "ar" && product.nameAr ? product.nameAr : product.name}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{product.category}</TableCell>
-                          <TableCell>${product.price.toFixed(2)}</TableCell>
-                          <TableCell>{product.stock || 0}</TableCell>
-                          <TableCell>
-                            <Badge variant={product.active !== false ? "default" : "secondary"}>
-                              {product.active !== false ? t("active", language) : t("inactive", language)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedProduct(product)
-                                  setIsEditingProduct(true)
-                                  setProductForm({
-                                    name: product.name || "",
-                                    nameAr: (product as any).nameAr || "",
-                                    description: product.description || "",
-                                    descriptionAr: (product as any).descriptionAr || "",
-                                    price: product.price?.toString() || "",
-                                    image: product.image || "",
-                                    images: product.images || [],
-                                    category: product.category || "",
-                                    gender: product.gender || "",
-                                    season: product.season || "",
-                                    style: product.style || "",
-                                    occasion: product.occasion || "",
-                                    sizes: product.sizes || [],
-                                    colors: product.colors || [],
-                                    stock: product.stock?.toString() || "100",
-                                    featured: product.featured || false,
-                                    active: product.active !== false,
-                                    onSale: (product as any).onSale || false,
-                                    salePercentage: ((product as any).salePercentage?.toString()) || "0",
-                                    newArrival: (product as any).newArrival || false,
-                                  })
-                                  setNewSize("")
-                                  setNewColor("")
-                                  setMainImageFile(null)
-                                  setAdditionalImageFiles([])
-                                  setShowProductModal(true)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={async () => {
-                                  if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذا المنتج؟" : "Are you sure you want to delete this product?")) {
-                                    try {
-                                      await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "")
-                                      toast({
-                                        title: language === "ar" ? "تم الحذف" : "Deleted",
-                                        description: language === "ar" ? "تم حذف المنتج بنجاح" : "Product deleted successfully",
-                                      })
-                                      loadProducts()
-                                    } catch (error: any) {
-                                      toast({
-                                        title: "Error",
-                                        description: error.message || "Failed to delete product",
-                                        variant: "destructive",
-                                      })
-                                    }
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                          </TableRow>
+                          {section.items.length > 0 ? (
+                            section.items.map((product, index) => {
+                              const productId = product._id?.toString() || product.id?.toString() || `product-${index}`
+                              return (
+                                <TableRow key={`${section.key}-${productId}`}>
+                                  <TableCell className="font-medium">
+                                    <div className="flex items-center gap-3">
+                                      <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                                        <Image
+                                          src={product.image || "/placeholder-logo.png"}
+                                          alt={product.name || "Product"}
+                                          fill
+                                          className="object-cover"
+                                          sizes="64px"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            if (target.src !== "/placeholder-logo.png") {
+                                              target.src = "/placeholder-logo.png";
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                      <span className="line-clamp-2">
+                                        {language === "ar" && product.nameAr ? product.nameAr : product.name}
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{product.category}</TableCell>
+                                  <TableCell>${product.price.toFixed(2)}</TableCell>
+                                  <TableCell>{product.stock || 0}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={product.active !== false ? "default" : "secondary"}>
+                                      {product.active !== false ? t("active", language) : t("inactive", language)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedProduct(product)
+                                          setIsEditingProduct(true)
+                                          setProductForm({
+                                            name: product.name || "",
+                                            nameAr: (product as any).nameAr || "",
+                                            description: product.description || "",
+                                            descriptionAr: (product as any).descriptionAr || "",
+                                            price: product.price?.toString() || "",
+                                            image: product.image || "",
+                                            images: product.images || [],
+                                            category: product.category || "",
+                                            gender: product.gender || "",
+                                            season: product.season || "",
+                                            style: product.style || "",
+                                            occasion: product.occasion || "",
+                                            sizes: product.sizes || [],
+                                            colors: product.colors || [],
+                                            stock: product.stock?.toString() || "100",
+                                            featured: product.featured || false,
+                                            active: product.active !== false,
+                                            onSale: (product as any).onSale || false,
+                                            salePercentage: ((product as any).salePercentage?.toString()) || "0",
+                                            newArrival: (product as any).newArrival || false,
+                                          })
+                                          setNewSize("")
+                                          setNewColor("")
+                                          setMainImageFile(null)
+                                          setAdditionalImageFiles([])
+                                          setShowProductModal(true)
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={async () => {
+                                          if (confirm(language === "ar" ? "?? ??? ????? ?? ??? ??? ???????" : "Are you sure you want to delete this product?")) {
+                                            try {
+                                              await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "")
+                                              toast({
+                                                title: language === "ar" ? "?? ?????" : "Deleted",
+                                                description: language === "ar" ? "?? ??? ?????? ?????" : "Product deleted successfully",
+                                              })
+                                              loadProducts()
+                                            } catch (error: any) {
+                                              toast({
+                                                title: "Error",
+                                                description: error.message || "Failed to delete product",
+                                                variant: "destructive",
+                                              })
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })
+                          ) : (
+                            <TableRow key={`${section.key}-empty`}>
+                              <TableCell colSpan={6} className="text-center text-muted-foreground py-6 text-sm">
+                                {language === "ar" ? "?? ???? ?????? ?? ??? ?????" : "No products in this section"}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
                       ))}
                     </TableBody>
                   </Table>

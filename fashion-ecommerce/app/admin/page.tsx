@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -935,6 +935,52 @@ export default function AdminDashboard() {
     })
   }, [products, productSearchQuery, language])
 
+  const normalizeGender = (value?: string) => value?.toLowerCase().trim() || ""
+  const groupedProducts = useMemo(() => {
+    const groups = {
+      men: [] as Product[],
+      women: [] as Product[],
+      kids: [] as Product[],
+      unisex: [] as Product[],
+      other: [] as Product[],
+    }
+
+    filteredProducts.forEach((product) => {
+      const gender = normalizeGender(product.gender)
+      if (["men", "man", "male"].includes(gender)) {
+        groups.men.push(product)
+      } else if (["women", "woman", "female"].includes(gender)) {
+        groups.women.push(product)
+      } else if (["kids", "kid", "children", "child", "boys", "girls"].includes(gender)) {
+        groups.kids.push(product)
+      } else if (["unisex", "all", "all gender", "all genders"].includes(gender)) {
+        groups.unisex.push(product)
+      } else {
+        groups.other.push(product)
+      }
+    })
+
+    return groups
+  }, [filteredProducts])
+
+  const productSections = useMemo(() => {
+    const sections = [
+      { key: "men", label: language === "ar" ? "رجال" : "Men", items: groupedProducts.men },
+      { key: "women", label: language === "ar" ? "نساء" : "Women", items: groupedProducts.women },
+      { key: "kids", label: language === "ar" ? "أطفال" : "Kids", items: groupedProducts.kids },
+    ]
+
+    if (groupedProducts.unisex.length) {
+      sections.push({ key: "unisex", label: language === "ar" ? "للجميع" : "Unisex", items: groupedProducts.unisex })
+    }
+
+    if (groupedProducts.other.length) {
+      sections.push({ key: "other", label: language === "ar" ? "غير محدد" : "Unassigned", items: groupedProducts.other })
+    }
+
+    return sections
+  }, [groupedProducts, language])
+
 
   const loadDashboardData = async () => {
     try {
@@ -1382,113 +1428,6 @@ export default function AdminDashboard() {
                 </div>
 
                 { }
-                <div className="space-y-3">
-                  <h2 className="text-xl font-semibold">
-                    {language === "ar" ? "موديولات جديدة" : "New Modules"}
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <Link href="/admin/suppliers" className="block">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            {language === "ar" ? "إدارة الموردين" : "Supplier Management"}
-                          </CardTitle>
-                          <CardDescription>
-                            {language === "ar"
-                              ? "إدارة الموردين والموافقة على منتجاتهم."
-                              : "Manage suppliers and approve supplier products."}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                    <Link href="/admin/partners" className="block">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            {language === "ar" ? "متاجر الشركاء" : "Partner Stores"}
-                          </CardTitle>
-                          <CardDescription>
-                            {language === "ar"
-                              ? "إضافة متاجر الشركاء والموافقة على منتجاتهم."
-                              : "Add partner stores and approve partner products."}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                    <Link href="/admin/similar-products" className="block">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            {language === "ar" ? "المنتجات المشابهة" : "Similar Products Control"}
-                          </CardTitle>
-                          <CardDescription>
-                            {language === "ar"
-                              ? "إعداد ميزة المنتجات المشابهة."
-                              : "Configure the similar products feature."}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                    <Link href="/admin/virtual-experience" className="block">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            {language === "ar" ? "التجربة الافتراضية" : "Virtual Experience Control"}
-                          </CardTitle>
-                          <CardDescription>
-                            {language === "ar"
-                              ? "إدارة المنتجات المدعومة وإحصاءات الاستخدام."
-                              : "Manage supported products and usage stats."}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                    <Link href="/admin/custom-design" className="block">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            {language === "ar" ? "التصميم المخصص" : "Custom Design Control"}
-                          </CardTitle>
-                          <CardDescription>
-                            {language === "ar"
-                              ? "إدارة الخطوط ومناطق الطباعة والموافقات."
-                              : "Manage fonts, print areas, and approvals."}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                    <Link href="/admin/vendor-approvals" className="block">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            {language === "ar" ? "اعتمادات البائعين" : "Vendor Product Approvals"}
-                          </CardTitle>
-                          <CardDescription>
-                            {language === "ar"
-                              ? "قبول أو رفض طلبات البائعين."
-                              : "Approve or reject vendor submissions."}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                    <Link href="/admin/role-assignments" className="block">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">
-                            {language === "ar" ? "إدارة الأدوار" : "Role Assignments"}
-                          </CardTitle>
-                          <CardDescription>
-                            {language === "ar"
-                              ? "تعيين أدوار البائعين والشركاء."
-                              : "Assign vendor and partner roles."}
-                          </CardDescription>
-                        </CardHeader>
-                      </Card>
-                    </Link>
-                  </div>
-                </div>
-
-                { }
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="border-2 shadow-lg">
                     <CardHeader className="flex flex-row items-center justify-between">
@@ -1851,112 +1790,133 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredProducts.map((product, index) => {
-                        
-                        const productId = product._id?.toString() || product.id?.toString() || `product-${index}`
-                        return (
-                        <TableRow key={productId}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                                <Image
-                                  src={product.image || "/placeholder-logo.png"}
-                                  alt={product.name || "Product"}
-                                  fill
-                                  className="object-cover"
-                                  sizes="64px"
-                                  loading="lazy"
-                                  quality={75}
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    if (target.src !== "/placeholder-logo.png") {
-                                      target.src = "/placeholder-logo.png";
-                                    }
-                                  }}
-                                />
+                      {productSections.map((section) => (
+                        <Fragment key={section.key}>
+                          <TableRow className="bg-muted/40">
+                            <TableCell colSpan={6} className="py-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-foreground">{section.label}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {section.items.length}
+                                </Badge>
                               </div>
-                              <span className="line-clamp-2">
-                                {language === "ar" && product.nameAr ? product.nameAr : product.name}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{product.category}</TableCell>
-                          <TableCell>${product.price.toFixed(2)}</TableCell>
-                          <TableCell>{product.stock || 0}</TableCell>
-                          <TableCell>
-                            <Badge variant={product.active !== false ? "default" : "secondary"}>
-                              {product.active !== false ? t("active", language) : t("inactive", language)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedProduct(product)
-                                  setIsEditingProduct(true)
-                                  setProductForm({
-                                    name: product.name || "",
-                                    nameAr: (product as any).nameAr || "",
-                                    description: product.description || "",
-                                    descriptionAr: (product as any).descriptionAr || "",
-                                    price: product.price?.toString() || "",
-                                    image: product.image || "",
-                                    images: product.images || [],
-                                    category: product.category || "",
-                                    gender: product.gender || "",
-                                    season: product.season || "",
-                                    style: product.style || "",
-                                    occasion: product.occasion || "",
-                                    sizes: product.sizes || [],
-                                    colors: product.colors || [],
-                                    stock: product.stock?.toString() || "100",
-                                    featured: product.featured || false,
-                                    active: product.active !== false,
-                                    onSale: (product as any).onSale || false,
-                                    salePercentage: ((product as any).salePercentage?.toString()) || "0",
-                                    inCollection: (product as any).inCollection || false,
-                                  })
-                                  setNewImageUrl("")
-                                  setNewSize("")
-                                  setNewColor("")
-                                  setMainImageFile(null)
-                                  setAdditionalImageFiles([])
-                                  setShowProductModal(true)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={async () => {
-                                  if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذا المنتج؟" : "Are you sure you want to delete this product?")) {
-                                    try {
-                                      await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "")
-                                      toast({
-                                        title: language === "ar" ? "تم الحذف" : "Deleted",
-                                        description: language === "ar" ? "تم حذف المنتج بنجاح" : "Product deleted successfully",
-                                      })
-                                      loadProducts()
-                                    } catch (error: any) {
-                                      toast({
-                                        title: "Error",
-                                        description: error.message || "Failed to delete product",
-                                        variant: "destructive",
-                                      })
-                                    }
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        )
-                      })}
+                            </TableCell>
+                          </TableRow>
+                          {section.items.length > 0 ? (
+                            section.items.map((product, index) => {
+                              const productId = product._id?.toString() || product.id?.toString() || `product-${index}`
+                              return (
+                                <TableRow key={`${section.key}-${productId}`}>
+                                  <TableCell className="font-medium">
+                                    <div className="flex items-center gap-3">
+                                      <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                                        <Image
+                                          src={product.image || "/placeholder-logo.png"}
+                                          alt={product.name || "Product"}
+                                          fill
+                                          className="object-cover"
+                                          sizes="64px"
+                                          loading="lazy"
+                                          quality={75}
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            if (target.src !== "/placeholder-logo.png") {
+                                              target.src = "/placeholder-logo.png";
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                      <span className="line-clamp-2">
+                                        {language === "ar" && product.nameAr ? product.nameAr : product.name}
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{product.category}</TableCell>
+                                  <TableCell>${product.price.toFixed(2)}</TableCell>
+                                  <TableCell>{product.stock || 0}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={product.active !== false ? "default" : "secondary"}>
+                                      {product.active !== false ? t("active", language) : t("inactive", language)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                          setSelectedProduct(product)
+                                          setIsEditingProduct(true)
+                                          setProductForm({
+                                            name: product.name || "",
+                                            nameAr: (product as any).nameAr || "",
+                                            description: product.description || "",
+                                            descriptionAr: (product as any).descriptionAr || "",
+                                            price: product.price?.toString() || "",
+                                            image: product.image || "",
+                                            images: product.images || [],
+                                            category: product.category || "",
+                                            gender: product.gender || "",
+                                            season: product.season || "",
+                                            style: product.style || "",
+                                            occasion: product.occasion || "",
+                                            sizes: product.sizes || [],
+                                            colors: product.colors || [],
+                                            stock: product.stock?.toString() || "100",
+                                            featured: product.featured || false,
+                                            active: product.active !== false,
+                                            onSale: (product as any).onSale || false,
+                                            salePercentage: ((product as any).salePercentage?.toString()) || "0",
+                                            inCollection: (product as any).inCollection || false,
+                                          })
+                                          setNewImageUrl("")
+                                          setNewSize("")
+                                          setNewColor("")
+                                          setMainImageFile(null)
+                                          setAdditionalImageFiles([])
+                                          setShowProductModal(true)
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={async () => {
+                                          if (confirm(language === "ar" ? "?? ??? ????? ?? ??? ??? ???????" : "Are you sure you want to delete this product?")) {
+                                            try {
+                                              await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "")
+                                              toast({
+                                                title: language === "ar" ? "?? ?????" : "Deleted",
+                                                description: language === "ar" ? "?? ??? ?????? ?????" : "Product deleted successfully",
+                                              })
+                                              loadProducts()
+                                            } catch (error: any) {
+                                              toast({
+                                                title: "Error",
+                                                description: error.message || "Failed to delete product",
+                                                variant: "destructive",
+                                              })
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })
+                          ) : (
+                            <TableRow key={`${section.key}-empty`}>
+                              <TableCell colSpan={6} className="text-center text-muted-foreground py-6 text-sm">
+                                {language === "ar" ? "?? ???? ?????? ?? ??? ?????" : "No products in this section"}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
+                      ))}
                     </TableBody>
                   </Table>
                 ) : productsLoading ? (

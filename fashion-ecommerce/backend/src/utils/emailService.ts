@@ -176,11 +176,15 @@ export const sendWelcomeEmail = async (
     }
 
     const fromEmail = process.env.SMTP_FROM || process.env.GMAIL_USER;
+    const supportEmail = process.env.SUPPORT_EMAIL || fromEmail;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const logoUrl = `${frontendUrl}/logo.png`;
+    const brandGradient = 'linear-gradient(135deg, #1f2a44 0%, #f97316 100%)';
     
     const mailOptions = {
       from: `"FashionHub" <${fromEmail}>`,
       to: email,
-      subject: 'مرحباً بك في FashionHub - Welcome to FashionHub',
+      subject: 'Welcome to FashionHub - Account Created',
       html: `
         <!DOCTYPE html>
         <html dir="ltr" lang="en">
@@ -189,26 +193,58 @@ export const sendWelcomeEmail = async (
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">FashionHub</h1>
+          <div style="background: ${brandGradient}; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <img src="${logoUrl}" alt="FashionHub" width="180" style="display: block; margin: 0 auto 10px; width: 180px; max-width: 100%; height: auto;" />
+            <h1 style="color: white; margin: 0; font-size: 24px; letter-spacing: 0.3px;">FashionHub</h1>
           </div>
           
           <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #1f2937; margin-top: 0;">مرحباً بك! / Welcome!</h2>
+            <h2 style="color: #1f2937; margin-top: 0;">Welcome to FashionHub!</h2>
             <p style="color: #4b5563; font-size: 16px;">
-              شكراً لك على الانضمام إلى FashionHub.<br>
-              Thank you for joining FashionHub.
+              Hello ${userName},
+            </p>
+            <p style="color: #4b5563; font-size: 16px;">
+              Your account was created successfully. You can now sign in and start exploring our latest collections.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${frontendUrl}"
+                 style="display: inline-block; background: ${brandGradient};
+                        color: white; padding: 12px 32px; text-decoration: none;
+                        border-radius: 8px; font-weight: bold; font-size: 15px;">
+                Visit FashionHub
+              </a>
+            </div>
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0; border-radius: 5px;">
+              <p style="color: #92400e; font-size: 14px; margin: 0;">
+                If you did not create this account, please contact support${supportEmail ? ` at ${supportEmail}` : ''}.
+              </p>
+            </div>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+              Thanks for choosing FashionHub. We are here to keep your account safe and secure.
             </p>
           </div>
         </body>
         </html>
       `,
+      text: `
+Welcome to FashionHub!
+
+Hello ${userName},
+
+Your account was created successfully. You can now sign in and start exploring our latest collections.
+
+Visit: ${frontendUrl}
+
+If you did not create this account, please contact support${supportEmail ? ` at ${supportEmail}` : ''}.
+
+Thanks for choosing FashionHub.
+      `.trim(),
     };
 
     await transporter.sendMail(mailOptions);
     return true;
   } catch (error: any) {
-    console.error('❌ Error sending welcome email:', error);
+    console.error('Error sending welcome email:', error);
     return false;
   }
 };
