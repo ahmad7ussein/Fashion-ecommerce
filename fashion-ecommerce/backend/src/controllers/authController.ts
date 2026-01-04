@@ -6,7 +6,7 @@ import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import env from '../config/env';
 import { logEmployeeActivity } from './employeeActivityController';
-import { sendPasswordResetEmail } from '../utils/emailService';
+import { sendPasswordResetEmail, sendWelcomeEmail } from '../utils/emailService';
 
 
 const generateToken = (id: string): string => {
@@ -48,6 +48,16 @@ export const register = async (req: Request, res: Response) => {
     });
 
     const token = generateToken((user._id as any).toString());
+
+    try {
+      const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+      const emailSent = await sendWelcomeEmail(user.email, fullName);
+      if (!emailSent) {
+        console.warn('Welcome email not sent for:', user.email);
+      }
+    } catch (emailError) {
+      console.warn('Welcome email failed:', (emailError as Error)?.message || emailError);
+    }
 
     res.status(201).json({
       success: true,

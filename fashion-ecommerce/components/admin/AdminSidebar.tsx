@@ -2,7 +2,9 @@
 
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 import {
+  ChevronDown,
   Package,
   ShoppingCart,
   Users,
@@ -18,7 +20,6 @@ import {
 import type { LucideIcon } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Logo } from "@/components/logo"
-import { useAuth } from "@/lib/auth"
 import { useLanguage } from "@/lib/language"
 import { t } from "@/lib/i18n"
 
@@ -102,14 +103,45 @@ const sectionClasses: Record<string, string> = {
   partners: "bg-violet-100 text-violet-700 border-violet-200",
 }
 
+const isActiveItem = (item: NavItem, pathname: string, isAdminRoot: boolean, currentTab: string) => {
+  if (item.type === "tab") {
+    return isAdminRoot && currentTab === item.key
+  }
+  if (!item.href) {
+    return false
+  }
+  return pathname.startsWith(item.href)
+}
+
+const getActiveSectionId = (
+  sections: NavSection[],
+  pathname: string,
+  isAdminRoot: boolean,
+  currentTab: string
+) => {
+  const activeSection = sections.find((section) =>
+    section.items.some((item) => isActiveItem(item, pathname, isAdminRoot, currentTab))
+  )
+  return activeSection?.id ?? null
+}
+
 export function AdminSidebar({ activeTab, pendingReviewsCount }: AdminSidebarProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { user } = useAuth()
   const { language } = useLanguage()
   const tabParam = searchParams.get("tab") || "overview"
   const currentTab = activeTab || tabParam
   const isAdminRoot = pathname === "/admin"
+  const [openSectionId, setOpenSectionId] = useState<string | null>(() =>
+    getActiveSectionId(navigationSections, pathname, isAdminRoot, currentTab)
+  )
+
+  useEffect(() => {
+    const activeSectionId = getActiveSectionId(navigationSections, pathname, isAdminRoot, currentTab)
+    if (activeSectionId) {
+      setOpenSectionId(activeSectionId)
+    }
+  }, [pathname, isAdminRoot, currentTab])
 
   const resolveLabel = (item: NavItem) => {
     if (item.labelKey) {
@@ -139,13 +171,10 @@ export function AdminSidebar({ activeTab, pendingReviewsCount }: AdminSidebarPro
         </div>
       </div>
       <div className="px-4 lg:px-6 py-3">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center">
           <Badge variant="destructive" className="text-xs font-semibold uppercase">
             Admin
           </Badge>
-          <span className="text-xs text-muted-foreground truncate flex-1">
-            {user?.email || "admin@fashionhub.com"}
-          </span>
         </div>
       </div>
       <nav className="px-3 lg:px-4 space-y-4 pt-4 pb-4 flex-1 overflow-y-auto">
@@ -158,41 +187,53 @@ export function AdminSidebar({ activeTab, pendingReviewsCount }: AdminSidebarPro
                 : "space-y-1.5 pt-4 mt-4 border-t border-border/50"
             }
           >
-            <div className="px-3 lg:px-4">
-              <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                  sectionClasses[section.id] || "bg-muted text-muted-foreground border-border"
+            <button
+              type="button"
+              onClick={() => setOpenSectionId((prev) => (prev === section.id ? null : section.id))}
+              className={`w-full flex items-center justify-between gap-2 px-3 lg:px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+                sectionClasses[section.id] || "bg-muted text-muted-foreground border-border"
+              }`}
+              aria-expanded={openSectionId === section.id}
+              aria-controls={`admin-section-${section.id}`}
+            >
+              <span className="truncate">{resolveSectionTitle(section)}</span>
+              <ChevronDown
+                className={`h-4 w-4 flex-shrink-0 transition-transform ${
+                  openSectionId === section.id ? "rotate-180" : ""
                 }`}
-              >
-                {resolveSectionTitle(section)}
-              </span>
+              />
+            </button>
+            <div
+              id={`admin-section-${section.id}`}
+              className="space-y-1.5 pt-2 pl-2"
+              hidden={openSectionId !== section.id}
+            >
+              {section.items.map((item) => {
+                const href = item.type === "tab" ? `/admin?tab=${item.key}` : item.href
+                const isActive = isActiveItem(item, pathname, isAdminRoot, currentTab)
+                const Icon = item.icon
+                const label = resolveLabel(item)
+                return (
+                  <Link
+                    key={item.type === "tab" ? item.key : item.href}
+                    href={href || "/admin"}
+                    className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 group ${
+                      isActive ? activeClasses : inactiveClasses
+                    }`}
+                  >
+                    <Icon
+                      className={`h-5 w-5 flex-shrink-0 ${isActive ? "scale-110" : ""} transition-transform`}
+                    />
+                    <span className="font-medium text-sm lg:text-base truncate">{label}</span>
+                    {item.type === "tab" && item.key === "reviews" && (pendingReviewsCount || 0) > 0 && (
+                      <Badge className="ml-auto bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                        {pendingReviewsCount}
+                      </Badge>
+                    )}
+                  </Link>
+                )
+              })}
             </div>
-            {section.items.map((item) => {
-              const href = item.type === "tab" ? `/admin?tab=${item.key}` : item.href
-              const isActive =
-                item.type === "tab"
-                  ? isAdminRoot && currentTab === item.key
-                  : pathname.startsWith(item.href || "")
-              const Icon = item.icon
-              const label = resolveLabel(item)
-              return (
-                <Link
-                  key={item.type === "tab" ? item.key : item.href}
-                  href={href || "/admin"}
-                  className={`w-full flex items-center justify-start gap-3 px-3 lg:px-4 py-3 lg:py-3.5 rounded-lg transition-all duration-200 group ${
-                    isActive ? activeClasses : inactiveClasses
-                  }`}
-                >
-                  <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? "scale-110" : ""} transition-transform`} />
-                  <span className="font-medium text-sm lg:text-base truncate">{label}</span>
-                  {item.type === "tab" && item.key === "reviews" && (pendingReviewsCount || 0) > 0 && (
-                    <Badge className="ml-auto bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                      {pendingReviewsCount}
-                    </Badge>
-                  )}
-                </Link>
-              )
-            })}
           </div>
         ))}
       </nav>

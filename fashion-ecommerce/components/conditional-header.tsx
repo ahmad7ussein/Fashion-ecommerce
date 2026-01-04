@@ -10,6 +10,7 @@ export function ConditionalHeader() {
   const hideHeader = 
     pathname === "/login" || 
     pathname === "/signup" || 
+    pathname === "/forgot-password" ||
     pathname === "/" ||
     pathname === "/order-success" ||
     pathname?.startsWith("/admin") ||
