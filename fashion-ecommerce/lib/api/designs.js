@@ -25,4 +25,12 @@ export const designsApi = {
     async publishDesign(id) {
         return await apiClient.put(`/designs/${id}/publish`, {});
     },
+    async uploadAsset(file) {
+        const formData = new FormData();
+        formData.append("image", file);
+        return await apiClient.post("/designs/upload", formData);
+    },
+    async exportDesign(id, imageData) {
+        return await apiClient.post(`/designs/${id}/export`, { imageData });
+    },
 };

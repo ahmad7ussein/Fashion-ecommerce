@@ -36,7 +36,7 @@ const getProducts = async (req, res) => {
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
-        const selectFields = 'name nameAr category gender price stock active featured onSale salePercentage image inCollection createdAt';
+        const selectFields = 'name nameAr description descriptionAr category gender season style occasion price stock active featured onSale salePercentage image images sizes colors inCollection newArrival createdAt';
         const query = { active: true };
         if (gender && gender !== 'all') {
             query.gender = gender;

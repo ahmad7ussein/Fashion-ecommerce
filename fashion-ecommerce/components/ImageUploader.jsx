@@ -1,20 +1,100 @@
 "use client";
-import { useRef } from "react";
-import { ImagePlus, Minus, Plus } from "lucide-react";
+import { useRef, useState, useCallback } from "react";
+import Cropper from "react-easy-crop";
+import { ImagePlus, Minus, Plus, Trash2, Wand2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+const createImage = (url) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.setAttribute("crossOrigin", "anonymous");
+    image.src = url;
+});
+const getCroppedImage = async (imageSrc, cropPixels, scale = 1) => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(cropPixels.width * scale));
+    canvas.height = Math.max(1, Math.round(cropPixels.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+        throw new Error("Canvas context unavailable");
+    }
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(image, cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), "image/png");
+    });
+};
 export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, onImageSizeChange, }) => {
     const inputRef = useRef(null);
+    const [editorOpen, setEditorOpen] = useState(false);
+    const [imageSrc, setImageSrc] = useState(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [outputScale, setOutputScale] = useState(1);
+    const [cropPixels, setCropPixels] = useState(null);
+    const [removeBg, setRemoveBg] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const handleClick = () => {
         inputRef.current?.click();
     };
     const handleChange = (event) => {
         const file = event.target.files?.[0];
-        if (file) {
-            onImageUpload(file);
+        if (!file) {
+            return;
+        }
+        const url = URL.createObjectURL(file);
+        setImageSrc(url);
+        setEditorOpen(true);
+    };
+    const onCropComplete = useCallback((_croppedArea, croppedAreaPixels) => {
+        setCropPixels(croppedAreaPixels);
+    }, []);
+    const handleClose = () => {
+        if (imageSrc) {
+            URL.revokeObjectURL(imageSrc);
+        }
+        setEditorOpen(false);
+        setImageSrc(null);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setOutputScale(1);
+        setCropPixels(null);
+        setRemoveBg(false);
+        setIsProcessing(false);
+    };
+    const handleConfirm = async () => {
+        if (!imageSrc || !cropPixels) {
+            handleClose();
+            return;
+        }
+        setIsProcessing(true);
+        try {
+            let blob = await getCroppedImage(imageSrc, cropPixels, outputScale);
+            if (removeBg && blob) {
+                const { removeBackground } = await import("@imgly/background-removal");
+                blob = await removeBackground(blob);
+            }
+            if (!blob) {
+                throw new Error("Image processing failed");
+            }
+            const dataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+            await onImageUpload({ blob, dataUrl });
+            handleClose();
+        }
+        catch (error) {
+            setIsProcessing(false);
         }
     };
     return (<div className="space-y-3">
-      <h3 className="text-sm font-medium text-foreground text-center">اختيار الصورة</h3>
+      <h3 className="text-sm font-medium text-foreground text-center">Add Image</h3>
       <div className="flex flex-col items-center gap-3">
         <button onClick={handleClick} className="w-16 h-16 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center hover:bg-primary/10 hover:border-primary/60 transition-all group">
           {uploadedImage ? (<img src={uploadedImage} alt="Uploaded" className="w-full h-full object-cover rounded-lg"/>) : (<div className="relative">
@@ -28,7 +108,7 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
 
         {uploadedImage && onImageSizeChange && (<div className="w-full max-w-xs space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>حجم الصورة</span>
+              <span>Image size</span>
               <span>{imageSize}px</span>
             </div>
             <div className="flex items-center gap-2">
@@ -42,5 +122,44 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
             </div>
           </div>)}
       </div>
+
+      <Dialog open={editorOpen} onOpenChange={(open) => (open ? setEditorOpen(true) : handleClose())}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit upload</DialogTitle>
+            <DialogDescription>Crop, resize, or remove background before adding to canvas.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-[1.6fr_1fr] gap-4">
+            <div className="relative w-full h-72 md:h-96 bg-muted rounded-lg overflow-hidden">
+              {imageSrc && (<Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete}/>)}
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">Zoom</div>
+                <Slider value={[zoom]} onValueChange={([value]) => setZoom(value)} min={1} max={3} step={0.05}/>
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-muted-foreground">Output size</div>
+                <Slider value={[outputScale]} onValueChange={([value]) => setOutputScale(value)} min={0.5} max={3} step={0.1}/>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="remove-bg" checked={removeBg} onCheckedChange={(value) => setRemoveBg(Boolean(value))}/>
+                <label htmlFor="remove-bg" className="text-sm text-muted-foreground flex items-center gap-2">
+                  <Wand2 className="h-4 w-4"/>
+                  Remove background
+                </label>
+              </div>
+              <Button type="button" variant="outline" onClick={handleClose} className="w-full" disabled={isProcessing}>
+                <Trash2 className="h-4 w-4 mr-2"/>
+                Delete
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleClose} disabled={isProcessing}>Cancel</Button>
+            <Button onClick={handleConfirm} disabled={isProcessing}>{isProcessing ? "Processing..." : "Add to canvas"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>);
 };

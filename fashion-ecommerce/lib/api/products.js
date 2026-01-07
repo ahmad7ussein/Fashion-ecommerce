@@ -1,4 +1,5 @@
 import apiClient from "./client";
+const ALLOW_FALLBACK_CATALOG = process.env.NEXT_PUBLIC_ALLOW_FALLBACK_CATALOG === "true";
 const CATALOG = [
     { id: 11, name: "Urban Black Hoodie", price: 59.99, image: "/black-hoodie-streetwear.png", category: "Hoodies", gender: "Men", season: "Winter", style: "Plain", occasion: "Casual" },
     { id: 12, name: "Oversized Hoodie", price: 64.99, image: "/black-hoodie-streetwear.png", category: "Hoodies", gender: "Men", season: "Winter", style: "Plain", occasion: "Casual" },
@@ -120,6 +121,9 @@ export async function listProducts(filters = {}) {
         return [];
     }
     catch (error) {
+        if (!ALLOW_FALLBACK_CATALOG) {
+            throw error;
+        }
         const isNetworkError = error?.status === 503 ||
             error?.status === 504 ||
             error?.status === 500 && error?.errorMessage?.includes('timeout') ||
@@ -161,6 +165,9 @@ export async function listProductsPaginated(filters = {}) {
         return { data: [], total: 0, page: filters.page || 1, pages: 1 };
     }
     catch (error) {
+        if (!ALLOW_FALLBACK_CATALOG) {
+            throw error;
+        }
         const isNetworkError = error?.status === 503 ||
             error?.status === 504 ||
             error?.status === 500 && error?.errorMessage?.includes('timeout') ||
@@ -190,7 +197,7 @@ export async function listProductsPaginated(filters = {}) {
 export async function getProductById(id) {
     const idString = String(id);
     const isNumericId = /^\d+$/.test(idString);
-    if (isNumericId) {
+    if (isNumericId && ALLOW_FALLBACK_CATALOG) {
         const fallbackProduct = CATALOG.find((p) => p.id === id || p._id === id);
         if (fallbackProduct) {
             apiClient.get(`/products/${idString}`).catch(() => {
@@ -206,6 +213,9 @@ export async function getProductById(id) {
         return response || null;
     }
     catch (error) {
+        if (!ALLOW_FALLBACK_CATALOG) {
+            throw error;
+        }
         if (error?.status === 404 ||
             error?.errorMessage?.toLowerCase().includes("not found") ||
             error?.errorBody?.toLowerCase().includes("not found") ||
@@ -226,6 +236,9 @@ export async function listCategories() {
         return await apiClient.get("/products/meta/categories");
     }
     catch (error) {
+        if (!ALLOW_FALLBACK_CATALOG) {
+            throw error;
+        }
         console.warn("Backend API unavailable, using fallback", error);
         return Array.from(new Set(CATALOG.map((p) => p.category)));
     }
@@ -235,6 +248,9 @@ export async function listGenders() {
         return await apiClient.get("/products/meta/genders");
     }
     catch (error) {
+        if (!ALLOW_FALLBACK_CATALOG) {
+            throw error;
+        }
         console.warn("Backend API unavailable, using fallback", error);
         return Array.from(new Set(CATALOG.map((p) => p.gender)));
     }

@@ -3,11 +3,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.publishDesign = exports.getAllDesigns = exports.deleteDesign = exports.updateDesign = exports.getDesign = exports.addDesignToCart = exports.getMyDesigns = exports.createDesign = void 0;
+exports.exportDesign = exports.uploadDesignAsset = exports.publishDesign = exports.getAllDesigns = exports.deleteDesign = exports.updateDesign = exports.getDesign = exports.addDesignToCart = exports.getMyDesigns = exports.createDesign = void 0;
 const Design_1 = __importDefault(require("../models/Design"));
 const StudioProduct_1 = __importDefault(require("../models/StudioProduct"));
 const Cart_1 = __importDefault(require("../models/Cart"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const cloudinary_1 = require("../config/cloudinary");
+const normalizeViews = (views) => {
+    if (!Array.isArray(views))
+        return [];
+    return views.map((view) => ({
+        view: view.view,
+        colorKey: String(view.colorKey || '').trim().toLowerCase(),
+        canvasJson: view.canvasJson ?? view.canvas ?? null,
+        ratioState: view.ratioState ?? null,
+        previewSize: view.previewSize ?? null,
+        updatedAt: view.updatedAt ? new Date(view.updatedAt) : new Date(),
+    })).filter((view) => view.view && view.colorKey);
+};
 const createDesign = async (req, res) => {
     try {
         if (!req.user?._id) {
@@ -16,7 +29,7 @@ const createDesign = async (req, res) => {
                 message: 'User not authenticated',
             });
         }
-        const { name, baseProduct, baseProductId, elements, thumbnail, designImageURL, designMetadata, userDescription } = req.body;
+        const { name, baseProduct, baseProductId, elements, views, thumbnail, designImageURL, designMetadata, userDescription } = req.body;
         const validStatuses = ['draft', 'published', 'archived'];
         const designStatus = 'draft';
         if (!baseProductId || !mongoose_1.default.Types.ObjectId.isValid(baseProductId)) {
@@ -32,6 +45,7 @@ const createDesign = async (req, res) => {
             baseProduct: baseProduct || { type: studioProduct.type, color: studioProduct.colors?.[0] || 'white', size: studioProduct.sizes?.[0] || 'M' },
             baseProductId: studioProduct._id,
             elements,
+            views: normalizeViews(views),
             thumbnail,
             designImageURL,
             designMetadata,
@@ -185,7 +199,11 @@ const updateDesign = async (req, res) => {
                 message: 'Not authorized to update this design',
             });
         }
-        design = await Design_1.default.findByIdAndUpdate(req.params.id, req.body, {
+        const payload = { ...req.body };
+        if (payload.views) {
+            payload.views = normalizeViews(payload.views);
+        }
+        design = await Design_1.default.findByIdAndUpdate(req.params.id, payload, {
             new: true,
             runValidators: true,
         });
@@ -309,3 +327,57 @@ const publishDesign = async (req, res) => {
     }
 };
 exports.publishDesign = publishDesign;
+const uploadDesignAsset = async (req, res) => {
+    try {
+        if (!req.user?._id) {
+            return res.status(401).json({ success: false, message: 'User not authenticated' });
+        }
+        const base64 = req.body?.image;
+        const fileBuffer = req.file?.buffer;
+        if (!base64 && !fileBuffer) {
+            return res.status(400).json({ success: false, message: 'No image provided' });
+        }
+        const uploadedUrl = await (0, cloudinary_1.uploadToCloudinary)(fileBuffer || base64, 'stylecraft/design-assets');
+        return res.status(200).json({ success: true, data: { url: uploadedUrl } });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Server error' });
+    }
+};
+exports.uploadDesignAsset = uploadDesignAsset;
+const exportDesign = async (req, res) => {
+    try {
+        if (!req.params.id || !req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid design ID format',
+            });
+        }
+        if (!req.user?._id) {
+            return res.status(401).json({ success: false, message: 'User not authenticated' });
+        }
+        const design = await Design_1.default.findById(req.params.id);
+        if (!design) {
+            return res.status(404).json({ success: false, message: 'Design not found' });
+        }
+        if (design.user.toString() !== req.user._id.toString() &&
+            req.user?.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Not authorized to export this design' });
+        }
+        const imageData = req.body?.imageData;
+        if (!imageData) {
+            return res.status(400).json({ success: false, message: 'Export image data is required' });
+        }
+        const uploadedUrl = await (0, cloudinary_1.uploadToCloudinary)(imageData, 'stylecraft/design-exports');
+        design.designImageURL = uploadedUrl;
+        if (!design.thumbnail) {
+            design.thumbnail = uploadedUrl;
+        }
+        await design.save();
+        return res.status(200).json({ success: true, data: { url: uploadedUrl } });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Server error' });
+    }
+};
+exports.exportDesign = exportDesign;

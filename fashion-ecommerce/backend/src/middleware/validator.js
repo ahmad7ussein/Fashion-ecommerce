@@ -47,5 +47,6 @@ exports.orderValidation = [
 ];
 exports.designValidation = [
     (0, express_validator_1.body)('name').trim().notEmpty().withMessage('Design name is required'),
-    (0, express_validator_1.body)('elements').isArray().withMessage('Elements must be an array'),
+    (0, express_validator_1.body)('elements').optional().isArray().withMessage('Elements must be an array'),
+    (0, express_validator_1.body)('views').optional().isArray().withMessage('Views must be an array'),
 ];

@@ -5,6 +5,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { ShoppingBag, Palette, TrendingUp, Camera, Video, ArrowRight, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { motion, AnimatePresence } from "framer-motion";
@@ -97,6 +98,7 @@ export default function HomePage() {
     const { formatPrice } = useRegion();
     const { language } = useLanguage();
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [slideDirection, setSlideDirection] = useState(1);
     const [virtualTryOnSlide, setVirtualTryOnSlide] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [menProducts, setMenProducts] = useState([]);
@@ -106,15 +108,31 @@ export default function HomePage() {
     const [featuredProducts, setFeaturedProducts] = useState([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [isLoadingFeatured, setIsLoadingFeatured] = useState(true);
-    const [menSlideIndex, setMenSlideIndex] = useState(0);
-    const [womenSlideIndex, setWomenSlideIndex] = useState(0);
-    const [kidsSlideIndex, setKidsSlideIndex] = useState(0);
-    const [newCollectionSlideIndex, setNewCollectionSlideIndex] = useState(0);
+    const [newCollectionCarouselApi, setNewCollectionCarouselApi] = useState(null);
+    const [menCarouselApi, setMenCarouselApi] = useState(null);
+    const [womenCarouselApi, setWomenCarouselApi] = useState(null);
+    const [kidsCarouselApi, setKidsCarouselApi] = useState(null);
     const activeVirtualTryOnSlide = virtualTryOnSlidesData[virtualTryOnSlide] || virtualTryOnSlidesData[0];
+    const slideVariants = {
+        enter: (direction) => ({ x: direction > 0 ? 120 : -120, opacity: 0 }),
+        center: { x: 0, opacity: 1 },
+        exit: (direction) => ({ x: direction > 0 ? -120 : 120, opacity: 0 }),
+    };
+    const slideContentVariants = {
+        enter: (direction) => ({ x: direction > 0 ? 60 : -60, opacity: 0 }),
+        center: { x: 0, opacity: 1 },
+        exit: (direction) => ({ x: direction > 0 ? -60 : 60, opacity: 0 }),
+    };
+    const slideImageVariants = {
+        enter: (direction) => ({ x: direction > 0 ? 80 : -80, opacity: 0, scale: 0.85, rotate: direction > 0 ? 4 : -4 }),
+        center: { x: 0, opacity: 1, scale: 1, rotate: 0 },
+        exit: (direction) => ({ x: direction > 0 ? -80 : 80, opacity: 0, scale: 0.85, rotate: direction > 0 ? -4 : 4 }),
+    };
     useEffect(() => {
         if (isPaused)
             return;
         const interval = setInterval(() => {
+            setSlideDirection(1);
             setCurrentSlide((prev) => (prev + 1) % sliderImages.length);
         }, 5000);
         return () => clearInterval(interval);
@@ -169,24 +187,37 @@ export default function HomePage() {
         loadFeaturedProducts();
     }, []);
     useEffect(() => {
-        if (menProducts.length === 0 && womenProducts.length === 0 && kidsProducts.length === 0 && newCollectionProducts.length === 0)
+        if (!newCollectionCarouselApi || newCollectionProducts.length <= 4)
             return;
         const interval = setInterval(() => {
-            if (menProducts.length > 4) {
-                setMenSlideIndex((prev) => (prev + 1) % Math.max(1, menProducts.length - 3));
-            }
-            if (womenProducts.length > 4) {
-                setWomenSlideIndex((prev) => (prev + 1) % Math.max(1, womenProducts.length - 3));
-            }
-            if (kidsProducts.length > 4) {
-                setKidsSlideIndex((prev) => (prev + 1) % Math.max(1, kidsProducts.length - 3));
-            }
-            if (newCollectionProducts.length > 4) {
-                setNewCollectionSlideIndex((prev) => (prev + 1) % Math.max(1, newCollectionProducts.length - 3));
-            }
+            newCollectionCarouselApi.scrollNext();
         }, 4000);
         return () => clearInterval(interval);
-    }, [menProducts.length, womenProducts.length, kidsProducts.length, newCollectionProducts.length]);
+    }, [newCollectionCarouselApi, newCollectionProducts.length]);
+    useEffect(() => {
+        if (!menCarouselApi || menProducts.length <= 4)
+            return;
+        const interval = setInterval(() => {
+            menCarouselApi.scrollNext();
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [menCarouselApi, menProducts.length]);
+    useEffect(() => {
+        if (!womenCarouselApi || womenProducts.length <= 4)
+            return;
+        const interval = setInterval(() => {
+            womenCarouselApi.scrollNext();
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [womenCarouselApi, womenProducts.length]);
+    useEffect(() => {
+        if (!kidsCarouselApi || kidsProducts.length <= 4)
+            return;
+        const interval = setInterval(() => {
+            kidsCarouselApi.scrollNext();
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [kidsCarouselApi, kidsProducts.length]);
     return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white">
       
       <ProfessionalNavbar />
@@ -195,8 +226,8 @@ export default function HomePage() {
       <section className="relative overflow-hidden min-h-screen flex items-center pt-20">
         
         <div className="relative w-full h-screen" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div key={currentSlide} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 flex items-center overflow-hidden" style={{ backgroundImage: sliderImages[currentSlide].bgGradient }}>
+          <AnimatePresence mode="sync" initial={false} custom={slideDirection}>
+            <motion.div key={currentSlide} custom={slideDirection} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 flex items-center overflow-hidden" style={{ backgroundImage: sliderImages[currentSlide].bgGradient }}>
               
               <div className="absolute inset-0 opacity-[0.45]">
                 <div className="absolute inset-0 bg-center bg-no-repeat" style={{
@@ -259,7 +290,7 @@ export default function HomePage() {
               <div className="relative z-20 container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 w-full">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
                   
-                  <motion.div key={`content-${currentSlide}`} initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }} transition={{ duration: 0.8, delay: 0.2 }} className="text-center lg:text-left space-y-6 lg:space-y-8">
+                  <motion.div key={`content-${currentSlide}`} custom={slideDirection} variants={slideContentVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }} className="text-center lg:text-left space-y-6 lg:space-y-8">
                     
                     <motion.div initial={{ opacity: 0, scale: 0.8, y: -10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}>
                       <div className="inline-flex items-center px-3 py-2 rounded-full">
@@ -291,7 +322,7 @@ export default function HomePage() {
                   </motion.div>
 
                   
-                  <motion.div key={`image-${currentSlide}`} initial={{ opacity: 0, scale: 0.8, rotate: -5 }} animate={{ opacity: 1, scale: 1, rotate: 0 }} exit={{ opacity: 0, scale: 0.8, rotate: 5 }} transition={{ duration: 0.8, delay: 0.3 }} className="relative h-[450px] lg:h-[650px] flex items-center justify-center">
+                  <motion.div key={`image-${currentSlide}`} custom={slideDirection} variants={slideImageVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.8, delay: 0.25, ease: [0.22, 1, 0.36, 1] }} className="relative h-[450px] lg:h-[650px] flex items-center justify-center">
                     
                     <div className="absolute inset-0">
                       <div className="absolute inset-0 bg-gradient-to-br from-rose-300/30 to-pink-300/30 rounded-[3rem] blur-3xl transform rotate-6"/>
@@ -325,12 +356,14 @@ export default function HomePage() {
           
           <button onClick={(e) => {
             e.stopPropagation();
+            setSlideDirection(-1);
             setCurrentSlide((prev) => (prev - 1 + sliderImages.length) % sliderImages.length);
         }} className="absolute left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-gray-200 transition-all duration-300 hover:scale-110 group" aria-label="Previous slide">
             <ChevronLeft className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
           </button>
           <button onClick={(e) => {
             e.stopPropagation();
+            setSlideDirection(1);
             setCurrentSlide((prev) => (prev + 1) % sliderImages.length);
         }} className="absolute right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-gray-200 transition-all duration-300 hover:scale-110 group" aria-label="Next slide">
             <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
@@ -340,6 +373,10 @@ export default function HomePage() {
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex gap-2 items-center">
             {sliderImages.map((_, index) => (<button key={index} onClick={(e) => {
                 e.stopPropagation();
+                if (index === currentSlide) {
+                    return;
+                }
+                setSlideDirection(index > currentSlide ? 1 : -1);
                 setCurrentSlide(index);
             }} className={`rounded-full transition-all duration-300 ${currentSlide === index
                 ? "bg-rose-500 w-8 h-2"
@@ -381,27 +418,35 @@ export default function HomePage() {
                 </Link>
               </div>
               <div className="relative overflow-hidden rounded-2xl">
-                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${newCollectionSlideIndex * (100 / 4)}%)` }}>
-                  {newCollectionProducts.map((product, idx) => (<Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
-                      <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
-                        <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                          {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
-                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
-                            </div>)}
-                          <div className="absolute top-3 left-3">
-                            <Badge className="bg-rose-500 text-white border-0 rounded-full px-3 py-1 text-xs">
-                              {language === "ar" ? "جديد" : "New"}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="p-4">
-                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
-                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
-                        </div>
-                      </motion.div>
-                    </Link>))}
-                </div>
+                <Carousel opts={{ align: "start", loop: true }} className="relative" setApi={setNewCollectionCarouselApi}>
+                  <CarouselContent className="-ml-6">
+                    {newCollectionProducts.map((product, idx) => (
+                      <CarouselItem key={product._id || product.id || idx} className="pl-6 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <Link href={`/products/${product._id || product.id}`} className="block">
+                          <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
+                            <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
+                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                                  <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                                </div>)}
+                              <div className="absolute top-3 left-3">
+                                <Badge className="bg-rose-500 text-white border-0 rounded-full px-3 py-1 text-xs">
+                                  {language === "ar" ? "\u062c\u062f\u064a\u062f" : "New"}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                              <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                              <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                            </div>
+                          </motion.div>
+                        </Link>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2 sm:left-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                  <CarouselNext className="right-2 sm:right-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                </Carousel>
               </div>
             </motion.div>
           </div>
@@ -549,22 +594,30 @@ export default function HomePage() {
                 </Link>
               </div>
               <div className="relative overflow-hidden rounded-2xl">
-                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${menSlideIndex * (100 / 4)}%)` }}>
-                  {menProducts.map((product, idx) => (<Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
-                      <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
-                        <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                          {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
-                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
-                            </div>)}
-                        </div>
-                        <div className="p-4">
-                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
-                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
-                        </div>
-                      </motion.div>
-                    </Link>))}
-                </div>
+                <Carousel opts={{ align: "start", loop: true }} className="relative" setApi={setMenCarouselApi}>
+                  <CarouselContent className="-ml-6">
+                    {menProducts.map((product, idx) => (
+                      <CarouselItem key={product._id || product.id || idx} className="pl-6 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <Link href={`/products/${product._id || product.id}`} className="block">
+                          <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
+                            <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
+                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                                  <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                                </div>)}
+                            </div>
+                            <div className="p-4">
+                              <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                              <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                              <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                            </div>
+                          </motion.div>
+                        </Link>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2 sm:left-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                  <CarouselNext className="right-2 sm:right-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                </Carousel>
               </div>
             </motion.div>
           </div>)}
@@ -587,22 +640,30 @@ export default function HomePage() {
                 </Link>
               </div>
               <div className="relative overflow-hidden rounded-2xl">
-                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${Math.max(0, (womenProducts.length - 4 - womenSlideIndex)) * (100 / 4)}%)` }}>
-                  {womenProducts.slice().reverse().map((product, idx) => (<Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
-                      <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
-                        <div className="aspect-square bg-gradient-to-br from-pink-50 to-rose-50 relative">
-                          {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
-                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
-                            </div>)}
-                        </div>
-                        <div className="p-4">
-                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
-                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
-                        </div>
-                      </motion.div>
-                    </Link>))}
-                </div>
+                <Carousel opts={{ align: "start", loop: true }} className="relative" setApi={setWomenCarouselApi}>
+                  <CarouselContent className="-ml-6">
+                    {womenProducts.slice().reverse().map((product, idx) => (
+                      <CarouselItem key={product._id || product.id || idx} className="pl-6 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <Link href={`/products/${product._id || product.id}`} className="block">
+                          <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
+                            <div className="aspect-square bg-gradient-to-br from-pink-50 to-rose-50 relative">
+                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                                  <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                                </div>)}
+                            </div>
+                            <div className="p-4">
+                              <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                              <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                              <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                            </div>
+                          </motion.div>
+                        </Link>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2 sm:left-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                  <CarouselNext className="right-2 sm:right-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                </Carousel>
               </div>
             </motion.div>
           </div>)}
@@ -625,22 +686,30 @@ export default function HomePage() {
                 </Link>
               </div>
               <div className="relative overflow-hidden rounded-2xl">
-                <div className="flex gap-6 transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${kidsSlideIndex * (100 / 4)}%)` }}>
-                  {kidsProducts.map((product, idx) => (<Link key={product._id || product.id || idx} href={`/products/${product._id || product.id}`} className="min-w-[calc(25%-18px)] flex-shrink-0">
-                      <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
-                        <div className="aspect-square bg-gradient-to-br from-amber-50 to-orange-50 relative">
-                          {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
-                              <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
-                            </div>)}
-                        </div>
-                        <div className="p-4">
-                          <p className="text-xs text-rose-500 mb-1">{product.category}</p>
-                          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
-                          <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
-                        </div>
-                      </motion.div>
-                    </Link>))}
-                </div>
+                <Carousel opts={{ align: "start", loop: true }} className="relative" setApi={setKidsCarouselApi}>
+                  <CarouselContent className="-ml-6">
+                    {kidsProducts.map((product, idx) => (
+                      <CarouselItem key={product._id || product.id || idx} className="pl-6 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
+                        <Link href={`/products/${product._id || product.id}`} className="block">
+                          <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
+                            <div className="aspect-square bg-gradient-to-br from-amber-50 to-orange-50 relative">
+                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                                  <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
+                                </div>)}
+                            </div>
+                            <div className="p-4">
+                              <p className="text-xs text-rose-500 mb-1">{product.category}</p>
+                              <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+                              <p className="text-lg font-bold text-rose-600">{formatPrice(product.price)}</p>
+                            </div>
+                          </motion.div>
+                        </Link>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2 sm:left-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                  <CarouselNext className="right-2 sm:right-4 bg-white/90 hover:bg-white border border-rose-200 shadow"/>
+                </Carousel>
               </div>
             </motion.div>
           </div>)}
@@ -684,40 +753,28 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl">
               {[
             {
-                icon: <Palette className="h-8 w-8"/>,
+                icon: <Palette className="h-5 w-5"/>,
                 title: "Live & Interactive Design",
                 description: "Drag-and-drop studio with instant previews before printing.",
-                accent: "from-rose-500/15 to-pink-500/10",
             },
             {
-                icon: <TrendingUp className="h-8 w-8"/>,
+                icon: <TrendingUp className="h-5 w-5"/>,
                 title: "Refined Quality",
                 description: "Certified materials and precise printing for lasting looks.",
-                accent: "from-amber-500/15 to-orange-500/10",
             },
             {
-                icon: <ShoppingBag className="h-8 w-8"/>,
+                icon: <ShoppingBag className="h-5 w-5"/>,
                 title: "Fast & Secure Delivery",
                 description: "Smart shipping with live tracking and confirmed delivery.",
-                accent: "from-blue-500/12 to-indigo-500/10",
             },
-        ].map((feature, index) => (<motion.div key={index} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: index * 0.1 }} whileHover={{ y: -8, transition: { duration: 0.25 } }} className="group relative p-6 sm:p-8 rounded-3xl bg-white/90 backdrop-blur-md border border-white/60 shadow-lg shadow-rose-100/30 overflow-hidden">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}/>
-                  <div className="relative flex items-center justify-between mb-4">
-                    <div className="h-12 w-12 rounded-2xl bg-white border border-rose-100 flex items-center justify-center text-rose-600 group-hover:scale-105 transition-transform">
+        ].map((feature, index) => (<motion.div key={index} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: index * 0.08 }} className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-9 w-9 rounded-md border border-gray-200 flex items-center justify-center text-gray-700">
                       {feature.icon}
                     </div>
-                    <span className="text-xs font-semibold text-rose-500 bg-rose-50 border border-rose-100 px-3 py-1 rounded-full">
-                      Trusted
-                    </span>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">{feature.title}</h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold mb-2 text-gray-900">{feature.title}</h3>
-                  <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{feature.description}</p>
-                  <div className="mt-4 h-px bg-gradient-to-r from-transparent via-rose-200/70 to-transparent"/>
-                  <div className="mt-3 flex items-center gap-2 text-sm font-semibold text-rose-600">
-                    Discover more
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform"/>
-                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
                 </motion.div>))}
             </div>
           </div>
@@ -791,26 +848,6 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>)}
-
-      
-      <section className="py-16 sm:py-24 md:py-32 bg-gradient-to-b from-white via-rose-50/50 to-white">
-        <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.8 }} className="max-w-4xl mx-auto text-center p-8 sm:p-12 md:p-16 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border border-white/20">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 tracking-tight text-gray-900 px-4">
-              Ready to Shop Something Amazing?
-            </h2>
-            <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto px-4">
-              Join thousands of fashion lovers who are already shopping premium clothing at FashionHub.
-            </p>
-            <Link href="/studio" className="inline-block">
-              <Button size="lg" className="bg-white text-black hover:bg-gray-100 px-8 sm:px-10 md:px-12 py-6 sm:py-7 md:py-8 text-base sm:text-lg md:text-xl rounded-full font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl group">
-                Get Started Now
-                <ArrowRight className="ml-2 sm:ml-3 h-5 w-5 sm:h-6 sm:w-6 group-hover:translate-x-1 transition-transform"/>
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
 
       
       <CustomerReviewsSection />

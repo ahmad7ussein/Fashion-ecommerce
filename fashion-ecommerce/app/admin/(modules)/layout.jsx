@@ -2,6 +2,7 @@
 import { Suspense } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/AdminTopbar";
+import { StaffChatWidget } from "@/components/staff-chat-widget";
 export default function AdminModulesLayout({ children }) {
     return (<div className="min-h-screen bg-background" dir="ltr">
       <div className="flex min-h-screen">
@@ -19,5 +20,6 @@ export default function AdminModulesLayout({ children }) {
           <main className="p-4 lg:p-8">{children}</main>
         </div>
       </div>
+      <StaffChatWidget mode="admin" />
     </div>);
 }

@@ -29,6 +29,20 @@ const resolveMockupUrl = async (value) => {
     }
     return normalized;
 };
+const resolveViewMockups = async (value) => {
+    if (!value || typeof value !== 'object')
+        return {};
+    const resolved = {};
+    for (const viewKey of ['front', 'chest', 'back']) {
+        if (!value[viewKey])
+            continue;
+        const resolvedUrl = await resolveMockupUrl(value[viewKey]);
+        if (resolvedUrl) {
+            resolved[viewKey] = resolvedUrl;
+        }
+    }
+    return resolved;
+};
 const resolveColorMockups = async (value) => {
     if (!value || typeof value !== 'object')
         return {};
@@ -64,49 +78,57 @@ const resolveColorMockups = async (value) => {
     }
     return resolved;
 };
+const resolveColorViews = async (value) => {
+    if (!value || typeof value !== 'object')
+        return {};
+    const entries = [];
+    if (Array.isArray(value)) {
+        for (const item of value) {
+            if (!item || typeof item !== 'object')
+                continue;
+            const color = String(item.color || '').trim();
+            if (!color)
+                continue;
+            const views = item.views && typeof item.views === 'object' ? item.views : item;
+            entries.push({ color, views });
+        }
+    }
+    else {
+        for (const [colorKey, views] of Object.entries(value)) {
+            const color = colorKey.trim();
+            if (!color)
+                continue;
+            entries.push({ color, views });
+        }
+    }
+    const resolved = {};
+    for (const entry of entries) {
+        const key = entry.color.trim().toLowerCase();
+        if (!key)
+            continue;
+        const viewUrls = {};
+        for (const viewKey of ['front', 'chest', 'back']) {
+            const rawUrl = entry.views?.[viewKey];
+            if (!rawUrl)
+                continue;
+            const resolvedUrl = await resolveMockupUrl(rawUrl);
+            if (resolvedUrl) {
+                viewUrls[viewKey] = resolvedUrl;
+            }
+        }
+        if (Object.keys(viewUrls).length > 0) {
+            resolved[key] = viewUrls;
+        }
+    }
+    return resolved;
+};
 const createStudioProduct = async (req, res) => {
     try {
         const payload = { ...req.body };
-        if (!payload.baseMockupUrl) {
+        if (!payload.baseMockupUrl && !payload.viewMockups?.front) {
             return res.status(400).json({ success: false, message: 'Mockup image is required' });
         }
-        let resolvedMockup = null;
-        try {
-            resolvedMockup = await resolveMockupUrl(payload.baseMockupUrl);
-        }
-        catch (error) {
-            return res.status(400).json({
-                success: false,
-                message: `Failed to upload mockup image: ${error.message || 'Upload failed'}`,
-            });
-        }
-        if (!resolvedMockup) {
-            return res.status(400).json({ success: false, message: 'Invalid mockup image format' });
-        }
-        payload.baseMockupUrl = resolvedMockup;
-        if (payload.colorMockups) {
-            try {
-                payload.colorMockups = await resolveColorMockups(payload.colorMockups);
-            }
-            catch (error) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Failed to upload color mockups: ${error.message || 'Upload failed'}`,
-                });
-            }
-        }
-        const product = await StudioProduct_1.default.create(payload);
-        res.status(201).json({ success: true, data: product });
-    }
-    catch (error) {
-        res.status(500).json({ success: false, message: error.message || 'Server error' });
-    }
-};
-exports.createStudioProduct = createStudioProduct;
-const updateStudioProduct = async (req, res) => {
-    try {
-        const payload = { ...req.body };
-        if (Object.prototype.hasOwnProperty.call(payload, 'baseMockupUrl')) {
+        if (payload.baseMockupUrl) {
             let resolvedMockup = null;
             try {
                 resolvedMockup = await resolveMockupUrl(payload.baseMockupUrl);
@@ -122,6 +144,100 @@ const updateStudioProduct = async (req, res) => {
             }
             payload.baseMockupUrl = resolvedMockup;
         }
+        if (payload.viewMockups) {
+            try {
+                payload.viewMockups = await resolveViewMockups(payload.viewMockups);
+            }
+            catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Failed to upload view mockups: ${error.message || 'Upload failed'}`,
+                });
+            }
+        }
+        if (payload.colorViews) {
+            try {
+                payload.colorViews = await resolveColorViews(payload.colorViews);
+            }
+            catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Failed to upload color view images: ${error.message || 'Upload failed'}`,
+                });
+            }
+        }
+        if (payload.colorMockups) {
+            try {
+                payload.colorMockups = await resolveColorMockups(payload.colorMockups);
+            }
+            catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Failed to upload color mockups: ${error.message || 'Upload failed'}`,
+                });
+            }
+        }
+        if (!payload.viewMockups?.front && payload.baseMockupUrl) {
+            payload.viewMockups = { ...(payload.viewMockups || {}), front: payload.baseMockupUrl };
+        }
+        if (!payload.colorViews && payload.colorMockups) {
+            const legacyColorViews = {};
+            Object.entries(payload.colorMockups).forEach(([color, url]) => {
+                legacyColorViews[color] = { front: url };
+            });
+            payload.colorViews = legacyColorViews;
+        }
+        const product = await StudioProduct_1.default.create(payload);
+        res.status(201).json({ success: true, data: product });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Server error' });
+    }
+};
+exports.createStudioProduct = createStudioProduct;
+const updateStudioProduct = async (req, res) => {
+    try {
+        const payload = { ...req.body };
+        if (Object.prototype.hasOwnProperty.call(payload, 'baseMockupUrl')) {
+            if (payload.baseMockupUrl) {
+                let resolvedMockup = null;
+                try {
+                    resolvedMockup = await resolveMockupUrl(payload.baseMockupUrl);
+                }
+                catch (error) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Failed to upload mockup image: ${error.message || 'Upload failed'}`,
+                    });
+                }
+                if (!resolvedMockup) {
+                    return res.status(400).json({ success: false, message: 'Invalid mockup image format' });
+                }
+                payload.baseMockupUrl = resolvedMockup;
+            }
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, 'viewMockups')) {
+            try {
+                payload.viewMockups = await resolveViewMockups(payload.viewMockups);
+            }
+            catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Failed to upload view mockups: ${error.message || 'Upload failed'}`,
+                });
+            }
+        }
+        if (Object.prototype.hasOwnProperty.call(payload, 'colorViews')) {
+            try {
+                payload.colorViews = await resolveColorViews(payload.colorViews);
+            }
+            catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Failed to upload color view images: ${error.message || 'Upload failed'}`,
+                });
+            }
+        }
         if (Object.prototype.hasOwnProperty.call(payload, 'colorMockups')) {
             try {
                 payload.colorMockups = await resolveColorMockups(payload.colorMockups);
@@ -132,6 +248,16 @@ const updateStudioProduct = async (req, res) => {
                     message: `Failed to upload color mockups: ${error.message || 'Upload failed'}`,
                 });
             }
+        }
+        if (!payload.viewMockups?.front && payload.baseMockupUrl) {
+            payload.viewMockups = { ...(payload.viewMockups || {}), front: payload.baseMockupUrl };
+        }
+        if (!payload.colorViews && payload.colorMockups) {
+            const legacyColorViews = {};
+            Object.entries(payload.colorMockups).forEach(([color, url]) => {
+                legacyColorViews[color] = { front: url };
+            });
+            payload.colorViews = legacyColorViews;
         }
         const product = await StudioProduct_1.default.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
         if (!product) {
