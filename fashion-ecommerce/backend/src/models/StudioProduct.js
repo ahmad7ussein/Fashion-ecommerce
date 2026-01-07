@@ -34,12 +34,30 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const viewImageSchema = new mongoose_1.Schema({
+    front: { type: String },
+    chest: { type: String },
+    back: { type: String },
+}, { _id: false });
+const designAreaSchema = new mongoose_1.Schema({
+    x: { type: Number, default: 0.18 },
+    y: { type: Number, default: 0.2 },
+    width: { type: Number, default: 0.64 },
+    height: { type: Number, default: 0.55 },
+}, { _id: false });
 const studioProductSchema = new mongoose_1.Schema({
     name: { type: String, required: true, trim: true },
     type: { type: String, required: true, default: 't-shirt' },
     description: { type: String },
-    baseMockupUrl: { type: String, required: true },
+    baseMockupUrl: { type: String },
+    viewMockups: { type: viewImageSchema, default: {} },
+    colorViews: { type: Map, of: viewImageSchema, default: {} },
     colorMockups: { type: Map, of: String, default: {} },
+    designAreas: {
+        front: { type: designAreaSchema, default: () => ({}) },
+        chest: { type: designAreaSchema, default: () => ({}) },
+        back: { type: designAreaSchema, default: () => ({}) },
+    },
     safeArea: {
         x: { type: Number, default: 0 },
         y: { type: Number, default: 0 },

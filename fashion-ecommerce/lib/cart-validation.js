@@ -9,7 +9,14 @@ export async function validateCartItems(items) {
             invalidItems.push({ id: item.id, reason: "Invalid product id" });
             continue;
         }
-        const product = await getProductById(productId);
+        let product = null;
+        try {
+            product = await getProductById(productId);
+        }
+        catch (_error) {
+            invalidItems.push({ id: item.id, reason: "Product lookup failed" });
+            continue;
+        }
         if (!product || product.active === false) {
             invalidItems.push({ id: item.id, reason: "Product not found or inactive" });
             continue;

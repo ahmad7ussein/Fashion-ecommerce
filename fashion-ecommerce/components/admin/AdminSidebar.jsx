@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, Package, ShoppingCart, Users, UserCog, Palette as PaletteIcon, Star, Truck, Shapes, Camera, SlidersHorizontal, BadgeCheck, } from "lucide-react";
+import { ChevronDown, Package, ShoppingCart, Users, UserCog, Palette as PaletteIcon, Star, Truck, Shapes, Camera, SlidersHorizontal, BadgeCheck, MessageSquare, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { useLanguage } from "@/lib/language";
@@ -26,6 +26,13 @@ const navigationSections = [
         items: [
             { type: "tab", key: "staff", icon: UserCog, labelKey: "staff" },
             { type: "module", href: "/admin/role-assignments", icon: UserCog, label: { en: "Role Assignments", ar: "OO_OOñOc OU,OœO_U^OOñ" } },
+        ],
+    },
+    {
+        id: "chat",
+        title: { en: "Chat", ar: "Chat" },
+        items: [
+            { type: "module", href: "/admin/staff-chat", icon: MessageSquare, label: { en: "Staff Chat", ar: "Staff Chat" } },
         ],
     },
     {
@@ -59,6 +66,7 @@ const sectionClasses = {
     general: "bg-slate-100 text-slate-700 border-slate-200",
     products: "bg-rose-100 text-rose-700 border-rose-200",
     employees: "bg-sky-100 text-sky-700 border-sky-200",
+    chat: "bg-cyan-100 text-cyan-700 border-cyan-200",
     suppliers: "bg-amber-100 text-amber-700 border-amber-200",
     features: "bg-emerald-100 text-emerald-700 border-emerald-200",
     partners: "bg-violet-100 text-violet-700 border-violet-200",

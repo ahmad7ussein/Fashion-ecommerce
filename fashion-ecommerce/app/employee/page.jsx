@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, Package, ShoppingCart, Users, Eye, Edit, CheckCircle, Clock, Truck, Printer, PackageCheck, Moon, Sun, Languages, } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Eye, Edit, CheckCircle, Clock, Truck, Printer, PackageCheck, Moon, Sun, Languages, MessageSquare, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +25,8 @@ import { Trash2, Plus, Upload, X, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
+import { StaffChatPanel } from "@/components/staff-chat-panel";
+import { StaffChatWidget } from "@/components/staff-chat-widget";
 const getStatusColor = (status) => {
     switch (status) {
         case "pending":
@@ -529,6 +531,11 @@ export default function EmployeeDashboard() {
             <Users className="h-5 w-5"/>
             <span className="font-medium">{t("customers", language)}</span>
           </button>
+
+          <button onClick={() => setActiveTab("chat")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "chat" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
+            <MessageSquare className="h-5 w-5"/>
+            <span className="font-medium">Staff Chat</span>
+          </button>
         </nav>
 
         <div className="absolute bottom-6 left-4 right-4 space-y-2">
@@ -979,6 +986,16 @@ export default function EmployeeDashboard() {
                       </div>)}
               </CardContent>
             </Card>
+          </div>)}
+
+        {activeTab === "chat" && (<div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Staff Chat</h1>
+              <p className="text-muted-foreground">
+                Chat directly with admin. Employees cannot message each other.
+              </p>
+            </div>
+            <StaffChatPanel mode="employee" />
           </div>)}
 
         
@@ -1650,5 +1667,6 @@ export default function EmployeeDashboard() {
           </Card>
         </div>)}
       </div>
+      <StaffChatWidget mode="employee" />
     </div>);
 }

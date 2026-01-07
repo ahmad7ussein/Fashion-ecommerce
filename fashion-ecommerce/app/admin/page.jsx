@@ -27,6 +27,7 @@ import { useLanguage } from "@/lib/language";
 import { t } from "@/lib/i18n";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminTopbar } from "@/components/admin/AdminTopbar";
+import { StaffChatWidget } from "@/components/staff-chat-widget";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, } from "recharts";
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 const COLOR_OPTIONS = [
@@ -137,12 +138,19 @@ function AdminDashboardContent() {
         type: "",
         description: "",
         baseMockupUrl: "",
+        viewMockups: { front: "", chest: "", back: "" },
         colorMockups: {},
+        colorViews: {},
         price: "",
         colors: "",
         sizes: "",
         active: true,
         aiEnhanceEnabled: false,
+        designAreas: {
+            front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+            chest: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+            back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+        },
         safeArea: { x: 60, y: 80, width: 280, height: 300 },
     });
     const [showEmployeeModal, setShowEmployeeModal] = useState(false);
@@ -179,6 +187,13 @@ function AdminDashboardContent() {
     const productColorSet = new Set(productForm.colors.map(normalizeColorKey));
     const studioColorList = parseColorList(studioForm.colors);
     const studioColorSet = new Set(studioColorList.map(normalizeColorKey));
+    const toPercent = (value) => Math.round((Number(value) || 0) * 100);
+    const fromPercent = (value) => {
+        const numeric = Number(value);
+        if (Number.isNaN(numeric))
+            return 0;
+        return Math.max(0, Math.min(100, numeric)) / 100;
+    };
     const fileToBase64 = (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -472,39 +487,7 @@ function AdminDashboardContent() {
         const timeoutId = setTimeout(savePreferences, 1000);
         return () => clearTimeout(timeoutId);
     }, [activeTab, theme, language, chartSettings, user]);
-    const handleStudioMockupUpload = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file)
-            return;
-        if (!file.type.startsWith("image/")) {
-            toast({
-                title: "Error",
-                description: "File must be an image",
-                variant: "destructive",
-            });
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            toast({
-                title: "Error",
-                description: "Image size must be less than 5MB",
-                variant: "destructive",
-            });
-            return;
-        }
-        try {
-            const base64 = await fileToBase64(file);
-            setStudioForm({ ...studioForm, baseMockupUrl: base64 });
-        }
-        catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to load mockup image",
-                variant: "destructive",
-            });
-        }
-    };
-    const handleStudioColorMockupUpload = async (colorKey, e) => {
+    const handleStudioViewMockupUpload = async (viewKey, e) => {
         const file = e.target.files?.[0];
         if (!file)
             return;
@@ -528,9 +511,51 @@ function AdminDashboardContent() {
             const base64 = await fileToBase64(file);
             setStudioForm((prev) => ({
                 ...prev,
-                colorMockups: {
-                    ...(prev.colorMockups || {}),
-                    [colorKey]: base64,
+                baseMockupUrl: viewKey === "front" ? base64 : prev.baseMockupUrl,
+                viewMockups: {
+                    ...(prev.viewMockups || {}),
+                    [viewKey]: base64,
+                },
+            }));
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to load mockup image",
+                variant: "destructive",
+            });
+        }
+    };
+    const handleStudioColorMockupUpload = async (colorKey, viewKey, e) => {
+        const file = e.target.files?.[0];
+        if (!file)
+            return;
+        if (!file.type.startsWith("image/")) {
+            toast({
+                title: "Error",
+                description: "File must be an image",
+                variant: "destructive",
+            });
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast({
+                title: "Error",
+                description: "Image size must be less than 5MB",
+                variant: "destructive",
+            });
+            return;
+        }
+        try {
+            const base64 = await fileToBase64(file);
+            setStudioForm((prev) => ({
+                ...prev,
+                colorViews: {
+                    ...(prev.colorViews || {}),
+                    [colorKey]: {
+                        ...(prev.colorViews?.[colorKey] || {}),
+                        [viewKey]: base64,
+                    },
                 },
             }));
         }
@@ -658,12 +683,19 @@ function AdminDashboardContent() {
             type: "",
             description: "",
             baseMockupUrl: "",
+            viewMockups: { front: "", chest: "", back: "" },
             colorMockups: {},
+            colorViews: {},
             price: "",
             colors: "",
             sizes: "",
             active: true,
             aiEnhanceEnabled: false,
+            designAreas: {
+                front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+                chest: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+                back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+            },
             safeArea: { x: 60, y: 80, width: 280, height: 300 },
         });
         setEditingStudio(null);
@@ -687,18 +719,37 @@ function AdminDashboardContent() {
         }
     }, [toast]);
     const handleEditStudioProduct = (product) => {
+        const legacyColorViews = {};
+        if (!product.colorViews && product.colorMockups) {
+            Object.entries(product.colorMockups || {}).forEach(([colorKey, url]) => {
+                if (!colorKey || !url)
+                    return;
+                legacyColorViews[colorKey] = { front: url };
+            });
+        }
         setEditingStudio(product);
         setStudioForm({
             name: product.name,
             type: product.type,
             description: product.description || "",
             baseMockupUrl: product.baseMockupUrl || "",
+            viewMockups: {
+                front: product.viewMockups?.front || product.baseMockupUrl || "",
+                chest: product.viewMockups?.chest || "",
+                back: product.viewMockups?.back || "",
+            },
             colorMockups: product.colorMockups || {},
+            colorViews: product.colorViews || legacyColorViews,
             price: product.price.toString(),
             colors: (product.colors || []).join(", "),
             sizes: (product.sizes || []).join(", "),
             active: product.active,
             aiEnhanceEnabled: product.aiEnhanceEnabled || false,
+            designAreas: product.designAreas || {
+                front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+                chest: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+                back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+            },
             safeArea: product.safeArea || { x: 60, y: 80, width: 280, height: 300 },
         });
         setShowStudioModal(true);
@@ -722,6 +773,32 @@ function AdminDashboardContent() {
     const handleSaveStudioProduct = async () => {
         try {
             const colorList = studioForm.colors.split(",").map((c) => c.trim()).filter(Boolean);
+            const normalizedViewMockups = {};
+            ["front", "chest", "back"].forEach((viewKey) => {
+                const url = studioForm.viewMockups?.[viewKey];
+                if (url) {
+                    normalizedViewMockups[viewKey] = url;
+                }
+            });
+            const normalizedColorViews = {};
+            Object.entries(studioForm.colorViews || {}).forEach(([colorKey, views]) => {
+                const normalizedKey = colorKey.trim().toLowerCase();
+                if (!normalizedKey || !views)
+                    return;
+                if (colorList.length > 0 && !colorList.some((c) => c.trim().toLowerCase() === normalizedKey)) {
+                    return;
+                }
+                const viewPayload = {};
+                ["front", "chest", "back"].forEach((viewKey) => {
+                    const url = views?.[viewKey];
+                    if (url) {
+                        viewPayload[viewKey] = url;
+                    }
+                });
+                if (Object.keys(viewPayload).length > 0) {
+                    normalizedColorViews[normalizedKey] = viewPayload;
+                }
+            });
             const normalizedColorMockups = {};
             Object.entries(studioForm.colorMockups || {}).forEach(([colorKey, url]) => {
                 const normalizedKey = colorKey.trim().toLowerCase();
@@ -732,17 +809,44 @@ function AdminDashboardContent() {
                 }
                 normalizedColorMockups[normalizedKey] = url;
             });
+            Object.entries(normalizedColorViews).forEach(([colorKey, views]) => {
+                if (views?.front && !normalizedColorMockups[colorKey]) {
+                    normalizedColorMockups[colorKey] = views.front;
+                }
+            });
             const payload = {
                 name: studioForm.name.trim(),
                 type: studioForm.type.trim(),
                 description: studioForm.description.trim(),
-                baseMockupUrl: studioForm.baseMockupUrl.trim(),
+                baseMockupUrl: (studioForm.baseMockupUrl || studioForm.viewMockups?.front || "").trim(),
                 price: Number(studioForm.price) || 0,
                 colors: colorList,
                 sizes: studioForm.sizes.split(",").map((s) => s.trim()).filter(Boolean),
                 active: studioForm.active,
                 aiEnhanceEnabled: studioForm.aiEnhanceEnabled,
+                viewMockups: normalizedViewMockups,
+                colorViews: normalizedColorViews,
                 colorMockups: normalizedColorMockups,
+                designAreas: {
+                    front: {
+                        x: Number(studioForm.designAreas?.front?.x) || 0,
+                        y: Number(studioForm.designAreas?.front?.y) || 0,
+                        width: Number(studioForm.designAreas?.front?.width) || 0,
+                        height: Number(studioForm.designAreas?.front?.height) || 0,
+                    },
+                    chest: {
+                        x: Number(studioForm.designAreas?.chest?.x) || 0,
+                        y: Number(studioForm.designAreas?.chest?.y) || 0,
+                        width: Number(studioForm.designAreas?.chest?.width) || 0,
+                        height: Number(studioForm.designAreas?.chest?.height) || 0,
+                    },
+                    back: {
+                        x: Number(studioForm.designAreas?.back?.x) || 0,
+                        y: Number(studioForm.designAreas?.back?.y) || 0,
+                        width: Number(studioForm.designAreas?.back?.width) || 0,
+                        height: Number(studioForm.designAreas?.back?.height) || 0,
+                    },
+                },
                 safeArea: {
                     x: Number(studioForm.safeArea.x) || 0,
                     y: Number(studioForm.safeArea.y) || 0,
@@ -2167,24 +2271,35 @@ function AdminDashboardContent() {
                     </datalist>
                     <Label>Description</Label>
                     <Textarea value={studioForm.description} onChange={(e) => setStudioForm({ ...studioForm, description: e.target.value })} placeholder="Premium hoodie..."/>
-                    <Label htmlFor="studio-mockup">Mockup Image</Label>
-                    <div className="border-2 border-dashed border-border rounded-lg p-4 hover:border-primary transition-colors">
-                      <Label htmlFor="studio-mockup" className="cursor-pointer">
-                        <div className="flex flex-col items-center justify-center gap-2">
-                          <Upload className="h-6 w-6 text-muted-foreground"/>
-                          <p className="text-sm font-medium">Click to upload mockup image</p>
-                          <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
-                        </div>
-                      </Label>
-                      <input id="studio-mockup" type="file" accept="image/*" onChange={handleStudioMockupUpload} className="hidden"/>
-                      {studioForm.baseMockupUrl && (<div className="mt-4 relative w-full max-w-xs mx-auto">
-                          <div className="relative aspect-[4/5] rounded-lg overflow-hidden border-2 border-primary">
-                            <img src={studioForm.baseMockupUrl} alt="Mockup preview" className="w-full h-full object-cover"/>
-                          </div>
-                          <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => setStudioForm({ ...studioForm, baseMockupUrl: "" })}>
-                            <X className="h-4 w-4"/>
-                          </Button>
-                        </div>)}
+                    <Label>View Mockups (Front / Chest / Back)</Label>
+                    <div className="space-y-3">
+                      {["front", "chest", "back"].map((viewKey) => {
+            const previewUrl = studioForm.viewMockups?.[viewKey] || (viewKey === "front" ? studioForm.baseMockupUrl : "");
+            return (<div key={viewKey} className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary transition-colors">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-medium capitalize">{viewKey}</span>
+                              <div className="flex items-center gap-2">
+                                <input id={`studio-view-${viewKey}`} type="file" accept="image/*" onChange={(e) => handleStudioViewMockupUpload(viewKey, e)} className="hidden"/>
+                                <Label htmlFor={`studio-view-${viewKey}`} className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">
+                                  <Upload className="h-4 w-4"/>
+                                  Upload
+                                </Label>
+                              </div>
+                            </div>
+                            {previewUrl && (<div className="mt-3 relative w-full max-w-xs">
+                                <div className="relative aspect-[4/5] rounded-lg overflow-hidden border-2 border-primary">
+                                  <img src={previewUrl} alt={`${viewKey} mockup`} className="w-full h-full object-cover"/>
+                                </div>
+                                <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => setStudioForm((prev) => ({
+                        ...prev,
+                        baseMockupUrl: viewKey === "front" ? "" : prev.baseMockupUrl,
+                        viewMockups: { ...(prev.viewMockups || {}), [viewKey]: "" },
+                    }))}>
+                                  <X className="h-4 w-4"/>
+                                </Button>
+                              </div>)}
+                          </div>);
+        })}
                     </div>
                     <Label>Price</Label>
                     <Input type="number" value={studioForm.price} onChange={(e) => setStudioForm({ ...studioForm, price: e.target.value })}/>
@@ -2235,35 +2350,47 @@ function AdminDashboardContent() {
                 })}
                     </div>
                     {studioForm.colors.trim() && (<div className="space-y-3">
-                        <Label>Color Mockups</Label>
-                        <div className="space-y-3">
+                        <Label>Color View Mockups</Label>
+                        <div className="space-y-4">
                           {studioForm.colors
                         .split(",")
                         .map((color) => color.trim())
                         .filter(Boolean)
                         .map((color) => {
                         const colorKey = color.toLowerCase();
-                        const previewUrl = studioForm.colorMockups?.[colorKey];
-                        return (<div key={colorKey} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                        const colorViews = studioForm.colorViews?.[colorKey] || {};
+                        return (<div key={colorKey} className="rounded-lg border border-border p-3 space-y-2">
                                   <span className="text-sm font-medium">{getColorLabel(colorKey, language)}</span>
-                                  <div className="flex items-center gap-2">
-                                    <input id={`studio-color-${colorKey}`} type="file" accept="image/*" onChange={(e) => handleStudioColorMockupUpload(colorKey, e)} className="hidden"/>
-                                    <Label htmlFor={`studio-color-${colorKey}`} className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">
-                                      <Upload className="h-4 w-4"/>
-                                      Upload
-                                    </Label>
-                                    {previewUrl && (<>
-                                        <div className="relative h-12 w-12 overflow-hidden rounded-md border border-border">
-                                          <img src={previewUrl} alt={`${color} mockup`} className="h-full w-full object-cover"/>
-                                        </div>
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => setStudioForm((prev) => {
-                                    const nextMockups = { ...(prev.colorMockups || {}) };
-                                    delete nextMockups[colorKey];
-                                    return { ...prev, colorMockups: nextMockups };
-                                })}>
-                                          <X className="h-4 w-4"/>
-                                        </Button>
-                                      </>)}
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    {["front", "chest", "back"].map((viewKey) => {
+                                const previewUrl = colorViews?.[viewKey];
+                                return (<div key={`${colorKey}-${viewKey}`} className="flex items-center gap-2">
+                                          <input id={`studio-color-${colorKey}-${viewKey}`} type="file" accept="image/*" onChange={(e) => handleStudioColorMockupUpload(colorKey, viewKey, e)} className="hidden"/>
+                                          <Label htmlFor={`studio-color-${colorKey}-${viewKey}`} className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">
+                                            <Upload className="h-4 w-4"/>
+                                            {viewKey}
+                                          </Label>
+                                          {previewUrl && (<>
+                                              <div className="relative h-12 w-12 overflow-hidden rounded-md border border-border">
+                                                <img src={previewUrl} alt={`${color} ${viewKey}`} className="h-full w-full object-cover"/>
+                                              </div>
+                                              <Button type="button" variant="ghost" size="icon" onClick={() => setStudioForm((prev) => {
+                                        const nextColorViews = { ...(prev.colorViews || {}) };
+                                        const nextViews = { ...(nextColorViews[colorKey] || {}) };
+                                        delete nextViews[viewKey];
+                                        if (Object.keys(nextViews).length === 0) {
+                                            delete nextColorViews[colorKey];
+                                        }
+                                        else {
+                                            nextColorViews[colorKey] = nextViews;
+                                        }
+                                        return { ...prev, colorViews: nextColorViews };
+                                    })}>
+                                                <X className="h-4 w-4"/>
+                                              </Button>
+                                            </>)}
+                                        </div>);
+                            })}
                                   </div>
                                 </div>);
                     })}
@@ -2277,6 +2404,54 @@ function AdminDashboardContent() {
                       <option value="M, L, XL"/>
                       <option value="One Size"/>
                     </datalist>
+                    <div className="space-y-3">
+                      <Label>Design Boundaries (Percent of image)</Label>
+                      {["front", "chest", "back"].map((viewKey) => (<div key={viewKey} className="rounded-lg border border-border p-3 space-y-2">
+                          <span className="text-xs font-semibold uppercase text-muted-foreground">{viewKey}</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label className="text-xs">X %</Label>
+                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.x)} onChange={(e) => setStudioForm((prev) => ({
+                ...prev,
+                designAreas: {
+                    ...(prev.designAreas || {}),
+                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), x: fromPercent(e.target.value) },
+                },
+            }))}/>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Y %</Label>
+                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.y)} onChange={(e) => setStudioForm((prev) => ({
+                ...prev,
+                designAreas: {
+                    ...(prev.designAreas || {}),
+                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), y: fromPercent(e.target.value) },
+                },
+            }))}/>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Width %</Label>
+                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.width)} onChange={(e) => setStudioForm((prev) => ({
+                ...prev,
+                designAreas: {
+                    ...(prev.designAreas || {}),
+                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), width: fromPercent(e.target.value) },
+                },
+            }))}/>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Height %</Label>
+                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.height)} onChange={(e) => setStudioForm((prev) => ({
+                ...prev,
+                designAreas: {
+                    ...(prev.designAreas || {}),
+                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), height: fromPercent(e.target.value) },
+                },
+            }))}/>
+                            </div>
+                          </div>
+                        </div>))}
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label>Safe X</Label>
@@ -3568,6 +3743,7 @@ function AdminDashboardContent() {
           </div>
         </div>
       </div>
+      <StaffChatWidget mode="admin" />
     </div>);
 }
 

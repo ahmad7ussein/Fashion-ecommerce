@@ -10,7 +10,9 @@ const morgan_1 = __importDefault(require("morgan"));
 const compression_1 = __importDefault(require("compression"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const http_1 = __importDefault(require("http"));
 const mongoose_1 = __importDefault(require("mongoose"));
+const socket_io_1 = require("socket.io");
 const database_1 = __importDefault(require("./config/database"));
 const errorHandler_1 = __importDefault(require("./middleware/errorHandler"));
 const env_1 = __importDefault(require("./config/env"));
@@ -35,50 +37,60 @@ const featureControlRoutes_1 = __importDefault(require("./routes/featureControlR
 const customDesignRoutes_1 = __importDefault(require("./routes/customDesignRoutes"));
 const vendorRoutes_1 = __importDefault(require("./routes/vendorRoutes"));
 const roleAssignmentRoutes_1 = __importDefault(require("./routes/roleAssignmentRoutes"));
+const staffChatRoutes_1 = __importDefault(require("./routes/staffChatRoutes"));
+const staffChatSocket_1 = __importDefault(require("./socket/staffChatSocket"));
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
+const allowedOrigins = [
+    env_1.default.frontendUrl,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'capacitor://localhost',
+    'ionic://localhost',
+    'http://localhost',
+    'https://localhost',
+];
+const isAllowedOrigin = (origin) => {
+    if (!origin) {
+        return true;
+    }
+    if (env_1.default.nodeEnv === 'development') {
+        if (origin.includes('localhost') ||
+            origin.includes('127.0.0.1') ||
+            origin.includes('192.168.') ||
+            origin.includes('10.0.') ||
+            origin.includes('capacitor://') ||
+            origin.includes('ionic://')) {
+            return true;
+        }
+    }
+    return allowedOrigins.indexOf(origin) !== -1;
+};
 const corsOptions = {
     origin: function (origin, callback) {
-        if (!origin) {
-            if (env_1.default.nodeEnv === 'development') {
-                return callback(null, true);
-            }
+        if (isAllowedOrigin(origin)) {
             return callback(null, true);
         }
-        const allowedOrigins = [
-            env_1.default.frontendUrl,
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-            'capacitor://localhost',
-            'ionic://localhost',
-            'http://localhost',
-            'https://localhost',
-        ];
         if (env_1.default.nodeEnv === 'development') {
-            if (origin.includes('localhost') ||
-                origin.includes('127.0.0.1') ||
-                origin.includes('192.168.') ||
-                origin.includes('10.0.') ||
-                origin.includes('capacitor://') ||
-                origin.includes('ionic://')) {
-                return callback(null, true);
-            }
+            console.warn('?s??,?  CORS: Blocked origin:', origin);
         }
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        }
-        else {
-            if (env_1.default.nodeEnv === 'development') {
-                console.warn('⚠️  CORS: Blocked origin:', origin);
-            }
-            callback(new Error('Not allowed by CORS'));
-        }
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     exposedHeaders: ['Authorization'],
     maxAge: 86400,
+};
+const socketCorsOptions = {
+    origin: function (origin, callback) {
+        if (isAllowedOrigin(origin)) {
+            return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST'],
 };
 app.use((0, cors_1.default)(corsOptions));
 const authLimiter = (0, express_rate_limit_1.default)({
@@ -111,8 +123,8 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/', apiLimiter);
 app.use((0, cookie_parser_1.default)());
-app.use(express_1.default.json({ limit: '10mb' }));
-app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express_1.default.json({ limit: '25mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '25mb' }));
 app.use((0, compression_1.default)());
 if (env_1.default.nodeEnv === 'development') {
     app.use((0, morgan_1.default)(':method :url :status :response-time ms'));
@@ -174,6 +186,7 @@ app.use('/api/feature-controls', featureControlRoutes_1.default);
 app.use('/api/custom-design-requests', customDesignRoutes_1.default);
 app.use('/api/vendor', vendorRoutes_1.default);
 app.use('/api/role-assignments', roleAssignmentRoutes_1.default);
+app.use('/api/staff-chat', staffChatRoutes_1.default);
 app.use((req, res) => {
     if (process.env.NODE_ENV === 'development') {
         console.warn('⚠️  Route not found:', {
@@ -205,13 +218,16 @@ const startServer = async () => {
         catch (verifyError) {
             console.warn('⚠️  Database verification warning:', verifyError.message);
         }
-        const server = app.listen(env_1.default.port, () => {
+        const server = http_1.default.createServer(app);
+        const io = new socket_io_1.Server(server, { cors: socketCorsOptions });
+        (0, staffChatSocket_1.default)(io);
+        server.listen(env_1.default.port, () => {
             console.log('');
-            console.log('🚀 ========================================');
-            console.log(`🚀 Server running in ${env_1.default.nodeEnv} mode`);
-            console.log(`🚀 Server listening on port ${env_1.default.port}`);
-            console.log(`🚀 API URL: http://localhost:${env_1.default.port}/api`);
-            console.log('🚀 ========================================');
+            console.log('dYs? ========================================');
+            console.log(`dYs? Server running in ${env_1.default.nodeEnv} mode`);
+            console.log(`dYs? Server listening on port ${env_1.default.port}`);
+            console.log(`dYs? API URL: http://localhost:${env_1.default.port}/api`);
+            console.log('dYs? ========================================');
             console.log('');
         });
         server.timeout = 180000;

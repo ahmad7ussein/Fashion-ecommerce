@@ -34,6 +34,42 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const ratioObjectSchema = new mongoose_1.Schema({
+    id: { type: String },
+    type: { type: String },
+    text: { type: String },
+    src: { type: String },
+    left: { type: Number },
+    top: { type: Number },
+    width: { type: Number },
+    height: { type: Number },
+    angle: { type: Number },
+    opacity: { type: Number },
+    fill: { type: String },
+    fontSize: { type: Number },
+    fontFamily: { type: String },
+    fontWeight: { type: String },
+    textAlign: { type: String },
+}, { _id: false });
+const designViewSchema = new mongoose_1.Schema({
+    view: { type: String, enum: ['front', 'chest', 'back'], required: true },
+    colorKey: { type: String, required: true },
+    canvasJson: mongoose_1.Schema.Types.Mixed,
+    ratioState: {
+        area: {
+            x: { type: Number },
+            y: { type: Number },
+            width: { type: Number },
+            height: { type: Number },
+        },
+        objects: { type: [ratioObjectSchema], default: [] },
+    },
+    previewSize: {
+        width: { type: Number },
+        height: { type: Number },
+    },
+    updatedAt: { type: Date, default: Date.now },
+}, { _id: false });
 const designSchema = new mongoose_1.Schema({
     user: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -86,6 +122,7 @@ const designSchema = new mongoose_1.Schema({
             fontWeight: String,
         },
     ],
+    views: { type: [designViewSchema], default: [] },
     thumbnail: String,
     designImageURL: String,
     designMetadata: mongoose_1.Schema.Types.Mixed,
