@@ -9,7 +9,7 @@ const RoleAssignment_1 = __importDefault(require("../models/RoleAssignment"));
 const PartnerStore_1 = __importDefault(require("../models/PartnerStore"));
 const User_1 = __importDefault(require("../models/User"));
 const isValidObjectId = (id) => !!id && mongoose_1.default.Types.ObjectId.isValid(id);
-const validRoles = ['service_provider', 'partner'];
+const validRoles = ['partner'];
 const getRoleAssignments = async (_req, res) => {
     try {
         const assignments = await RoleAssignment_1.default.find()

@@ -36,27 +36,12 @@ const navigationSections = [
         ],
     },
     {
-        id: "suppliers",
-        title: { en: "Suppliers", ar: "Suppliers" },
-        items: [
-            { type: "module", href: "/admin/suppliers", icon: Users, label: { en: "Suppliers", ar: "OO_OOñOc OU,U.U^OñO_USU+" } },
-            { type: "module", href: "/admin/vendor-approvals", icon: UserCog, label: { en: "Vendor Approvals", ar: "OO1O¦U.OO_OO¦ OU,O\"OÝO1USU+" } },
-        ],
-    },
-    {
         id: "features",
         title: { en: "Features", ar: "Features" },
         items: [
-            { type: "module", href: "/admin/similar-products", icon: SlidersHorizontal, label: { en: "Similar Products", ar: "OU,U.U+O¦OªOO¦ OU,U.O'OO\"UØOc" } },
             { type: "module", href: "/admin/virtual-experience", icon: Camera, label: { en: "Virtual Experience", ar: "OU,O¦OªOñO\"Oc OU,OU?O¦OñOOUSOc" } },
             { type: "module", href: "/admin/custom-design", icon: BadgeCheck, label: { en: "Custom Design", ar: "OU,O¦OæU.USU. OU,U.OrOæOæ" } },
-        ],
-    },
-    {
-        id: "partners",
-        title: { en: "Partner Stores", ar: "Partner Stores" },
-        items: [
-            { type: "module", href: "/admin/partners", icon: Shapes, label: { en: "Partner Stores", ar: "U.O¦OOªOñ OU,O'OñUŸOO­" } },
+            { type: "module", href: "/admin/home-slider", icon: SlidersHorizontal, label: { en: "Home Slider", ar: "Home Slider" } },
         ],
     },
 ];
@@ -67,9 +52,7 @@ const sectionClasses = {
     products: "bg-rose-100 text-rose-700 border-rose-200",
     employees: "bg-sky-100 text-sky-700 border-sky-200",
     chat: "bg-cyan-100 text-cyan-700 border-cyan-200",
-    suppliers: "bg-amber-100 text-amber-700 border-amber-200",
     features: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    partners: "bg-violet-100 text-violet-700 border-violet-200",
 };
 const isActiveItem = (item, pathname, isAdminRoot, currentTab) => {
     if (item.type === "tab") {

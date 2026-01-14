@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,56 @@ import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import logger from "@/lib/logger";
+
+const LOCAL_DESIGNS_KEY = "fashionhub_simple_studio_designs";
+
+const parseLocalDesigns = () => {
+    try {
+        const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+        return parsed.map((design) => ({
+            _id: design.id,
+            name: design.name || "My design",
+            thumbnail: design.thumbnail || "",
+            createdAt: design.createdAt || new Date().toISOString(),
+            updatedAt: design.createdAt || new Date().toISOString(),
+            baseProduct: {
+                type: design.data?.selectedProduct || "Product",
+            },
+            status: "draft",
+            isLocal: true,
+            isFavorite: Boolean(design.isFavorite),
+        }));
+    }
+    catch {
+        return [];
+    }
+};
+
+const removeLocalDesign = (designId) => {
+    try {
+        const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+        const next = parsed.filter((design) => String(design.id) !== String(designId));
+        localStorage.setItem(LOCAL_DESIGNS_KEY, JSON.stringify(next));
+        return next;
+    }
+    catch {
+        return [];
+    }
+};
 export default function MyDesignsPage() {
     const { user, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     const [designs, setDesigns] = useState([]);
+    const [localDesigns, setLocalDesigns] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState("grid");
@@ -45,6 +90,7 @@ export default function MyDesignsPage() {
             });
         }
         finally {
+            setLocalDesigns(parseLocalDesigns());
             setIsLoading(false);
         }
     };
@@ -52,8 +98,15 @@ export default function MyDesignsPage() {
         if (!confirm("Are you sure you want to delete this design?"))
             return;
         try {
-            await designsApi.deleteDesign(id);
-            setDesigns(designs.filter((d) => d._id !== id));
+            const target = allDesigns.find((design) => design._id === id);
+            if (target?.isLocal) {
+                removeLocalDesign(id);
+                setLocalDesigns(parseLocalDesigns());
+            }
+            else {
+                await designsApi.deleteDesign(id);
+                setDesigns(designs.filter((d) => d._id !== id));
+            }
             toast({
                 title: "Design deleted",
                 description: "Your design has been deleted successfully",
@@ -68,11 +121,22 @@ export default function MyDesignsPage() {
             });
         }
     };
-    const filteredDesigns = designs.filter((design) => {
+    const allDesigns = useMemo(() => {
+        const merged = [...designs];
+        localDesigns.forEach((localDesign) => {
+            if (!merged.some((design) => design._id === localDesign._id)) {
+                merged.push(localDesign);
+            }
+        });
+        return merged;
+    }, [designs, localDesigns]);
+    const filteredDesigns = allDesigns.filter((design) => {
         const matchesSearch = design.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             design.baseProduct?.type?.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesSearch;
     });
+    const getDesignLink = (design) =>
+        design.isLocal ? `/studio?localDesign=${design._id}` : `/studio?design=${design._id}`;
     if (authLoading || isLoading) {
         return (<div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
@@ -128,7 +192,7 @@ export default function MyDesignsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Designs</p>
-                  <p className="text-3xl font-bold">{designs.length}</p>
+                  <p className="text-3xl font-bold">{allDesigns.length}</p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <Grid3x3 className="h-6 w-6 text-primary"/>
@@ -141,23 +205,9 @@ export default function MyDesignsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Published</p>
-                  <p className="text-3xl font-bold">{designs.filter((d) => d.status === "published").length}</p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <Heart className="h-6 w-6 text-green-600"/>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
                   <p className="text-sm text-muted-foreground mb-1">This Month</p>
                   <p className="text-3xl font-bold">
-                    {designs.filter((d) => {
+                    {allDesigns.filter((d) => {
             const designDate = new Date(d.createdAt);
             const now = new Date();
             return designDate.getMonth() === now.getMonth() && designDate.getFullYear() === now.getFullYear();
@@ -219,7 +269,7 @@ export default function MyDesignsPage() {
                   <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
                   {design.status === "published" && (<Badge className="absolute top-3 left-3 bg-green-500">Published</Badge>)}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Link href={`/studio?design=${design._id}`}>
+                    <Link href={getDesignLink(design)}>
                       <Button size="sm" variant="secondary">
                         <Edit className="h-4 w-4 mr-1"/>
                         Edit
@@ -241,7 +291,7 @@ export default function MyDesignsPage() {
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="flex-1" asChild>
-                      <Link href={`/studio?design=${design._id}`}>
+                      <Link href={getDesignLink(design)}>
                         <Edit className="h-3 w-3 mr-1"/>
                         Edit
                       </Link>
@@ -272,7 +322,7 @@ export default function MyDesignsPage() {
                         <span>Modified: {new Date(design.updatedAt).toLocaleDateString()}</span>
                       </div>
                       <div className="flex gap-2">
-                        <Link href={`/studio?design=${design._id}`}>
+                        <Link href={getDesignLink(design)}>
                           <Button size="sm">
                             <Edit className="h-4 w-4 mr-1"/>
                             Edit Design

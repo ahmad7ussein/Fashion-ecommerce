@@ -1,13 +1,16 @@
 "use client";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Eye, Home, Languages, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Bell, Eye, Home, Languages, LogOut, MessageSquare, Moon, Settings, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/language";
 import { t } from "@/lib/i18n";
 import { useTheme } from "next-themes";
+import { getNotifications, markAllAsRead } from "@/lib/api/notifications";
+import { staffChatApi } from "@/lib/api/staffChat";
 export function AdminTopbar() {
     const pathname = usePathname();
     const router = useRouter();
@@ -15,6 +18,10 @@ export function AdminTopbar() {
     const { user, logout } = useAuth();
     const { theme, setTheme } = useTheme();
     const { language, setLanguage } = useLanguage();
+    const [notifications, setNotifications] = useState([]);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [unreadMessages, setUnreadMessages] = useState(0);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
     const currentTab = searchParams.get("tab") || "overview";
     const isAdminRoot = pathname === "/admin";
     const adminEmail = user?.email || "admin@fashionhub.com";
@@ -42,6 +49,46 @@ export function AdminTopbar() {
     const handleOpenSettings = () => {
         router.push("/admin?tab=settings");
     };
+    const loadNotifications = useCallback(async () => {
+        if (!user)
+            return;
+        try {
+            const response = await getNotifications({ page: 1, limit: 5 });
+            setNotifications(response?.data || []);
+            setUnreadNotifications(response?.unreadCount || 0);
+        }
+        catch {
+        }
+    }, [user]);
+    const loadUnreadMessages = useCallback(async () => {
+        if (!user)
+            return;
+        try {
+            const threads = await staffChatApi.getThreads();
+            const totalUnread = Array.isArray(threads)
+                ? threads.reduce((sum, thread) => sum + (thread.unreadCount || 0), 0)
+                : 0;
+            setUnreadMessages(totalUnread);
+        }
+        catch {
+        }
+    }, [user]);
+    useEffect(() => {
+        if (!user)
+            return;
+        loadNotifications();
+        loadUnreadMessages();
+        const interval = setInterval(() => {
+            loadNotifications();
+            loadUnreadMessages();
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [user, loadNotifications, loadUnreadMessages]);
+    useEffect(() => {
+        if (notificationsOpen) {
+            loadNotifications();
+        }
+    }, [notificationsOpen, loadNotifications]);
     return (<div className="flex h-16 items-center gap-4 px-4 lg:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-4">
         <div className="flex items-center gap-3">
@@ -59,6 +106,39 @@ export function AdminTopbar() {
         </nav>
       </div>
       <div className="flex items-center gap-2">
+        <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="relative h-8 w-8 border-border/60" aria-label="Notifications">
+              <Bell className="h-4 w-4"/>
+              {unreadNotifications > 0 && (<span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>)}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {notifications.length === 0 ? (<div className="px-3 py-4 text-sm text-muted-foreground">
+                No notifications yet.
+              </div>) : (notifications.map((notification) => (<div key={notification._id} className="px-3 py-3 text-sm">
+                <div className="font-medium">{notification.title || "Notification"}</div>
+                <div className="text-muted-foreground">{notification.message}</div>
+              </div>)))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={async () => {
+            await markAllAsRead();
+            setUnreadNotifications(0);
+        }}>
+              Mark all as read
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button variant="outline" size="icon" className="relative h-8 w-8 border-border/60" aria-label="Staff chat" onClick={() => router.push("/admin/staff-chat")}>
+          <MessageSquare className="h-4 w-4"/>
+          {unreadMessages > 0 && (<span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white">
+            {unreadMessages > 99 ? "99+" : unreadMessages}
+          </span>)}
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8 border-border/60" aria-label="Settings">

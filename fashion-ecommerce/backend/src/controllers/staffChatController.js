@@ -1,30 +1,101 @@
 "use strict";
 const StaffChatMessage = require("../models/StaffChatMessage");
 const UserModule = require("../models/User");
+const RoleAssignmentModule = require("../models/RoleAssignment");
 const User = UserModule.default || UserModule;
+const RoleAssignment = RoleAssignmentModule.default || RoleAssignmentModule;
 
-const summarizeUser = (user) => ({
+const summarizeUser = (user, roleOverride) => ({
   _id: user._id,
   firstName: user.firstName,
   lastName: user.lastName,
   email: user.email,
-  role: user.role,
+  role: roleOverride || user.role,
 });
+
+const resolveChatRole = async (user) => {
+  if (!user) {
+    return null;
+  }
+  if (user.role === "admin" || user.role === "employee") {
+    return user.role;
+  }
+  const assignment = await RoleAssignment.findOne({
+    user: user._id,
+    role: { $in: ["partner"] },
+    status: "active",
+  })
+    .select("role")
+    .lean();
+  return assignment?.role || null;
+};
+
+const resolveCounterpart = async (userId) => {
+  if (!userId) {
+    return null;
+  }
+  const user = await User.findById(userId).select("role firstName lastName email").lean();
+  if (!user) {
+    return null;
+  }
+  if (user.role === "employee") {
+    return { user, role: "employee" };
+  }
+  const assignment = await RoleAssignment.findOne({
+    user: user._id,
+    role: { $in: ["partner"] },
+    status: "active",
+  })
+    .select("role")
+    .lean();
+  if (!assignment) {
+    return null;
+  }
+  return { user, role: assignment.role };
+};
 
 const getThreads = async (req, res) => {
   try {
-    const role = req.user?.role;
-    if (role !== "admin" && role !== "employee") {
+    const chatRole = await resolveChatRole(req.user);
+    if (!chatRole) {
       return res.status(403).json({
         success: false,
         message: "Not authorized for staff chat",
       });
     }
-    const isAdmin = role === "admin";
-    const counterpartRole = isAdmin ? "employee" : "admin";
-    const counterparts = await User.find({ role: counterpartRole })
-      .select("firstName lastName email role")
-      .lean();
+    const isAdmin = chatRole === "admin";
+    let counterparts = [];
+    if (isAdmin) {
+      const employees = await User.find({ role: "employee" })
+        .select("firstName lastName email role")
+        .lean();
+      const assignments = await RoleAssignment.find({
+        role: { $in: ["partner"] },
+        status: "active",
+      })
+        .populate("user", "firstName lastName email role")
+        .lean();
+      const assignmentUsers = assignments
+        .map((assignment) => {
+          if (!assignment.user) {
+            return null;
+          }
+          return {
+            ...assignment.user,
+            role: assignment.role,
+          };
+        })
+        .filter(Boolean);
+      const counterpartMap = new Map();
+      [...employees, ...assignmentUsers].forEach((item) => {
+        counterpartMap.set(item._id.toString(), item);
+      });
+      counterparts = Array.from(counterpartMap.values());
+    } else {
+      counterparts = await User.find({ role: "admin" })
+        .select("firstName lastName email role")
+        .lean();
+    }
     if (!counterparts.length) {
       return res.status(200).json({ success: true, data: [] });
     }
@@ -44,21 +115,21 @@ const getThreads = async (req, res) => {
         threadStats.set(counterpartId, entry);
       }
       if (isAdmin) {
-        if (!message.readByAdmin && message.senderRole === "employee") {
+        if (!message.readByAdmin && message.senderRole !== "admin") {
           entry.unreadCount += 1;
         }
       } else if (!message.readByEmployee && message.senderRole === "admin") {
         entry.unreadCount += 1;
       }
     });
-    const currentUser = summarizeUser(req.user);
+    const currentUser = summarizeUser(req.user, chatRole);
     const threads = counterparts.map((counterpart) => {
       const key = counterpart._id.toString();
       const stats = threadStats.get(key);
       return {
         id: key,
         admin: isAdmin ? currentUser : summarizeUser(counterpart),
-        employee: isAdmin ? summarizeUser(counterpart) : currentUser,
+        employee: isAdmin ? summarizeUser(counterpart, counterpart.role) : currentUser,
         lastMessage: stats
           ? {
               message: stats.lastMessage.message,
@@ -80,7 +151,14 @@ const getThreads = async (req, res) => {
 
 const getMessages = async (req, res) => {
   try {
-    const isAdmin = req.user.role === "admin";
+    const chatRole = await resolveChatRole(req.user);
+    if (!chatRole) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized for staff chat",
+      });
+    }
+    const isAdmin = chatRole === "admin";
     const employeeId = isAdmin ? req.query.employeeId : req.user._id;
     let adminId = isAdmin ? req.user._id : req.query.adminId;
     if (isAdmin && !employeeId) {
@@ -99,9 +177,9 @@ const getMessages = async (req, res) => {
         message: "No admin available",
       });
     }
-    const [adminUser, employeeUser] = await Promise.all([
+    const [adminUser, counterpartInfo] = await Promise.all([
       User.findById(adminId).select("role firstName lastName email"),
-      User.findById(employeeId).select("role firstName lastName email"),
+      resolveCounterpart(employeeId),
     ]);
     if (!adminUser || adminUser.role !== "admin") {
       return res.status(400).json({
@@ -109,12 +187,13 @@ const getMessages = async (req, res) => {
         message: "Invalid admin user",
       });
     }
-    if (!employeeUser || employeeUser.role !== "employee") {
+    if (!counterpartInfo) {
       return res.status(400).json({
         success: false,
-        message: "Invalid employee user",
+        message: "Invalid staff user",
       });
     }
+    const employeeUser = counterpartInfo.user;
     const messages = await StaffChatMessage.find({
       admin: adminUser._id,
       employee: employeeUser._id,
@@ -127,7 +206,7 @@ const getMessages = async (req, res) => {
         admin: adminUser._id,
         employee: employeeUser._id,
         readByAdmin: false,
-        senderRole: "employee",
+        senderRole: { $ne: "admin" },
       }, { $set: { readByAdmin: true } });
     } else {
       await StaffChatMessage.updateMany({
@@ -155,7 +234,14 @@ const sendMessage = async (req, res) => {
         message: "Message is required",
       });
     }
-    const isAdmin = req.user.role === "admin";
+    const chatRole = await resolveChatRole(req.user);
+    if (!chatRole) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized for staff chat",
+      });
+    }
+    const isAdmin = chatRole === "admin";
     let adminId;
     let employeeId;
     if (isAdmin) {
@@ -181,9 +267,9 @@ const sendMessage = async (req, res) => {
         });
       }
     }
-    const [adminUser, employeeUser] = await Promise.all([
+    const [adminUser, counterpartInfo] = await Promise.all([
       User.findById(adminId).select("role"),
-      User.findById(employeeId).select("role"),
+      resolveCounterpart(employeeId),
     ]);
     if (!adminUser || adminUser.role !== "admin") {
       return res.status(400).json({
@@ -191,17 +277,18 @@ const sendMessage = async (req, res) => {
         message: "Invalid admin user",
       });
     }
-    if (!employeeUser || employeeUser.role !== "employee") {
+    if (!counterpartInfo) {
       return res.status(400).json({
         success: false,
-        message: "Invalid employee user",
+        message: "Invalid staff user",
       });
     }
+    const employeeUser = counterpartInfo.user;
     const createdMessage = await StaffChatMessage.create({
       admin: adminUser._id,
       employee: employeeUser._id,
       sender: req.user._id,
-      senderRole: isAdmin ? "admin" : "employee",
+      senderRole: isAdmin ? "admin" : chatRole,
       message: messageText,
       readByAdmin: isAdmin,
       readByEmployee: !isAdmin,

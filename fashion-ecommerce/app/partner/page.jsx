@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { roleAssignmentsApi } from "@/lib/api/roleAssignments";
 import { partnerPanelApi, } from "@/lib/api/partnerPanel";
+import { StaffChatPanel } from "@/components/staff-chat-panel";
 const defaultFormState = {
     name: "",
     description: "",
@@ -431,6 +432,16 @@ export default function PartnerPanelPage() {
                     </TableRow>))}
                 </TableBody>
               </Table>)}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Admin Chat</CardTitle>
+            <CardDescription>Message the admin team about your partner store.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StaffChatPanel mode="partner" compact={false} showThreads={false} />
           </CardContent>
         </Card>
       </div>

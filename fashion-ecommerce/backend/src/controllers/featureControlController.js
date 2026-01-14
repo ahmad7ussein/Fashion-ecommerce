@@ -3,19 +3,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateCustomDesignSettings = exports.getCustomDesignSettings = exports.logVirtualExperienceConversion = exports.logVirtualExperienceUsage = exports.updateVirtualExperienceSettings = exports.getVirtualExperienceSettings = exports.getSimilarProducts = exports.updateSimilarProductsSettings = exports.getSimilarProductsSettings = void 0;
-const SimilarProductsSetting_1 = __importDefault(require("../models/SimilarProductsSetting"));
+exports.uploadHomeSliderImage = exports.updateCustomDesignSettings = exports.getCustomDesignSettings = exports.updateHomeSliderSettings = exports.getHomeSliderSettings = exports.logVirtualExperienceConversion = exports.logVirtualExperienceUsage = exports.updateVirtualExperienceSettings = exports.getVirtualExperienceSettings = void 0;
 const VirtualExperienceSetting_1 = __importDefault(require("../models/VirtualExperienceSetting"));
 const CustomDesignSetting_1 = __importDefault(require("../models/CustomDesignSetting"));
-const Product_1 = __importDefault(require("../models/Product"));
-const PartnerProduct_1 = __importDefault(require("../models/PartnerProduct"));
-const getSimilarSettings = async () => {
-    let settings = await SimilarProductsSetting_1.default.findOne();
-    if (!settings) {
-        settings = await SimilarProductsSetting_1.default.create({});
-    }
-    return settings;
-};
+const HomeSliderSetting_1 = __importDefault(require("../models/HomeSliderSetting"));
+const cloudinary_1 = require("../config/cloudinary");
 const getVirtualSettings = async () => {
     let settings = await VirtualExperienceSetting_1.default.findOne();
     if (!settings) {
@@ -30,82 +22,13 @@ const getCustomSettings = async () => {
     }
     return settings;
 };
-const getSimilarProductsSettings = async (_req, res) => {
-    try {
-        const settings = await getSimilarSettings();
-        res.status(200).json({ success: true, data: settings });
+const getHomeSliderSettingsInternal = async () => {
+    let settings = await HomeSliderSetting_1.default.findOne();
+    if (!settings) {
+        settings = await HomeSliderSetting_1.default.create({ slides: [] });
     }
-    catch (error) {
-        res.status(500).json({ success: false, message: error.message || 'Server error' });
-    }
+    return settings;
 };
-exports.getSimilarProductsSettings = getSimilarProductsSettings;
-const updateSimilarProductsSettings = async (req, res) => {
-    try {
-        const settings = await getSimilarSettings();
-        settings.enabled = req.body.enabled ?? settings.enabled;
-        settings.maxItems = req.body.maxItems ?? settings.maxItems;
-        settings.prioritizeInStore = req.body.prioritizeInStore ?? settings.prioritizeInStore;
-        settings.prioritizePartner = req.body.prioritizePartner ?? settings.prioritizePartner;
-        settings.autoWhenNoPurchase = req.body.autoWhenNoPurchase ?? settings.autoWhenNoPurchase;
-        await settings.save();
-        res.status(200).json({ success: true, data: settings });
-    }
-    catch (error) {
-        res.status(500).json({ success: false, message: error.message || 'Server error' });
-    }
-};
-exports.updateSimilarProductsSettings = updateSimilarProductsSettings;
-const getSimilarProducts = async (req, res) => {
-    try {
-        const settings = await getSimilarSettings();
-        const productId = req.query.productId;
-        const context = req.query.context;
-        const autoEnabled = settings.autoWhenNoPurchase && context === 'noPurchase';
-        if (!settings.enabled && !autoEnabled) {
-            return res.status(200).json({ success: true, data: [] });
-        }
-        const maxItems = settings.maxItems || 4;
-        const results = [];
-        let baseProduct = null;
-        if (productId) {
-            baseProduct = await Product_1.default.findById(productId);
-        }
-        if (settings.prioritizeInStore) {
-            const query = { active: true };
-            if (baseProduct) {
-                query._id = { $ne: baseProduct._id };
-                query.category = baseProduct.category;
-                query.gender = baseProduct.gender;
-            }
-            const inStore = await Product_1.default.find(query)
-                .sort({ createdAt: -1 })
-                .limit(maxItems)
-                .lean();
-            inStore.forEach((item) => {
-                results.push({ ...item, source: 'in_store' });
-            });
-        }
-        if (settings.prioritizePartner && results.length < maxItems) {
-            const partnerItems = await PartnerProduct_1.default.find({ status: 'approved' })
-                .populate('partnerStore', 'status')
-                .sort({ createdAt: -1 })
-                .limit(maxItems)
-                .lean();
-            partnerItems.forEach((item) => {
-                const store = item.partnerStore;
-                if (store?.status === 'active' && results.length < maxItems) {
-                    results.push({ ...item, source: 'partner' });
-                }
-            });
-        }
-        res.status(200).json({ success: true, data: results.slice(0, maxItems) });
-    }
-    catch (error) {
-        res.status(500).json({ success: false, message: error.message || 'Server error' });
-    }
-};
-exports.getSimilarProducts = getSimilarProducts;
 const getVirtualExperienceSettings = async (_req, res) => {
     try {
         const settings = await getVirtualSettings();
@@ -183,3 +106,52 @@ const updateCustomDesignSettings = async (req, res) => {
     }
 };
 exports.updateCustomDesignSettings = updateCustomDesignSettings;
+const getHomeSliderSettings = async (_req, res) => {
+    try {
+        const settings = await getHomeSliderSettingsInternal();
+        res.status(200).json({ success: true, data: settings });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: error.message || "Server error" });
+    }
+};
+exports.getHomeSliderSettings = getHomeSliderSettings;
+const updateHomeSliderSettings = async (req, res) => {
+    try {
+        const settings = await getHomeSliderSettingsInternal();
+        if (Array.isArray(req.body.slides)) {
+            settings.slides = req.body.slides.map((slide, index) => ({
+                image: slide.image,
+                title: slide.title,
+                subtitle: slide.subtitle,
+                description: slide.description,
+                buttonText: slide.buttonText,
+                buttonLink: slide.buttonLink,
+                bgGradient: slide.bgGradient,
+                bgImage: slide.bgImage,
+                isActive: slide.isActive !== undefined ? slide.isActive : true,
+                order: Number.isFinite(slide.order) ? slide.order : index,
+            }));
+        }
+        await settings.save();
+        res.status(200).json({ success: true, data: settings });
+    }
+    catch (error) {
+        res.status(500).json({ success: false, message: error.message || "Server error" });
+    }
+};
+exports.updateHomeSliderSettings = updateHomeSliderSettings;
+const uploadHomeSliderImage = async (req, res) => {
+    try {
+        const fileBuffer = req.file?.buffer;
+        if (!fileBuffer) {
+            return res.status(400).json({ success: false, message: "No image file provided." });
+        }
+        const uploadedUrl = await (0, cloudinary_1.uploadToCloudinary)(fileBuffer, "stylecraft/home-slider");
+        return res.status(200).json({ success: true, data: { url: uploadedUrl } });
+    }
+    catch (error) {
+        return res.status(500).json({ success: false, message: error.message || "Upload failed" });
+    }
+};
+exports.uploadHomeSliderImage = uploadHomeSliderImage;

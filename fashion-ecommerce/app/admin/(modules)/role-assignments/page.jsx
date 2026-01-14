@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 const emptyForm = {
     email: "",
-    role: "service_provider",
+    role: "partner",
     partnerStoreId: "",
     notes: "",
 };
@@ -66,7 +66,6 @@ export default function RoleAssignmentsPage() {
           <div className="grid gap-3 md:grid-cols-2">
             <Input placeholder="User email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/>
             <select className="h-10 rounded-md border px-3" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
-              <option value="service_provider">Service Provider</option>
               <option value="partner">Partner</option>
             </select>
             {form.role === "partner" && (<select className="h-10 rounded-md border px-3" value={form.partnerStoreId} onChange={(event) => setForm({ ...form, partnerStoreId: event.target.value })}>

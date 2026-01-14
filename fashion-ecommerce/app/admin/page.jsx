@@ -138,7 +138,7 @@ function AdminDashboardContent() {
         type: "",
         description: "",
         baseMockupUrl: "",
-        viewMockups: { front: "", chest: "", back: "" },
+        viewMockups: { front: "", back: "" },
         colorMockups: {},
         colorViews: {},
         price: "",
@@ -148,7 +148,6 @@ function AdminDashboardContent() {
         aiEnhanceEnabled: false,
         designAreas: {
             front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
-            chest: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
             back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
         },
         safeArea: { x: 60, y: 80, width: 280, height: 300 },
@@ -683,7 +682,7 @@ function AdminDashboardContent() {
             type: "",
             description: "",
             baseMockupUrl: "",
-            viewMockups: { front: "", chest: "", back: "" },
+            viewMockups: { front: "", back: "" },
             colorMockups: {},
             colorViews: {},
             price: "",
@@ -693,7 +692,6 @@ function AdminDashboardContent() {
             aiEnhanceEnabled: false,
             designAreas: {
                 front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
-                chest: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
                 back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
             },
             safeArea: { x: 60, y: 80, width: 280, height: 300 },
@@ -735,7 +733,6 @@ function AdminDashboardContent() {
             baseMockupUrl: product.baseMockupUrl || "",
             viewMockups: {
                 front: product.viewMockups?.front || product.baseMockupUrl || "",
-                chest: product.viewMockups?.chest || "",
                 back: product.viewMockups?.back || "",
             },
             colorMockups: product.colorMockups || {},
@@ -747,7 +744,6 @@ function AdminDashboardContent() {
             aiEnhanceEnabled: product.aiEnhanceEnabled || false,
             designAreas: product.designAreas || {
                 front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
-                chest: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
                 back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
             },
             safeArea: product.safeArea || { x: 60, y: 80, width: 280, height: 300 },
@@ -774,7 +770,7 @@ function AdminDashboardContent() {
         try {
             const colorList = studioForm.colors.split(",").map((c) => c.trim()).filter(Boolean);
             const normalizedViewMockups = {};
-            ["front", "chest", "back"].forEach((viewKey) => {
+            ["front", "back"].forEach((viewKey) => {
                 const url = studioForm.viewMockups?.[viewKey];
                 if (url) {
                     normalizedViewMockups[viewKey] = url;
@@ -789,7 +785,7 @@ function AdminDashboardContent() {
                     return;
                 }
                 const viewPayload = {};
-                ["front", "chest", "back"].forEach((viewKey) => {
+                ["front", "back"].forEach((viewKey) => {
                     const url = views?.[viewKey];
                     if (url) {
                         viewPayload[viewKey] = url;
@@ -833,12 +829,6 @@ function AdminDashboardContent() {
                         y: Number(studioForm.designAreas?.front?.y) || 0,
                         width: Number(studioForm.designAreas?.front?.width) || 0,
                         height: Number(studioForm.designAreas?.front?.height) || 0,
-                    },
-                    chest: {
-                        x: Number(studioForm.designAreas?.chest?.x) || 0,
-                        y: Number(studioForm.designAreas?.chest?.y) || 0,
-                        width: Number(studioForm.designAreas?.chest?.width) || 0,
-                        height: Number(studioForm.designAreas?.chest?.height) || 0,
                     },
                     back: {
                         x: Number(studioForm.designAreas?.back?.x) || 0,
@@ -1770,7 +1760,7 @@ function AdminDashboardContent() {
                         setAdditionalImageFiles([]);
                     }
                 }}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-2 shadow-2xl">
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border-2 shadow-2xl">
                 <DialogHeader>
                   <DialogTitle>
                     {isEditingProduct
@@ -2221,30 +2211,45 @@ function AdminDashboardContent() {
                         <TableHead>Name</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Price</TableHead>
-                        <TableHead>Active</TableHead>
-                        <TableHead>AI</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {studioProducts.map((p) => (<TableRow key={p._id}>
-                          <TableCell className="font-medium">{p.name}</TableCell>
+                      {studioProducts.map((p) => {
+            const colorViews = p.colorViews || {};
+            const colorMockups = p.colorMockups || {};
+            const firstColorView = Object.values(colorViews)[0];
+            const firstColorMockup = Object.values(colorMockups)[0];
+            const thumbnailUrl = p.viewMockups?.front || p.baseMockupUrl || firstColorView?.front || firstColorMockup || "/placeholder-logo.png";
+            return (<TableRow key={p._id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-lg border border-border bg-muted/40 overflow-hidden flex items-center justify-center">
+                                <img
+                                  src={thumbnailUrl}
+                                  alt={p.name}
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                />
+                              </div>
+                              <span>{p.name}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-muted-foreground">{p.type}</TableCell>
                           <TableCell>${p.price.toFixed(2)}</TableCell>
-                          <TableCell>{p.active ? 'Yes' : 'No'}</TableCell>
-                          <TableCell>{p.aiEnhanceEnabled ? 'On' : 'Off'}</TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button variant="ghost" size="icon" onClick={() => handleEditStudioProduct(p)}><Edit className="h-4 w-4"/></Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteStudioProduct(p._id)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                           </TableCell>
-                        </TableRow>))}
+                        </TableRow>);
+        })}
                     </TableBody>
                   </Table>)}
               </CardContent>
             </Card>
 
             <Dialog open={showStudioModal} onOpenChange={setShowStudioModal}>
-              <DialogContent className="max-w-3xl">
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingStudio ? 'Edit Studio Product' : 'Add Studio Product'}</DialogTitle>
                   <DialogDescription>Define designable product details, pricing, and safe area.</DialogDescription>
@@ -2271,9 +2276,9 @@ function AdminDashboardContent() {
                     </datalist>
                     <Label>Description</Label>
                     <Textarea value={studioForm.description} onChange={(e) => setStudioForm({ ...studioForm, description: e.target.value })} placeholder="Premium hoodie..."/>
-                    <Label>View Mockups (Front / Chest / Back)</Label>
+                    <Label>View Mockups (Front / Back)</Label>
                     <div className="space-y-3">
-                      {["front", "chest", "back"].map((viewKey) => {
+                      {["front", "back"].map((viewKey) => {
             const previewUrl = studioForm.viewMockups?.[viewKey] || (viewKey === "front" ? studioForm.baseMockupUrl : "");
             return (<div key={viewKey} className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary transition-colors">
                             <div className="flex items-center justify-between gap-2">
@@ -2349,53 +2354,6 @@ function AdminDashboardContent() {
                           </button>);
                 })}
                     </div>
-                    {studioForm.colors.trim() && (<div className="space-y-3">
-                        <Label>Color View Mockups</Label>
-                        <div className="space-y-4">
-                          {studioForm.colors
-                        .split(",")
-                        .map((color) => color.trim())
-                        .filter(Boolean)
-                        .map((color) => {
-                        const colorKey = color.toLowerCase();
-                        const colorViews = studioForm.colorViews?.[colorKey] || {};
-                        return (<div key={colorKey} className="rounded-lg border border-border p-3 space-y-2">
-                                  <span className="text-sm font-medium">{getColorLabel(colorKey, language)}</span>
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    {["front", "chest", "back"].map((viewKey) => {
-                                const previewUrl = colorViews?.[viewKey];
-                                return (<div key={`${colorKey}-${viewKey}`} className="flex items-center gap-2">
-                                          <input id={`studio-color-${colorKey}-${viewKey}`} type="file" accept="image/*" onChange={(e) => handleStudioColorMockupUpload(colorKey, viewKey, e)} className="hidden"/>
-                                          <Label htmlFor={`studio-color-${colorKey}-${viewKey}`} className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">
-                                            <Upload className="h-4 w-4"/>
-                                            {viewKey}
-                                          </Label>
-                                          {previewUrl && (<>
-                                              <div className="relative h-12 w-12 overflow-hidden rounded-md border border-border">
-                                                <img src={previewUrl} alt={`${color} ${viewKey}`} className="h-full w-full object-cover"/>
-                                              </div>
-                                              <Button type="button" variant="ghost" size="icon" onClick={() => setStudioForm((prev) => {
-                                        const nextColorViews = { ...(prev.colorViews || {}) };
-                                        const nextViews = { ...(nextColorViews[colorKey] || {}) };
-                                        delete nextViews[viewKey];
-                                        if (Object.keys(nextViews).length === 0) {
-                                            delete nextColorViews[colorKey];
-                                        }
-                                        else {
-                                            nextColorViews[colorKey] = nextViews;
-                                        }
-                                        return { ...prev, colorViews: nextColorViews };
-                                    })}>
-                                                <X className="h-4 w-4"/>
-                                              </Button>
-                                            </>)}
-                                        </div>);
-                            })}
-                                  </div>
-                                </div>);
-                    })}
-                        </div>
-                      </div>)}
                     <Label>Sizes (comma separated)</Label>
                     <Input value={studioForm.sizes} onChange={(e) => setStudioForm({ ...studioForm, sizes: e.target.value })} placeholder="S, M, L" list="studio-sizes-list"/>
                     <datalist id="studio-sizes-list">
@@ -2404,79 +2362,9 @@ function AdminDashboardContent() {
                       <option value="M, L, XL"/>
                       <option value="One Size"/>
                     </datalist>
-                    <div className="space-y-3">
-                      <Label>Design Boundaries (Percent of image)</Label>
-                      {["front", "chest", "back"].map((viewKey) => (<div key={viewKey} className="rounded-lg border border-border p-3 space-y-2">
-                          <span className="text-xs font-semibold uppercase text-muted-foreground">{viewKey}</span>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-xs">X %</Label>
-                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.x)} onChange={(e) => setStudioForm((prev) => ({
-                ...prev,
-                designAreas: {
-                    ...(prev.designAreas || {}),
-                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), x: fromPercent(e.target.value) },
-                },
-            }))}/>
-                            </div>
-                            <div>
-                              <Label className="text-xs">Y %</Label>
-                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.y)} onChange={(e) => setStudioForm((prev) => ({
-                ...prev,
-                designAreas: {
-                    ...(prev.designAreas || {}),
-                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), y: fromPercent(e.target.value) },
-                },
-            }))}/>
-                            </div>
-                            <div>
-                              <Label className="text-xs">Width %</Label>
-                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.width)} onChange={(e) => setStudioForm((prev) => ({
-                ...prev,
-                designAreas: {
-                    ...(prev.designAreas || {}),
-                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), width: fromPercent(e.target.value) },
-                },
-            }))}/>
-                            </div>
-                            <div>
-                              <Label className="text-xs">Height %</Label>
-                              <Input type="number" value={toPercent(studioForm.designAreas?.[viewKey]?.height)} onChange={(e) => setStudioForm((prev) => ({
-                ...prev,
-                designAreas: {
-                    ...(prev.designAreas || {}),
-                    [viewKey]: { ...(prev.designAreas?.[viewKey] || {}), height: fromPercent(e.target.value) },
-                },
-            }))}/>
-                            </div>
-                          </div>
-                        </div>))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label>Safe X</Label>
-                        <Input type="number" value={studioForm.safeArea.x} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, x: Number(e.target.value) } })}/>
-                      </div>
-                      <div>
-                        <Label>Safe Y</Label>
-                        <Input type="number" value={studioForm.safeArea.y} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, y: Number(e.target.value) } })}/>
-                      </div>
-                      <div>
-                        <Label>Safe Width</Label>
-                        <Input type="number" value={studioForm.safeArea.width} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, width: Number(e.target.value) } })}/>
-                      </div>
-                      <div>
-                        <Label>Safe Height</Label>
-                        <Input type="number" value={studioForm.safeArea.height} onChange={(e) => setStudioForm({ ...studioForm, safeArea: { ...studioForm.safeArea, height: Number(e.target.value) } })}/>
-                      </div>
-                    </div>
                     <div className="flex items-center gap-3">
                       <Checkbox id="studio-active" checked={studioForm.active} onCheckedChange={(v) => setStudioForm({ ...studioForm, active: Boolean(v) })}/>
                       <Label htmlFor="studio-active">Active</Label>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Checkbox id="studio-ai" checked={studioForm.aiEnhanceEnabled} onCheckedChange={(v) => setStudioForm({ ...studioForm, aiEnhanceEnabled: Boolean(v) })}/>
-                      <Label htmlFor="studio-ai">AI Enhancement Enabled</Label>
                     </div>
                   </div>
                 </div>
@@ -2687,7 +2575,7 @@ function AdminDashboardContent() {
 
             
             <Dialog open={showEmployeeModal} onOpenChange={setShowEmployeeModal}>
-              <DialogContent className="border-2 shadow-2xl">
+              <DialogContent className="max-h-[80vh] overflow-y-auto border-2 shadow-2xl">
                 <DialogHeader>
                   <DialogTitle>{language === "ar" ? "إضافة موظف جديد" : "Add New Employee"}</DialogTitle>
                   <DialogDescription>
@@ -3499,7 +3387,7 @@ function AdminDashboardContent() {
 
         
         <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{language === "ar" ? "تفاصيل الطلب" : "Order Details"}</DialogTitle>
               <DialogDescription>
@@ -3613,7 +3501,7 @@ function AdminDashboardContent() {
 
         
         <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
-          <DialogContent>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{language === "ar" ? "تعديل الطلب" : "Edit Order"}</DialogTitle>
               <DialogDescription>
@@ -3654,7 +3542,7 @@ function AdminDashboardContent() {
 
         
         <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{language === "ar" ? "تحديث حالة الطلب والتتبع" : "Update Order Status & Tracking"}</DialogTitle>
               <DialogDescription>

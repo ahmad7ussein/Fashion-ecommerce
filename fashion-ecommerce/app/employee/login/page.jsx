@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { Briefcase, Lock } from "lucide-react";
 import { Logo } from "@/components/logo";
 export default function EmployeeLoginPage() {
-    const [employeeId, setEmployeeId] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
@@ -20,17 +20,17 @@ export default function EmployeeLoginPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        if (!/^\d{6}$/.test(employeeId)) {
+        if (!email || !email.includes("@")) {
             toast({
-                title: "Invalid Employee ID",
-                description: "Employee ID must be 6 digits",
+                title: "Invalid Email",
+                description: "Please enter a valid email address",
                 variant: "destructive",
             });
             setIsLoading(false);
             return;
         }
         try {
-            await login(employeeId, password);
+            await login(email, password);
             toast({
                 title: "Employee Login Successful",
                 description: "Welcome to the employee dashboard!",
@@ -71,9 +71,9 @@ export default function EmployeeLoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="employeeId" className="text-white">Employee ID</Label>
-                <Input id="employeeId" type="text" placeholder="123456" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} maxLength={6} required className="bg-blue-700 border-blue-600 text-white placeholder:text-blue-300"/>
-                <p className="text-xs text-blue-300 mt-1">6-digit employee identification number</p>
+              <Label htmlFor="email" className="text-white">Email</Label>
+              <Input id="email" type="email" placeholder="employee@stylecraft.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-blue-700 border-blue-600 text-white placeholder:text-blue-300"/>
+              <p className="text-xs text-blue-300 mt-1">Enter your employee email address</p>
               </div>
 
               <div>
@@ -103,7 +103,7 @@ export default function EmployeeLoginPage() {
 
             <div className="mt-6 p-3 bg-blue-700/50 rounded-lg">
               <p className="text-xs text-blue-200 font-semibold mb-1">Demo Credentials:</p>
-              <p className="text-xs text-blue-300">ID: 123456</p>
+              <p className="text-xs text-blue-300">Email: employee@stylecraft.com</p>
               <p className="text-xs text-blue-300">Password: Employee@123</p>
             </div>
           </CardContent>

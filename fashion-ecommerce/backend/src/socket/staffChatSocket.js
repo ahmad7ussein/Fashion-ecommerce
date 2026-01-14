@@ -2,14 +2,54 @@
 const jwt = require("jsonwebtoken");
 const StaffChatMessage = require("../models/StaffChatMessage");
 const UserModule = require("../models/User");
+const RoleAssignmentModule = require("../models/RoleAssignment");
 const User = UserModule.default || UserModule;
+const RoleAssignment = RoleAssignmentModule.default || RoleAssignmentModule;
 const envModule = require("../config/env");
 const env = envModule.default || envModule.env || envModule;
 
 const getRoomId = (adminId, employeeId) => `staff-chat:${adminId}:${employeeId}`;
 
-const resolveParticipants = async (socketUser, payload) => {
-  const isAdmin = socketUser.role === "admin";
+const resolveChatRole = async (user) => {
+  if (!user) {
+    return null;
+  }
+  if (user.role === "admin" || user.role === "employee") {
+    return user.role;
+  }
+  const assignment = await RoleAssignment.findOne({
+    user: user._id,
+    role: { $in: ["partner"] },
+    status: "active",
+  })
+    .select("role")
+    .lean();
+  return assignment?.role || null;
+};
+
+const resolveCounterpart = async (userId) => {
+  if (!userId) {
+    return null;
+  }
+  const user = await User.findById(userId).select("role");
+  if (!user) {
+    return null;
+  }
+  if (user.role === "employee") {
+    return user._id;
+  }
+  const assignment = await RoleAssignment.findOne({
+    user: user._id,
+    role: { $in: ["partner"] },
+    status: "active",
+  })
+    .select("_id")
+    .lean();
+  return assignment ? user._id : null;
+};
+
+const resolveParticipants = async (socketUser, payload, chatRole) => {
+  const isAdmin = chatRole === "admin";
   let adminId = isAdmin ? socketUser._id : payload?.adminId;
   let employeeId = isAdmin ? payload?.employeeId : socketUser._id;
 
@@ -26,22 +66,22 @@ const resolveParticipants = async (socketUser, payload) => {
     throw new Error("No admin available");
   }
 
-  const [adminUser, employeeUser] = await Promise.all([
+  const [adminUser, counterpartId] = await Promise.all([
     User.findById(adminId).select("role"),
-    User.findById(employeeId).select("role"),
+    resolveCounterpart(employeeId),
   ]);
 
   if (!adminUser || adminUser.role !== "admin") {
     throw new Error("Invalid admin user");
   }
 
-  if (!employeeUser || employeeUser.role !== "employee") {
-    throw new Error("Invalid employee user");
+  if (!counterpartId) {
+    throw new Error("Invalid staff user");
   }
 
   return {
     adminId: adminUser._id,
-    employeeId: employeeUser._id,
+    employeeId: counterpartId,
   };
 };
 
@@ -61,10 +101,12 @@ const setupStaffChatSocket = (io) => {
       if (!user) {
         return next(new Error("User not found"));
       }
-      if (!["admin", "employee"].includes(user.role)) {
+      const chatRole = await resolveChatRole(user);
+      if (!chatRole) {
         return next(new Error("Not authorized"));
       }
       socket.data.user = user;
+      socket.data.chatRole = chatRole;
       next();
     } catch (error) {
       next(new Error("Invalid token"));
@@ -74,16 +116,20 @@ const setupStaffChatSocket = (io) => {
   io.on("connection", (socket) => {
     socket.on("staff-chat:join", async (payload, callback) => {
       try {
-        const { adminId, employeeId } = await resolveParticipants(socket.data.user, payload);
+        const { adminId, employeeId } = await resolveParticipants(
+          socket.data.user,
+          payload,
+          socket.data.chatRole
+        );
         const roomId = getRoomId(adminId, employeeId);
         socket.join(roomId);
 
-        if (socket.data.user.role === "admin") {
+        if (socket.data.chatRole === "admin") {
           await StaffChatMessage.updateMany({
             admin: adminId,
             employee: employeeId,
             readByAdmin: false,
-            senderRole: "employee",
+            senderRole: { $ne: "admin" },
           }, { $set: { readByAdmin: true } });
         } else {
           await StaffChatMessage.updateMany({
@@ -106,13 +152,17 @@ const setupStaffChatSocket = (io) => {
 
     socket.on("staff-chat:mark-read", async (payload) => {
       try {
-        const { adminId, employeeId } = await resolveParticipants(socket.data.user, payload);
-        if (socket.data.user.role === "admin") {
+        const { adminId, employeeId } = await resolveParticipants(
+          socket.data.user,
+          payload,
+          socket.data.chatRole
+        );
+        if (socket.data.chatRole === "admin") {
           await StaffChatMessage.updateMany({
             admin: adminId,
             employee: employeeId,
             readByAdmin: false,
-            senderRole: "employee",
+            senderRole: { $ne: "admin" },
           }, { $set: { readByAdmin: true } });
         } else {
           await StaffChatMessage.updateMany({
@@ -134,7 +184,11 @@ const setupStaffChatSocket = (io) => {
           throw new Error("Message is required");
         }
 
-        const { adminId, employeeId } = await resolveParticipants(socket.data.user, payload);
+        const { adminId, employeeId } = await resolveParticipants(
+          socket.data.user,
+          payload,
+          socket.data.chatRole
+        );
         const roomId = getRoomId(adminId, employeeId);
         socket.join(roomId);
 
@@ -142,10 +196,10 @@ const setupStaffChatSocket = (io) => {
           admin: adminId,
           employee: employeeId,
           sender: socket.data.user._id,
-          senderRole: socket.data.user.role,
+          senderRole: socket.data.chatRole,
           message: messageText,
-          readByAdmin: socket.data.user.role === "admin",
-          readByEmployee: socket.data.user.role === "employee",
+          readByAdmin: socket.data.chatRole === "admin",
+          readByEmployee: socket.data.chatRole !== "admin",
         });
 
         const populated = await StaffChatMessage.findById(createdMessage._id)

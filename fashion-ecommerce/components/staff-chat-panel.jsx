@@ -54,16 +54,18 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
   const socketRef = useRef(null);
   const selectedThreadRef = useRef(null);
   const threadsRef = useRef([]);
-  const modeRef = useRef({ isAdminMode: false, isEmployeeMode: false });
+  const modeRef = useRef({ isAdminMode: false, isCounterpartMode: false });
   const bottomRef = useRef(null);
 
   const resolvedMode = mode || user?.role;
   const isAdminMode = resolvedMode === "admin";
-  const isEmployeeMode = resolvedMode === "employee";
+  const isCounterpartMode =
+    resolvedMode === "employee" ||
+    resolvedMode === "partner";
 
   useEffect(() => {
-    modeRef.current = { isAdminMode, isEmployeeMode };
-  }, [isAdminMode, isEmployeeMode]);
+    modeRef.current = { isAdminMode, isCounterpartMode };
+  }, [isAdminMode, isCounterpartMode]);
 
   const selectedThread = useMemo(() => {
     if (!threads.length) {
@@ -134,7 +136,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
       const params = {};
       if (isAdminMode) {
         params.employeeId = thread.employee?._id;
-      } else if (isEmployeeMode) {
+      } else if (isCounterpartMode) {
         params.adminId = thread.admin?._id;
       }
       const data = await staffChatApi.getMessages(params);
@@ -152,7 +154,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
         setLoadingMessages(false);
       }
     }
-  }, [isAdminMode, isEmployeeMode, toast]);
+  }, [isAdminMode, isCounterpartMode, toast]);
 
   const handleIncomingMessage = useCallback((message) => {
     const { isAdminMode: adminMode } = modeRef.current;
@@ -165,7 +167,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
     const activeThreadId = selectedThreadRef.current?.id;
     const isActive = activeThreadId === threadId;
     const isFromOther = adminMode
-      ? message.senderRole === "employee"
+      ? message.senderRole !== "admin"
       : message.senderRole === "admin";
 
     if (isActive) {
@@ -224,7 +226,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
     if (typeof window === "undefined") {
       return;
     }
-    if (!user || (!isAdminMode && !isEmployeeMode)) {
+    if (!user || (!isAdminMode && !isCounterpartMode)) {
       return;
     }
     const token = localStorage.getItem("auth_token");
@@ -264,7 +266,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [user, isAdminMode, isEmployeeMode, handleIncomingMessage]);
+  }, [user, isAdminMode, isCounterpartMode, handleIncomingMessage]);
 
   useEffect(() => {
     if (!user) {
@@ -273,26 +275,38 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
     loadThreads();
   }, [user, loadThreads]);
 
+  const selectedThreadIdValue = selectedThread?.id || null;
+
   useEffect(() => {
-    if (!selectedThread) {
+    if (!selectedThreadIdValue) {
       return;
     }
-    loadMessages(selectedThread);
-    setThreads((prev) =>
-      prev.map((thread) => {
-        if (thread.id !== selectedThread.id) {
+    const activeThread = selectedThreadRef.current;
+    if (!activeThread || activeThread.id !== selectedThreadIdValue) {
+      return;
+    }
+    loadMessages(activeThread);
+    setThreads((prev) => {
+      let hasChanges = false;
+      const next = prev.map((thread) => {
+        if (thread.id !== selectedThreadIdValue) {
           return thread;
         }
+        if (!thread.unreadCount) {
+          return thread;
+        }
+        hasChanges = true;
         return { ...thread, unreadCount: 0 };
-      })
-    );
+      });
+      return hasChanges ? next : prev;
+    });
     if (socketRef.current) {
       const payload = isAdminMode
-        ? { employeeId: selectedThread.employee?._id }
-        : { adminId: selectedThread.admin?._id };
+        ? { employeeId: activeThread.employee?._id }
+        : { adminId: activeThread.admin?._id };
       socketRef.current.emit("staff-chat:join", payload);
     }
-  }, [selectedThread, loadMessages, isAdminMode, isEmployeeMode]);
+  }, [selectedThreadIdValue, loadMessages, isAdminMode, isCounterpartMode]);
 
   useEffect(() => {
     if (bottomRef.current) {
@@ -309,7 +323,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
     const payload = { message: messageText };
     if (isAdminMode) {
       payload.employeeId = selectedThread.employee?._id;
-    } else if (isEmployeeMode) {
+    } else if (isCounterpartMode) {
       payload.adminId = selectedThread.admin?._id;
     }
 
@@ -350,7 +364,9 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
     return (<div className="text-muted-foreground">Loading...</div>);
   }
 
-  if ((!isAdminMode && !isEmployeeMode) || (isAdminMode && user.role !== "admin") || (isEmployeeMode && user.role !== "employee")) {
+  if ((!isAdminMode && !isCounterpartMode) ||
+      (isAdminMode && user.role !== "admin") ||
+      (resolvedMode === "employee" && user.role !== "employee")) {
     return (<div className="text-muted-foreground">Access restricted.</div>);
   }
 
@@ -434,7 +450,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
                   messages.map((message) => {
                     const isMine = isAdminMode
                       ? message.senderRole === "admin"
-                      : message.senderRole === "employee";
+                      : message.senderRole === resolvedMode;
                     return (
                       <div key={message._id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
                         <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${isMine ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>

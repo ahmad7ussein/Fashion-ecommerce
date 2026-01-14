@@ -35,7 +35,6 @@ const partnerProductRoutes_1 = __importDefault(require("./routes/partnerProductR
 const partnerPanelRoutes_1 = __importDefault(require("./routes/partnerPanelRoutes"));
 const featureControlRoutes_1 = __importDefault(require("./routes/featureControlRoutes"));
 const customDesignRoutes_1 = __importDefault(require("./routes/customDesignRoutes"));
-const vendorRoutes_1 = __importDefault(require("./routes/vendorRoutes"));
 const roleAssignmentRoutes_1 = __importDefault(require("./routes/roleAssignmentRoutes"));
 const staffChatRoutes_1 = __importDefault(require("./routes/staffChatRoutes"));
 const staffChatSocket_1 = __importDefault(require("./socket/staffChatSocket"));
@@ -184,7 +183,6 @@ app.use('/api/partner-products', partnerProductRoutes_1.default);
 app.use('/api/partner', partnerPanelRoutes_1.default);
 app.use('/api/feature-controls', featureControlRoutes_1.default);
 app.use('/api/custom-design-requests', customDesignRoutes_1.default);
-app.use('/api/vendor', vendorRoutes_1.default);
 app.use('/api/role-assignments', roleAssignmentRoutes_1.default);
 app.use('/api/staff-chat', staffChatRoutes_1.default);
 app.use((req, res) => {

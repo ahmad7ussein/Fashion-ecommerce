@@ -1,11 +1,14 @@
 {
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "express": "^5.2.1",
+    "fabric": "^7.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.1",
-    "nodemailer": "^7.0.11"
+    "nodemailer": "^7.0.11",
+    "react-easy-crop": "^5.5.6"
   }
 }

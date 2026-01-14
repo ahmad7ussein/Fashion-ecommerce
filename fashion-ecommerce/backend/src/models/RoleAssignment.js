@@ -42,7 +42,7 @@ const roleAssignmentSchema = new mongoose_1.Schema({
     },
     role: {
         type: String,
-        enum: ['service_provider', 'partner'],
+        enum: ['partner'],
         required: true,
     },
     status: {
