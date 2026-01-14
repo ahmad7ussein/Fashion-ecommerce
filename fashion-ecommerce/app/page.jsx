@@ -14,6 +14,7 @@ import { CustomerReviewsSection } from "@/components/customer-reviews-section";
 import { useRegion } from "@/lib/region";
 import { useLanguage } from "@/lib/language";
 import { listProducts } from "@/lib/api/products";
+import { featureControlsApi } from "@/lib/api/featureControls";
 import { FeaturedProductsSkeleton } from "@/components/skeletons";
 const Background3DSimple = dynamic(() => import("@/components/3d-background").then((mod) => mod.Background3DSimple), { ssr: false });
 const sliderImages = [
@@ -101,6 +102,7 @@ export default function HomePage() {
     const [slideDirection, setSlideDirection] = useState(1);
     const [virtualTryOnSlide, setVirtualTryOnSlide] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
+    const [heroSlides, setHeroSlides] = useState(sliderImages);
     const [menProducts, setMenProducts] = useState([]);
     const [womenProducts, setWomenProducts] = useState([]);
     const [kidsProducts, setKidsProducts] = useState([]);
@@ -113,6 +115,8 @@ export default function HomePage() {
     const [womenCarouselApi, setWomenCarouselApi] = useState(null);
     const [kidsCarouselApi, setKidsCarouselApi] = useState(null);
     const activeVirtualTryOnSlide = virtualTryOnSlidesData[virtualTryOnSlide] || virtualTryOnSlidesData[0];
+    const safeSlides = heroSlides.length ? heroSlides : sliderImages;
+    const activeSlide = safeSlides[currentSlide] || safeSlides[0];
     const slideVariants = {
         enter: (direction) => ({ x: direction > 0 ? 120 : -120, opacity: 0 }),
         center: { x: 0, opacity: 1 },
@@ -129,14 +133,14 @@ export default function HomePage() {
         exit: (direction) => ({ x: direction > 0 ? -80 : 80, opacity: 0, scale: 0.85, rotate: direction > 0 ? -4 : 4 }),
     };
     useEffect(() => {
-        if (isPaused)
+        if (isPaused || heroSlides.length === 0)
             return;
         const interval = setInterval(() => {
             setSlideDirection(1);
-            setCurrentSlide((prev) => (prev + 1) % sliderImages.length);
+            setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
         }, 5000);
         return () => clearInterval(interval);
-    }, [isPaused, sliderImages.length]);
+    }, [isPaused, heroSlides.length]);
     useEffect(() => {
         const interval = setInterval(() => {
             setVirtualTryOnSlide((prev) => (prev + 1) % virtualTryOnSlidesData.length);
@@ -187,6 +191,35 @@ export default function HomePage() {
         loadFeaturedProducts();
     }, []);
     useEffect(() => {
+        let isMounted = true;
+        const loadHeroSlides = async () => {
+            try {
+                const data = await featureControlsApi.getHomeSliderSettings();
+                const slides = Array.isArray(data?.slides) ? data.slides : [];
+                const activeSlides = slides
+                    .filter((slide) => slide && slide.isActive !== false)
+                    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+                if (isMounted) {
+                    setHeroSlides(activeSlides.length ? activeSlides : sliderImages);
+                }
+            }
+            catch {
+                if (isMounted) {
+                    setHeroSlides(sliderImages);
+                }
+            }
+        };
+        loadHeroSlides();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+    useEffect(() => {
+        if (currentSlide >= heroSlides.length) {
+            setCurrentSlide(0);
+        }
+    }, [currentSlide, heroSlides.length]);
+    useEffect(() => {
         if (!newCollectionCarouselApi || newCollectionProducts.length <= 4)
             return;
         const interval = setInterval(() => {
@@ -227,11 +260,11 @@ export default function HomePage() {
         
         <div className="relative w-full h-screen" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
           <AnimatePresence mode="sync" initial={false} custom={slideDirection}>
-            <motion.div key={currentSlide} custom={slideDirection} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 flex items-center overflow-hidden" style={{ backgroundImage: sliderImages[currentSlide].bgGradient }}>
+            <motion.div key={currentSlide} custom={slideDirection} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 flex items-center overflow-hidden" style={{ backgroundImage: activeSlide.bgGradient || "linear-gradient(135deg, #fff1f2 0%, #fdf2f8 50%, #ffe4e6 100%)" }}>
               
               <div className="absolute inset-0 opacity-[0.45]">
                 <div className="absolute inset-0 bg-center bg-no-repeat" style={{
-            backgroundImage: `url(${sliderImages[currentSlide].bgImage})`,
+            backgroundImage: `url(${activeSlide.bgImage || activeSlide.image})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(15px) brightness(1.05)',
@@ -242,13 +275,13 @@ export default function HomePage() {
               
               <div className="absolute inset-0 opacity-[0.3]">
                 <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-center rounded-full" style={{
-            backgroundImage: `url(${sliderImages[currentSlide].bgImage})`,
+            backgroundImage: `url(${activeSlide.bgImage || activeSlide.image})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(24px)',
         }}/>
                 <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-center rounded-full" style={{
-            backgroundImage: `url(${sliderImages[currentSlide].bgImage})`,
+            backgroundImage: `url(${activeSlide.bgImage || activeSlide.image})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(24px)',
@@ -300,20 +333,20 @@ export default function HomePage() {
 
                     
                     <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold leading-[1.1] tracking-tight">
-                      <span className="text-gray-900 block mb-2">{sliderImages[currentSlide].title}</span>
+                      <span className="text-gray-900 block mb-2">{activeSlide.title}</span>
                     </motion.h1>
 
                     
                     <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }} className="text-xl md:text-2xl text-gray-700 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light">
-                      {sliderImages[currentSlide].description}
+                      {activeSlide.description}
                     </motion.p>
 
                     
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.6 }} className="flex justify-center lg:justify-start pt-2">
-                      <Link href={sliderImages[currentSlide].buttonLink}>
+                      <Link href={activeSlide.buttonLink}>
                         <Button size="lg" className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 text-white hover:from-rose-600 hover:via-pink-600 hover:to-rose-700 px-10 py-7 text-lg rounded-full font-bold transition-all duration-300 hover:scale-110 hover:shadow-2xl group shadow-xl">
                           <span className="flex items-center gap-2">
-                            {sliderImages[currentSlide].buttonText}
+                            {activeSlide.buttonText}
                             <ArrowRight className="h-5 w-5 group-hover:translate-x-2 transition-transform"/>
                           </span>
                         </Button>
@@ -331,21 +364,15 @@ export default function HomePage() {
                     
                     
                     <div className="relative w-full h-full max-w-lg mx-auto">
-                      <motion.div animate={{
-            y: [0, -10, 0],
-        }} transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-        }} className="relative bg-white/90 backdrop-blur-md rounded-[2.5rem] p-10 shadow-2xl border-2 border-white/80 overflow-hidden">
+                      <div className="relative bg-white/90 backdrop-blur-md rounded-[2.5rem] p-10 shadow-2xl border-2 border-white/80 overflow-hidden">
                         
                         <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-rose-200/30 to-pink-200/30 rounded-full blur-2xl"/>
                         <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200/30 to-rose-200/30 rounded-full blur-xl"/>
                         
                         <div className="relative w-full h-full min-h-[350px] lg:min-h-[550px]">
-                          <Image src={sliderImages[currentSlide].image} alt={sliderImages[currentSlide].title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
+                          <Image src={activeSlide.image} alt={activeSlide.title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
                         </div>
-                      </motion.div>
+                      </div>
                     </div>
                   </motion.div>
                 </div>
@@ -353,26 +380,24 @@ export default function HomePage() {
             </motion.div>
           </AnimatePresence>
 
-          
-          <button onClick={(e) => {
-            e.stopPropagation();
+          <button onClick={(event) => {
+            event.stopPropagation();
             setSlideDirection(-1);
-            setCurrentSlide((prev) => (prev - 1 + sliderImages.length) % sliderImages.length);
+            setCurrentSlide((prev) => (prev - 1 + safeSlides.length) % safeSlides.length);
         }} className="absolute left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-gray-200 transition-all duration-300 hover:scale-110 group" aria-label="Previous slide">
             <ChevronLeft className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
           </button>
-          <button onClick={(e) => {
-            e.stopPropagation();
+          <button onClick={(event) => {
+            event.stopPropagation();
             setSlideDirection(1);
-            setCurrentSlide((prev) => (prev + 1) % sliderImages.length);
+            setCurrentSlide((prev) => (prev + 1) % safeSlides.length);
         }} className="absolute right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-gray-200 transition-all duration-300 hover:scale-110 group" aria-label="Next slide">
             <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
           </button>
 
-          
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-40 flex gap-2 items-center">
-            {sliderImages.map((_, index) => (<button key={index} onClick={(e) => {
-                e.stopPropagation();
+            {safeSlides.map((_, index) => (<button key={index} onClick={(event) => {
+                event.stopPropagation();
                 if (index === currentSlide) {
                     return;
                 }
@@ -716,67 +741,23 @@ export default function HomePage() {
       </section>
 
       
-      <section className="relative overflow-hidden py-16 sm:py-24 md:py-32 bg-gradient-to-br from-white via-rose-50/40 to-amber-50/30">
-        <div className="absolute inset-0">
-          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-rose-200/25 blur-3xl"/>
-          <div className="absolute right-0 top-1/4 h-64 w-64 rounded-full bg-amber-200/25 blur-3xl"/>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.7),transparent_30%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.6),transparent_35%)]"/>
-        </div>
-        <div className="container relative mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
-          <div className="max-w-7xl mx-auto">
-            
-            <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-12 sm:mb-16 md:mb-20">
-              <div className="max-w-3xl space-y-4">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 border border-rose-100 text-sm font-semibold text-rose-600 shadow-sm">
-                  Why choose us?
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900">
-                  Reasons that make <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 bg-clip-text text-transparent">FashionHub</span> your first choice
-                </h2>
-                <p className="text-base sm:text-lg md:text-xl text-gray-600">
-                  Smooth experience, premium quality, and fast delivery—everything crafted to keep you confident with every order.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {[
-            { label: "Customer Satisfaction", value: "4.9/5" },
-            { label: "Avg. Delivery", value: "48h" },
-            { label: "Certified Materials", value: "100%" },
-        ].map((stat) => (<div key={stat.label} className="px-4 py-3 rounded-2xl bg-white/85 border border-rose-100 shadow-sm">
-                    <p className="text-xs text-gray-500">{stat.label}</p>
-                    <p className="text-lg font-bold text-gray-900">{stat.value}</p>
-                  </div>))}
-              </div>
-            </motion.div>
-
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl">
-              {[
-            {
-                icon: <Palette className="h-5 w-5"/>,
-                title: "Live & Interactive Design",
-                description: "Drag-and-drop studio with instant previews before printing.",
-            },
-            {
-                icon: <TrendingUp className="h-5 w-5"/>,
-                title: "Refined Quality",
-                description: "Certified materials and precise printing for lasting looks.",
-            },
-            {
-                icon: <ShoppingBag className="h-5 w-5"/>,
-                title: "Fast & Secure Delivery",
-                description: "Smart shipping with live tracking and confirmed delivery.",
-            },
-        ].map((feature, index) => (<motion.div key={index} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.4, delay: index * 0.08 }} className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-9 w-9 rounded-md border border-gray-200 flex items-center justify-center text-gray-700">
-                      {feature.icon}
-                    </div>
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">{feature.title}</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
-                </motion.div>))}
+      <section className="bg-rose-50 border-y border-rose-100">
+        <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
+          <div className="flex flex-col gap-4 py-6 sm:py-8 md:py-10 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.2em] text-rose-600">Partner with us</p>
+              <h3 className="text-2xl sm:text-3xl font-semibold text-gray-900">
+                Are you a supplier or a store owner? Feature your products with us.
+              </h3>
+              <p className="mt-2 text-gray-600">
+                Contact us for partnership details and onboarding.
+              </p>
             </div>
+            <Link href="/contact">
+              <Button size="lg" className="bg-rose-600 text-white hover:bg-rose-700">
+                Contact Us
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -923,7 +904,7 @@ export default function HomePage() {
           </div>
 
           <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2025 FashionHub. All rights reserved.</p>
+            <p>&copy; 2026 FashionHub. All rights reserved.</p>
           </div>
         </div>
       </footer>

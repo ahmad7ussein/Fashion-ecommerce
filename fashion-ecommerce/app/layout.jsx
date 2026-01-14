@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "@/lib/cart";
 import { AuthProvider } from "@/lib/auth";
@@ -12,7 +13,7 @@ import "./globals.css";
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata = {
-    title: "FashionHub - Premium Fashion & Clothing Store",
+    title: "FashionHub",
     description: "Discover the latest fashion trends. Shop premium clothing for men, women, and kids. Quality fashion at your fingertips.",
     generator: "FashionHub Platform",
     authors: [{ name: "FashionHub Team" }],
@@ -31,6 +32,7 @@ export const metadata = {
 export default function RootLayout({ children, }) {
     return (<html lang="en" dir="ltr" suppressHydrationWarning>
       <body className={`font-sans antialiased student-ui`} dir="ltr" suppressHydrationWarning>
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <ErrorBoundaryWrapper>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="theme">
             <LanguageProvider>

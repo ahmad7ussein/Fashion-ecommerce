@@ -32,6 +32,25 @@ const nextConfig = {
   
   poweredByHeader: false,
   compress: true,
+  async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev) {
+      return [];
+    }
+    const scriptSrc =
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com https://apis.google.com";
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: `${scriptSrc}; object-src 'none';`,
+          },
+        ],
+      },
+    ];
+  },
   
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],

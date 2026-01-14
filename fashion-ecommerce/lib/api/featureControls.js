@@ -1,20 +1,5 @@
 import apiClient from './client';
 export const featureControlsApi = {
-    getSimilarProductsSettings() {
-        return apiClient.get('/feature-controls/similar-products');
-    },
-    updateSimilarProductsSettings(payload) {
-        return apiClient.put('/feature-controls/similar-products', payload);
-    },
-    getSimilarProductsRecommendations(params) {
-        const query = new URLSearchParams();
-        if (params?.productId)
-            query.append('productId', params.productId);
-        if (params?.context)
-            query.append('context', params.context);
-        const qs = query.toString();
-        return apiClient.get(`/feature-controls/similar-products/recommendations${qs ? `?${qs}` : ''}`);
-    },
     getVirtualExperienceSettings() {
         return apiClient.get('/feature-controls/virtual-experience');
     },
@@ -32,5 +17,16 @@ export const featureControlsApi = {
     },
     updateCustomDesignSettings(payload) {
         return apiClient.put('/feature-controls/custom-design', payload);
+    },
+    getHomeSliderSettings() {
+        return apiClient.get('/feature-controls/home-slider');
+    },
+    updateHomeSliderSettings(payload) {
+        return apiClient.put('/feature-controls/home-slider', payload);
+    },
+    uploadHomeSliderImage(file) {
+        const formData = new FormData();
+        formData.append('image', file);
+        return apiClient.post('/feature-controls/home-slider/upload', formData);
     },
 };

@@ -1,1748 +1,1470 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./studio.css";
 import { ColorPicker } from "@/components/ColorPicker";
 import { ImageUploader } from "@/components/ImageUploader";
 import { PositionSelector } from "@/components/PositionSelector";
 import { QuantitySelector } from "@/components/QuantitySelector";
-import { SizeSelector } from "@/components/SizeSelector";
-import { TextEditor, TextStyleControls } from "@/components/TextEditor";
+import { textColors, textFontGroups } from "@/components/TextEditor";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ShoppingBag, Undo, Redo, Trash2, Sparkles, Loader2, Search, MousePointer, Save, ZoomIn, ZoomOut, Grid3x3, AlignLeft, AlignCenter, AlignRight, Download, Copy, FolderOpen, Move, FileText, X, Check, } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Heart,
+  Minus,
+  Move,
+  Plus,
+  ShoppingBag,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
-import { designsApi } from "@/lib/api/designs";
+import { useRouter, useSearchParams } from "next/navigation";
+import html2canvas from "html2canvas";
 import { studioProductsApi } from "@/lib/api/studioProducts";
-import { useAuth } from "@/lib/auth";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import logger from "@/lib/logger";
-import { Canvas, StaticCanvas, Image as FabricImage, Rect, IText, Textbox, Point } from "fabric";
-import { v4 as uuidv4 } from "uuid";
-const fabric = { Canvas, StaticCanvas, Image: FabricImage, Rect, IText, Textbox, Point };
-const VIEW_KEYS = ["front", "chest", "back"];
-const DEFAULT_DESIGN_AREA = { x: 0.18, y: 0.2, width: 0.64, height: 0.55 };
-const EXPORT_MIN_SIZE = 4000;
-const getOptimizedCloudinaryUrl = (url, width = 1600) => {
-    if (!url || !url.includes("res.cloudinary.com") || !url.includes("/upload/"))
-        return url;
-    if (url.includes("/upload/f_auto") || url.includes("/upload/q_auto") || url.includes("/upload/w_"))
-        return url;
-    const parts = url.split("/upload/");
-    if (parts.length < 2)
-        return url;
-    const [prefix, rest] = parts;
-    return `${prefix}/upload/f_auto,q_auto,dpr_auto,w_${width}/${rest}`;
+import { designsApi } from "@/lib/api/designs";
+
+const products = [
+  {
+    id: "hoodie",
+    name: "Hoodie",
+    image: "/black-hoodie-streetwear.png",
+    price: 24,
+    category: "Studio",
+    colors: ["white", "black", "navy", "gray", "blue", "charcoal", "green", "peach", "pink"],
+    sizes: ["XS", "S", "M", "L", "XL", "XXL"],
+    viewMockups: { front: "/black-hoodie-streetwear.png" },
+  },
+];
+
+const LOCAL_DESIGNS_KEY = "fashionhub_simple_studio_designs";
+const LOCAL_FAVORITES_KEY = "fashionhub_simple_studio_favorites";
+
+const defaultDesignAreas = {
+  front: { top: "30%", left: "30%", width: "40%", height: "22%" },
+  chest: { top: "30%", left: "30%", width: "40%", height: "22%" },
+  back: { top: "30%", left: "30%", width: "40%", height: "22%" },
 };
-const colorNameToHex = {
-    white: "#ffffff",
-    black: "#111111",
-    navy: "#1f2a44",
-    gray: "#b6b6b6",
-    blue: "#5aa7e0",
-    charcoal: "#4a4a4a",
-    green: "#4fa884",
-    peach: "#f2b6a0",
-    pink: "#f2a8c7",
-    burgundy: "#722F37",
-    olive: "#556B2F",
-    cream: "#FFFDD0",
-    lavender: "#E6E6FA",
-    beige: "#f5f5dc",
-    brown: "#8b5e3c",
-    red: "#ef4444",
-    yellow: "#facc15",
-    orange: "#f97316",
-    purple: "#8b5cf6",
-    teal: "#14b8a6",
-    cyan: "#06b6d4",
+
+const colorHexMap = {
+  white: "#ffffff",
+  black: "#111111",
+  navy: "#1f2a44",
+  gray: "#b6b6b6",
+  blue: "#5aa7e0",
+  charcoal: "#4a4a4a",
+  green: "#4fa884",
+  peach: "#f2b6a0",
+  pink: "#f2a8c7",
+  burgundy: "#722f37",
+  olive: "#556b2f",
+  cream: "#fffdd0",
+  lavender: "#e6e6fa",
+  beige: "#f5f5dc",
+  brown: "#8b5e3c",
+  red: "#ef4444",
+  yellow: "#facc15",
+  orange: "#f97316",
+  purple: "#8b5cf6",
+  teal: "#14b8a6",
+  cyan: "#06b6d4",
 };
-const isColorValue = (value) => value.startsWith("#") || value.startsWith("rgb") || value.startsWith("hsl");
-const resolveColorHex = (color) => {
-    const normalized = color.trim().toLowerCase();
-    if (!normalized)
-        return "#ffffff";
-    if (isColorValue(normalized))
-        return color;
-    return colorNameToHex[normalized] || color;
+
+const colorImageMap = {
+  white: "/hoodies/hoodie-1.avif",
+  black: "/hoodies/hoodie-2.avif",
+  navy: "/hoodies/hoodie-3.avif",
+  gray: "/hoodies/hoodie-4.avif",
+  blue: "/hoodies/hoodie-5.avif",
+  charcoal: "/hoodies/hoodie-6.avif",
+  green: "/hoodies/hoodie-7.avif",
+  peach: "/hoodies/hoodie-8.avif",
+  pink: "/hoodies/hoodie-9.avif",
 };
-const resolveColorKey = (selectedColor, availableColors) => {
-    if (!availableColors.length)
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const isColorValue = (value) =>
+  value.startsWith("#") || value.startsWith("rgb") || value.startsWith("hsl");
+
+const isValidObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ""));
+
+const normalizeColorKey = (value) => String(value || "").trim().toLowerCase();
+
+const createEmptySideState = () => ({
+  textValue: "",
+  textFontSize: 16,
+  textAlign: "center",
+  textColor: "#000000",
+  textFontFamily: "Tajawal",
+  uploadedImage: null,
+  imagePosition: { x: 50, y: 50 },
+  imageSize: 120,
+});
+
+const resolveColorValue = (value) => {
+  if (!value) return "#ffffff";
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return "#ffffff";
+  if (isColorValue(normalized)) return value;
+  return colorHexMap[normalized] || value;
+};
+
+const normalizeViewKey = (value) => {
+  if (!value) return "";
+  return String(value).trim().toLowerCase();
+};
+
+const getViewEntry = (viewMap, viewKey) => {
+  if (!viewMap || !viewKey) return null;
+  const normalized = normalizeViewKey(viewKey);
+  if (!normalized) return null;
+  if (Object.prototype.hasOwnProperty.call(viewMap, normalized)) {
+    return viewMap[normalized];
+  }
+  const fallbackKey = Object.keys(viewMap).find(
+    (key) => normalizeViewKey(key) === normalized
+  );
+  return fallbackKey ? viewMap[fallbackKey] : null;
+};
+
+const resolveProductColorKey = (value, product) => {
+  if (!value) return "black";
+  const normalized = normalizeColorKey(value);
+  const productColors = Array.isArray(product?.colors)
+    ? product.colors.map((color) => color.trim().toLowerCase()).filter(Boolean)
+    : [];
+  if (productColors.includes(normalized)) return normalized;
+  const byHex = Object.entries(colorHexMap).find(
+    ([, hex]) => hex.toLowerCase() === normalized
+  );
+  if (byHex) {
+    const key = byHex[0];
+    return productColors.includes(key) ? key : key;
+  }
+  return normalized;
+};
+
+const getColorKeys = (source) => {
+  if (!source) return [];
+  if (source instanceof Map) return Array.from(source.keys());
+  if (Array.isArray(source)) {
+    return source
+      .map((item) => {
+        if (!item) return "";
+        if (typeof item === "string") return item;
+        if (typeof item === "object" && item.color) return String(item.color);
         return "";
-    const normalizedSelected = selectedColor.trim().toLowerCase();
-    if (normalizedSelected && !isColorValue(normalizedSelected)) {
-        const direct = availableColors.find((c) => c.trim().toLowerCase() === normalizedSelected);
-        if (direct)
-            return direct.trim().toLowerCase();
-    }
-    const selectedHex = resolveColorHex(selectedColor).toLowerCase();
-    const match = availableColors.find((c) => resolveColorHex(c).toLowerCase() === selectedHex);
-    return match ? match.trim().toLowerCase() : "";
+      })
+      .filter(Boolean);
+  }
+  if (typeof source === "object") {
+    return Object.keys(source)
+      .map((key) => normalizeColorKey(key))
+      .filter(Boolean);
+  }
+  return [];
 };
+
+const getColorEntry = (source, colorKey) => {
+  if (!source || !colorKey) return null;
+  const normalizedColorKey = normalizeColorKey(colorKey);
+  if (!normalizedColorKey) return null;
+  if (source instanceof Map) {
+    return source.get(colorKey) || source.get(normalizedColorKey) || null;
+  }
+  if (typeof source !== "object") return null;
+  if (Object.prototype.hasOwnProperty.call(source, colorKey)) {
+    return source[colorKey];
+  }
+  if (Object.prototype.hasOwnProperty.call(source, normalizedColorKey)) {
+    return source[normalizedColorKey];
+  }
+  const fallbackKey = Object.keys(source).find(
+    (key) => normalizeColorKey(key) === normalizedColorKey
+  );
+  return fallbackKey ? source[fallbackKey] : null;
+};
+
+const toPercent = (value) => {
+  if (typeof value !== "number" || Number.isNaN(value)) return null;
+  return `${value * 100}%`;
+};
+
+const resolveDesignArea = (product, position) => {
+  const fallback = defaultDesignAreas[position] || defaultDesignAreas.front;
+  const area = product?.designAreas?.[position] || product?.designAreas?.front;
+  if (!area || typeof area !== "object") return fallback;
+  const next = {
+    top: toPercent(area.y),
+    left: toPercent(area.x),
+    width: toPercent(area.width),
+    height: toPercent(area.height),
+  };
+  if (Object.values(next).some((value) => value == null)) {
+    return fallback;
+  }
+  return next;
+};
+
+const resolveProductImage = (product, viewKey, colorKey) => {
+  if (!product) return null;
+  const normalizedColor = colorKey ? colorKey.toLowerCase() : "";
+  const normalizedViewKey = normalizeViewKey(viewKey) || "front";
+  const colorViews = product.colorViews || {};
+  const colorView = normalizedColor ? getColorEntry(colorViews, normalizedColor) : null;
+  const colorMockups = product.colorMockups || {};
+  const colorMockup = normalizedColor ? getColorEntry(colorMockups, normalizedColor) : null;
+  const colorViewImage = colorView ? getViewEntry(colorView, normalizedViewKey) : null;
+  if (colorViewImage) return colorViewImage;
+  const productViewImage = getViewEntry(product.viewMockups || {}, normalizedViewKey);
+  if (productViewImage) return productViewImage;
+  if (normalizedViewKey !== "front") return null;
+  if (colorView?.front) return colorView.front;
+  if (colorMockup) return colorMockup;
+  if (product.viewMockups?.front) return product.viewMockups.front;
+  if (colorImageMap[normalizedColor]) return colorImageMap[normalizedColor];
+  return product.baseMockupUrl || product.image;
+};
+
 export default function DesignStudioPage() {
-    const { user, isAuthenticated } = useAuth();
-    const router = useRouter();
-    const { toast } = useToast();
-    const { addItem } = useCart();
-    const [selectedProduct, setSelectedProduct] = useState("tshirt");
-    const [productColor, setProductColor] = useState("#ffffff");
-    const [hasPickedColor, setHasPickedColor] = useState(false);
-    const [productSize, setProductSize] = useState("M");
-    const [productQuantity, setProductQuantity] = useState(1);
-    const [selectedPosition, setSelectedPosition] = useState("front");
-    const [textValue, setTextValue] = useState("");
-    const [textFontSize, setTextFontSize] = useState(32);
-    const [textAlign, setTextAlign] = useState("center");
-    const [textColor, setTextColor] = useState("#000000");
-    const [textFontFamily, setTextFontFamily] = useState("Tajawal");
-    const [activeTextId, setActiveTextId] = useState(null);
-    const [imageSize, setImageSize] = useState(120);
-    const [activeImageId, setActiveImageId] = useState(null);
-    const [designElements, setDesignElements] = useState([]);
-    const [selectedElement, setSelectedElement] = useState(null);
-    const [historyIndex, setHistoryIndex] = useState(-1);
-    const [historyLength, setHistoryLength] = useState(0);
-    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-    const [aiVariations, setAiVariations] = useState([]);
-    const [showAIResults, setShowAIResults] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
-    const activeTab = "all";
-    const [zoom, setZoom] = useState(100);
-    const [showGrid, setShowGrid] = useState(false);
-    const [snapToGrid, setSnapToGrid] = useState(false);
-    const [gridSize, setGridSize] = useState(10);
-    const [isSaving, setIsSaving] = useState(false);
-    const [designName, setDesignName] = useState("");
-    const [savedDesigns, setSavedDesigns] = useState([]);
-    const [studioProducts, setStudioProducts] = useState([]);
-    const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-    const [showLoadDialog, setShowLoadDialog] = useState(false);
-    const [currentDesignId, setCurrentDesignId] = useState(null);
-    const [viewImageSize, setViewImageSize] = useState({ width: 1000, height: 1200 });
-    const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
-    const canvasRef = useRef(null);
-    const canvasWrapperRef = useRef(null);
-    const fabricRef = useRef(null);
-    const guideRef = useRef(null);
-    const designAreaRef = useRef(null);
-    const viewStatesRef = useRef({});
-    const historyRef = useRef({});
-    const isRestoringRef = useRef(false);
-    const lastViewKeyRef = useRef(null);
-    const syncTimeoutRef = useRef(null);
-    useEffect(() => {
-        if (user) {
-            designsApi.getMyDesigns().then(setSavedDesigns).catch(() => { });
-        }
-    }, [user]);
-    useEffect(() => {
-        setIsLoadingProducts(true);
-        studioProductsApi
-            .getActive()
-            .then((data) => setStudioProducts(data))
-            .catch(() => setStudioProducts([]))
-            .finally(() => setIsLoadingProducts(false));
-    }, []);
-    const resolvedProductTemplates = useMemo(() => {
-        const map = {};
-        studioProducts.forEach((p) => {
-            map[p.type] = { name: p.name, image: p.baseMockupUrl, price: p.price, category: "Studio" };
-        });
-        return map;
-    }, [studioProducts]);
-    const currentStudioProduct = useMemo(() => studioProducts.find((p) => p.type === selectedProduct), [studioProducts, selectedProduct]);
-    const currentProduct = resolvedProductTemplates[selectedProduct];
-    const activeStudioProduct = currentStudioProduct || studioProducts[0];
-    const activeProduct = activeStudioProduct ? resolvedProductTemplates[activeStudioProduct.type] : undefined;
-    const availableColors = useMemo(() => (activeStudioProduct?.colors || []).map((color) => color.trim()).filter(Boolean), [activeStudioProduct]);
-    const colorOptions = useMemo(() => {
-        const palette = Object.keys(colorNameToHex);
-        if (!availableColors.length)
-            return palette;
-        const seen = new Set();
-        const merged = [];
-        const addColor = (color) => {
-            const key = color.trim().toLowerCase();
-            if (!key || seen.has(key))
-                return;
-            seen.add(key);
-            merged.push(color);
+  const { toast } = useToast();
+  const { addItem } = useCart();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const previewRef = useRef(null);
+  const skipSideSyncRef = useRef(false);
+
+  const [selectedProduct, setSelectedProduct] = useState(products[0].id);
+  const [productColor, setProductColor] = useState("#ffffff");
+  const [productSize, setProductSize] = useState("M");
+  const [productQuantity, setProductQuantity] = useState(1);
+  const [selectedPosition, setSelectedPosition] = useState("front");
+
+  const [textValue, setTextValue] = useState("");
+  const [textFontSize, setTextFontSize] = useState(16);
+  const [textAlign, setTextAlign] = useState("center");
+  const [textColor, setTextColor] = useState("#000000");
+  const [textFontFamily, setTextFontFamily] = useState("Tajawal");
+
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [imagePosition, setImagePosition] = useState({ x: 50, y: 50 });
+  const [imageSize, setImageSize] = useState(120);
+  const [designBySide, setDesignBySide] = useState(() => ({
+    front: createEmptySideState(),
+    back: createEmptySideState(),
+  }));
+
+  const zoom = 100;
+  const [showGrid, setShowGrid] = useState(false);
+  const [gridSize] = useState(10);
+  const [designName, setDesignName] = useState("");
+  const [savedDesigns, setSavedDesigns] = useState([]);
+  const [favoriteDesignIds, setFavoriteDesignIds] = useState([]);
+  const [studioProducts, setStudioProducts] = useState([]);
+  const [studioLoading, setStudioLoading] = useState(false);
+  const [studioReady, setStudioReady] = useState(false);
+  const [isSavingDesign, setIsSavingDesign] = useState(false);
+  const [loadingDesignId, setLoadingDesignId] = useState("");
+  const [loadingLocalDesignId, setLoadingLocalDesignId] = useState("");
+
+  const mergedStudioProducts = useMemo(() => {
+    if (!studioProducts.length) return [];
+    const merged = new Map();
+    studioProducts.forEach((product) => {
+      const nameKey = product?.name ? product.name.trim().toLowerCase() : "studio-product";
+      const typeKey = product?.type ? product.type.trim().toLowerCase() : "";
+      const key = `${nameKey}:${typeKey}`;
+      const colors = Array.isArray(product.colors) ? product.colors : [];
+      const colorViews =
+        product.colorViews && typeof product.colorViews === "object" ? product.colorViews : {};
+      const colorMockups =
+        product.colorMockups && typeof product.colorMockups === "object" ? product.colorMockups : {};
+      const viewMockups = product.viewMockups || {};
+      const previewUrl = viewMockups.front || product.baseMockupUrl || product.image || "";
+      const singleColorKey =
+        colors.length === 1 && typeof colors[0] === "string"
+          ? colors[0].trim().toLowerCase()
+          : "";
+      const viewPayload =
+        viewMockups && typeof viewMockups === "object" ? { ...viewMockups } : {};
+      if (!merged.has(key)) {
+        const next = {
+          ...product,
+          colors: [...colors],
+          colorViews: { ...colorViews },
+          colorMockups: { ...colorMockups },
         };
-        availableColors.forEach(addColor);
-        palette.forEach(addColor);
-        return merged;
-    }, [availableColors]);
-    const selectedColorKey = resolveColorKey(productColor, availableColors);
-    const activeColorKey = (selectedColorKey || productColor || "default").trim().toLowerCase();
-    const rawViewImageUrl = useMemo(() => {
-        if (!activeStudioProduct) {
-            return "/placeholder-logo.png";
+        if (singleColorKey && Object.keys(viewPayload).length) {
+          next.colorViews = {
+            ...next.colorViews,
+            [singleColorKey]: {
+              ...(next.colorViews?.[singleColorKey] || {}),
+              ...viewPayload,
+            },
+          };
         }
-        const colorViews = activeStudioProduct.colorViews?.[activeColorKey];
-        const viewMockups = activeStudioProduct.viewMockups || {};
-        const legacyColor = activeStudioProduct.colorMockups?.[activeColorKey];
-        const rawUrl = colorViews?.[selectedPosition]
-            || viewMockups?.[selectedPosition]
-            || legacyColor
-            || activeStudioProduct.baseMockupUrl
-            || activeProduct?.image
-            || "/placeholder-logo.png";
-        return rawUrl;
-    }, [activeStudioProduct, activeColorKey, selectedPosition, activeProduct]);
-    const viewImageUrl = useMemo(() => getOptimizedCloudinaryUrl(rawViewImageUrl), [rawViewImageUrl]);
-    const exportImageUrl = useMemo(() => getOptimizedCloudinaryUrl(rawViewImageUrl, EXPORT_MIN_SIZE), [rawViewImageUrl]);
-    const designAreaRatio = useMemo(() => {
-        const candidate = activeStudioProduct?.designAreas?.[selectedPosition];
-        if (!candidate)
-            return DEFAULT_DESIGN_AREA;
-        const values = [candidate.x, candidate.y, candidate.width, candidate.height];
-        if (values.some((value) => typeof value !== "number")) {
-            return DEFAULT_DESIGN_AREA;
-        }
-        if (values.some((value) => value > 1)) {
-            return DEFAULT_DESIGN_AREA;
-        }
-        return {
-            x: Math.max(0, Math.min(1, candidate.x)),
-            y: Math.max(0, Math.min(1, candidate.y)),
-            width: Math.max(0, Math.min(1, candidate.width)),
-            height: Math.max(0, Math.min(1, candidate.height)),
+        merged.set(key, next);
+        return;
+      }
+      const existing = merged.get(key);
+      const mergedColors = new Set([
+        ...((existing.colors || []).map((c) => String(c))),
+        ...colors.map((c) => String(c)),
+      ]);
+      existing.colors = Array.from(mergedColors);
+      existing.colorViews = { ...(existing.colorViews || {}), ...colorViews };
+      existing.colorMockups = { ...(existing.colorMockups || {}), ...colorMockups };
+      if (singleColorKey && Object.keys(viewPayload).length) {
+        existing.colorViews = {
+          ...(existing.colorViews || {}),
+          [singleColorKey]: {
+            ...(existing.colorViews?.[singleColorKey] || {}),
+            ...viewPayload,
+          },
         };
-    }, [activeStudioProduct, selectedPosition]);
-    useEffect(() => {
-        if (!availableColors.length)
-            return;
-        if (hasPickedColor)
-            return;
-        const match = resolveColorKey(productColor, availableColors);
-        if (!match) {
-            setProductColor(resolveColorHex(availableColors[0]));
-        }
-    }, [availableColors, productColor, hasPickedColor]);
-    useEffect(() => {
-        if (studioProducts.length === 0)
-            return;
-        const allowed = new Set(studioProducts.map((p) => p.type));
-        if (!allowed.has(selectedProduct)) {
-            setSelectedProduct(studioProducts[0].type);
-        }
-    }, [studioProducts, selectedProduct]);
-    useEffect(() => {
-        if (!viewImageUrl)
-            return;
-        let active = true;
-        const image = new window.Image();
-        image.onload = () => {
-            if (!active)
-                return;
-            setViewImageSize({
-                width: image.naturalWidth || 1000,
-                height: image.naturalHeight || 1200,
-            });
-        };
-        image.src = viewImageUrl;
-        return () => {
-            active = false;
-        };
-    }, [viewImageUrl]);
-    useEffect(() => {
-        const wrapper = canvasWrapperRef.current;
-        if (!wrapper)
-            return;
-        const observer = new ResizeObserver(() => {
-            const width = wrapper.clientWidth;
-            const height = wrapper.clientHeight;
-            if (!width || !height)
-                return;
-            setCanvasSize({ width, height });
-        });
-        observer.observe(wrapper);
-        return () => observer.disconnect();
-    }, [viewImageSize]);
-    const getHistoryKey = useCallback((colorKey, view) => `${colorKey}::${view}`, []);
-    const scheduleSyncElements = useCallback(() => {
-        if (syncTimeoutRef.current)
-            return;
-        syncTimeoutRef.current = setTimeout(() => {
-            syncTimeoutRef.current = null;
-            const canvas = fabricRef.current;
-            if (!canvas)
-                return;
-            const elements = canvas.getObjects().filter((obj) => !obj.excludeFromExport).map((obj) => {
-                const id = obj.id || obj.data?.id || uuidv4();
-                const isText = obj.type === "textbox" || obj.type === "i-text" || obj.type === "text";
-                return {
-                    id,
-                    type: isText ? "text" : "image",
-                    content: isText ? obj.text : (obj.data?.src || obj._originalElement?.currentSrc || obj._element?.currentSrc || ""),
-                    x: obj.left || 0,
-                    y: obj.top || 0,
-                    width: obj.getScaledWidth(),
-                    height: obj.getScaledHeight(),
-                    rotation: obj.angle || 0,
-                    opacity: obj.opacity ?? 1,
-                    fontSize: obj.fontSize,
-                    fontFamily: obj.fontFamily,
-                    color: obj.fill,
-                    fontWeight: obj.fontWeight,
-                    textAlign: obj.textAlign,
-                };
-            });
-            setDesignElements(elements);
-        }, 60);
-    }, []);
-    const buildRatioState = useCallback(() => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return null;
-        const areaPx = designAreaRef.current;
-        if (!areaPx)
-            return null;
-        const objects = canvas.getObjects().filter((obj) => !obj.excludeFromExport).map((obj) => {
-            const id = obj.id || obj.data?.id || uuidv4();
-            const isText = obj.type === "textbox" || obj.type === "i-text" || obj.type === "text";
-            const width = obj.getScaledWidth();
-            const height = obj.getScaledHeight();
-            return {
-                id,
-                type: isText ? "text" : "image",
-                text: isText ? obj.text : undefined,
-                src: isText ? undefined : (obj.data?.src || obj._originalElement?.currentSrc || obj._element?.currentSrc || ""),
-                left: areaPx.width > 0 ? (obj.left - areaPx.x) / areaPx.width : 0,
-                top: areaPx.height > 0 ? (obj.top - areaPx.y) / areaPx.height : 0,
-                width: areaPx.width > 0 ? width / areaPx.width : 0,
-                height: areaPx.height > 0 ? height / areaPx.height : 0,
-                angle: obj.angle || 0,
-                opacity: obj.opacity ?? 1,
-                fill: obj.fill,
-                fontSize: isText && obj.fontSize ? obj.fontSize / areaPx.width : undefined,
-                fontFamily: obj.fontFamily,
-                fontWeight: obj.fontWeight,
-                textAlign: obj.textAlign,
-            };
-        });
-        return {
-            area: { ...designAreaRatio },
-            objects,
-        };
-    }, [designAreaRatio]);
-    const setHistoryState = useCallback((colorKey, viewKey, state) => {
-        historyRef.current[getHistoryKey(colorKey, viewKey)] = state;
-        setHistoryIndex(state.index);
-        setHistoryLength(state.stack.length);
-    }, [getHistoryKey]);
-    const pushHistory = useCallback(() => {
-        const canvas = fabricRef.current;
-        if (!canvas || isRestoringRef.current)
-            return;
-        const key = getHistoryKey(activeColorKey, selectedPosition);
-        const historyState = historyRef.current[key] || { stack: [], index: -1 };
-        const json = canvas.toJSON(["id", "data"]);
-        const jsonString = JSON.stringify(json);
-        const currentString = historyState.index >= 0 ? JSON.stringify(historyState.stack[historyState.index]) : "";
-        if (jsonString === currentString)
-            return;
-        const nextStack = historyState.stack.slice(0, historyState.index + 1);
-        nextStack.push(json);
-        const nextState = { stack: nextStack, index: nextStack.length - 1 };
-        setHistoryState(activeColorKey, selectedPosition, nextState);
-    }, [activeColorKey, selectedPosition, getHistoryKey, setHistoryState]);
-    const updateGuide = useCallback(() => {
-        const canvas = fabricRef.current;
-        if (!canvas || !canvasSize.width || !canvasSize.height)
-            return;
-        const areaPx = {
-            x: designAreaRatio.x * canvasSize.width,
-            y: designAreaRatio.y * canvasSize.height,
-            width: designAreaRatio.width * canvasSize.width,
-            height: designAreaRatio.height * canvasSize.height,
-        };
-        designAreaRef.current = areaPx;
-        let guide = guideRef.current;
-        if (!guide) {
-            guide = new fabric.Rect({
-                left: areaPx.x,
-                top: areaPx.y,
-                width: areaPx.width,
-                height: areaPx.height,
-                fill: "rgba(99,102,241,0.06)",
-                stroke: "rgba(99,102,241,0.6)",
-                strokeDashArray: [6, 6],
-                selectable: false,
-                evented: false,
-                excludeFromExport: true,
-            });
-            guideRef.current = guide;
-            canvas.add(guide);
-        }
-        else {
-            guide.set({
-                left: areaPx.x,
-                top: areaPx.y,
-                width: areaPx.width,
-                height: areaPx.height,
-            });
-        }
-        guide.bringToFront();
-        canvas.clipPath = new fabric.Rect({
-            left: areaPx.x,
-            top: areaPx.y,
-            width: areaPx.width,
-            height: areaPx.height,
-            absolutePositioned: true,
-        });
-        canvas.requestRenderAll();
-    }, [canvasSize, designAreaRatio]);
-    const applyBackground = useCallback((url) => {
-        const canvas = fabricRef.current;
-        if (!canvas || !url || !canvasSize.width || !canvasSize.height)
-            return;
-        fabric.Image.fromURL(url, (img) => {
-            if (!img)
-                return;
-            const scaleX = canvasSize.width / img.width;
-            const scaleY = canvasSize.height / img.height;
-            img.set({
-                originX: "left",
-                originY: "top",
-                scaleX,
-                scaleY,
-            });
-            canvas.backgroundImage = img;
-            canvas.requestRenderAll();
-        }, { crossOrigin: "anonymous" });
-    }, [canvasSize]);
-    const clampToArea = useCallback((obj) => {
-        const area = designAreaRef.current;
-        if (!area || !obj)
-            return;
-        const bounds = obj.getBoundingRect(true);
-        let deltaX = 0;
-        let deltaY = 0;
-        if (bounds.left < area.x) {
-            deltaX = area.x - bounds.left;
-        }
-        if (bounds.top < area.y) {
-            deltaY = area.y - bounds.top;
-        }
-        if (bounds.left + bounds.width > area.x + area.width) {
-            deltaX = area.x + area.width - (bounds.left + bounds.width);
-        }
-        if (bounds.top + bounds.height > area.y + area.height) {
-            deltaY = area.y + area.height - (bounds.top + bounds.height);
-        }
-        if (deltaX || deltaY) {
-            obj.left = (obj.left || 0) + deltaX;
-            obj.top = (obj.top || 0) + deltaY;
-            obj.setCoords();
-        }
-    }, []);
-    const initCanvas = useCallback(() => {
-        if (!canvasRef.current || fabricRef.current)
-            return;
-        const canvas = new fabric.Canvas(canvasRef.current, {
-            preserveObjectStacking: true,
-            selection: true,
-        });
-        fabricRef.current = canvas;
-        canvas.on("selection:created", () => {
-            const active = canvas.getActiveObject();
-            if (!active || active.excludeFromExport) {
-                setSelectedElement(null);
-                return;
-            }
-            const id = active.id || active.data?.id;
-            setSelectedElement(id || null);
-            if (active.type === "image") {
-                setActiveImageId(id || null);
-                setActiveTextId(null);
-                setImageSize(Math.round(active.getScaledWidth()));
-            }
-            else if (active.type === "textbox" || active.type === "i-text" || active.type === "text") {
-                setActiveTextId(id || null);
-                setActiveImageId(null);
-                setTextValue(active.text || "");
-                setTextFontSize(active.fontSize || 32);
-                setTextAlign(active.textAlign || "center");
-                setTextColor(active.fill || "#111111");
-                setTextFontFamily(active.fontFamily || "Tajawal");
-            }
-        });
-        canvas.on("selection:updated", () => {
-            const active = canvas.getActiveObject();
-            if (!active || active.excludeFromExport) {
-                setSelectedElement(null);
-                return;
-            }
-            const id = active.id || active.data?.id;
-            setSelectedElement(id || null);
-            if (active.type === "image") {
-                setActiveImageId(id || null);
-                setActiveTextId(null);
-                setImageSize(Math.round(active.getScaledWidth()));
-            }
-            else if (active.type === "textbox" || active.type === "i-text" || active.type === "text") {
-                setActiveTextId(id || null);
-                setActiveImageId(null);
-                setTextValue(active.text || "");
-                setTextFontSize(active.fontSize || 32);
-                setTextAlign(active.textAlign || "center");
-                setTextColor(active.fill || "#111111");
-                setTextFontFamily(active.fontFamily || "Tajawal");
-            }
-        });
-        canvas.on("selection:cleared", () => {
-            setSelectedElement(null);
-        });
-        canvas.on("object:moving", (event) => {
-            if (snapToGrid) {
-                const obj = event.target;
-                if (obj) {
-                    obj.left = Math.round((obj.left || 0) / gridSize) * gridSize;
-                    obj.top = Math.round((obj.top || 0) / gridSize) * gridSize;
-                }
-            }
-            clampToArea(event.target);
-        });
-        canvas.on("object:scaling", (event) => {
-            clampToArea(event.target);
-        });
-        canvas.on("object:rotating", (event) => {
-            clampToArea(event.target);
-        });
-        const handleObjectChange = () => {
-            scheduleSyncElements();
-            pushHistory();
-        };
-        canvas.on("object:added", handleObjectChange);
-        canvas.on("object:modified", handleObjectChange);
-        canvas.on("object:removed", handleObjectChange);
-    }, [clampToArea, gridSize, pushHistory, scheduleSyncElements, snapToGrid]);
-    useEffect(() => {
-        initCanvas();
-    }, [initCanvas]);
-    useEffect(() => {
-        const canvas = fabricRef.current;
-        if (!canvas || !canvasSize.width || !canvasSize.height)
-            return;
-        canvas.setWidth(canvasSize.width);
-        canvas.setHeight(canvasSize.height);
-        canvas.calcOffset();
-        applyBackground(viewImageUrl);
-        updateGuide();
-    }, [canvasSize, applyBackground, updateGuide, viewImageUrl]);
-    useEffect(() => {
-        const canvas = fabricRef.current;
-        if (!canvas || !canvasSize.width || !canvasSize.height)
-            return;
-        canvas.zoomToPoint(new fabric.Point(canvasSize.width / 2, canvasSize.height / 2), zoom / 100);
-        canvas.requestRenderAll();
-    }, [zoom, canvasSize]);
-    const persistCurrentView = useCallback(() => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const ratioState = buildRatioState();
-        const state = {
-            view: selectedPosition,
-            colorKey: activeColorKey,
-            canvasJson: canvas.toJSON(["id", "data"]),
-            ratioState,
-            previewSize: { width: canvas.getWidth(), height: canvas.getHeight() },
-            updatedAt: new Date().toISOString(),
-        };
-        if (!viewStatesRef.current[activeColorKey]) {
-            viewStatesRef.current[activeColorKey] = {};
-        }
-        viewStatesRef.current[activeColorKey][selectedPosition] = state;
-    }, [activeColorKey, buildRatioState, selectedPosition]);
-    const loadViewState = useCallback(async (colorKey, viewKey) => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        isRestoringRef.current = true;
-        canvas.getObjects().forEach((obj) => canvas.remove(obj));
-        const state = viewStatesRef.current?.[colorKey]?.[viewKey];
-        if (state?.ratioState) {
-            const areaRatio = state.ratioState.area || designAreaRatio;
-            const areaPx = {
-                x: areaRatio.x * canvasSize.width,
-                y: areaRatio.y * canvasSize.height,
-                width: areaRatio.width * canvasSize.width,
-                height: areaRatio.height * canvasSize.height,
-            };
-            designAreaRef.current = areaPx;
-            const objects = [];
-            for (const obj of state.ratioState.objects || []) {
-                if (obj.type === "image" && obj.src) {
-                    const image = await new Promise((resolve) => {
-                        fabric.Image.fromURL(obj.src, (img) => resolve(img), { crossOrigin: "anonymous" });
-                    });
-                    if (!image)
-                        continue;
-                    const width = obj.width * areaPx.width;
-                    const height = obj.height * areaPx.height;
-                    image.set({
-                        left: areaPx.x + obj.left * areaPx.width,
-                        top: areaPx.y + obj.top * areaPx.height,
-                        angle: obj.angle || 0,
-                        opacity: obj.opacity ?? 1,
-                        id: obj.id || uuidv4(),
-                        data: { id: obj.id || uuidv4(), src: obj.src },
-                    });
-                    image.scaleX = width / image.width;
-                    image.scaleY = height / image.height;
-                    objects.push(image);
-                }
-                if (obj.type === "text" && obj.text) {
-                    const fontSize = obj.fontSize ? obj.fontSize * areaPx.width : 32;
-                    const textObj = new fabric.Textbox(obj.text, {
-                        left: areaPx.x + obj.left * areaPx.width,
-                        top: areaPx.y + obj.top * areaPx.height,
-                        fontSize,
-                        fill: obj.fill || "#111111",
-                        fontFamily: obj.fontFamily || "Tajawal",
-                        fontWeight: obj.fontWeight || "normal",
-                        textAlign: obj.textAlign || "center",
-                        angle: obj.angle || 0,
-                        opacity: obj.opacity ?? 1,
-                    });
-                    textObj.set({
-                        id: obj.id || uuidv4(),
-                        data: { id: obj.id || uuidv4() },
-                    });
-                    const width = obj.width * areaPx.width;
-                    const height = obj.height * areaPx.height;
-                    if (width > 0) {
-                        textObj.set({ width });
-                    }
-                    if (height > 0 && textObj.height) {
-                        textObj.scaleY = height / textObj.height;
-                    }
-                    objects.push(textObj);
-                }
-            }
-            objects.forEach((obj) => canvas.add(obj));
-        }
-        else if (state?.canvasJson) {
-            await new Promise((resolve) => {
-                canvas.loadFromJSON(state.canvasJson, () => resolve());
-            });
-        }
-        updateGuide();
-        canvas.requestRenderAll();
-        scheduleSyncElements();
-        const historyState = {
-            stack: state?.canvasJson ? [state.canvasJson] : [canvas.toJSON(["id", "data"])],
-            index: 0,
-        };
-        setHistoryState(colorKey, viewKey, historyState);
-        isRestoringRef.current = false;
-    }, [canvasSize, designAreaRatio, scheduleSyncElements, setHistoryState, updateGuide]);
-    useEffect(() => {
-        const nextKey = `${activeColorKey}::${selectedPosition}`;
-        if (lastViewKeyRef.current && lastViewKeyRef.current !== nextKey) {
-            persistCurrentView();
-        }
-        lastViewKeyRef.current = nextKey;
-        if (!canvasSize.width || !canvasSize.height)
-            return;
-        loadViewState(activeColorKey, selectedPosition);
-        applyBackground(viewImageUrl);
-    }, [activeColorKey, selectedPosition, canvasSize, persistCurrentView, loadViewState, applyBackground, viewImageUrl]);
-    const addTextElement = useCallback((content) => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const area = designAreaRef.current;
-        const safe = area || { x: 0, y: 0, width: canvas.getWidth(), height: canvas.getHeight() };
-        const text = new fabric.IText(content?.trim() ? content : "Your Text Here", {
-            left: safe.x + safe.width / 2,
-            top: safe.y + safe.height / 2,
-            originX: "center",
-            originY: "center",
-            fontSize: textFontSize,
-            fill: textColor,
-            fontFamily: textFontFamily,
-            textAlign,
-        });
-        const id = uuidv4();
-        text.set({ id, data: { id } });
-        canvas.add(text);
-        canvas.setActiveObject(text);
-        canvas.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-        setSelectedElement(id);
-        setActiveTextId(id);
-    }, [pushHistory, scheduleSyncElements, textAlign, textColor, textFontFamily, textFontSize]);
-    const addImageElement = useCallback((imageUrl) => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const area = designAreaRef.current;
-        const safe = area || { x: 0, y: 0, width: canvas.getWidth(), height: canvas.getHeight() };
-        fabric.Image.fromURL(imageUrl, (img) => {
-            if (!img)
-                return;
-            const maxSize = Math.min(safe.width, safe.height) * 0.6;
-            img.scaleToWidth(maxSize);
-            img.scaleToHeight(maxSize);
-            const id = uuidv4();
-            img.set({
-                left: safe.x + safe.width / 2 - img.getScaledWidth() / 2,
-                top: safe.y + safe.height / 2 - img.getScaledHeight() / 2,
-                id,
-                data: { id, src: imageUrl },
-            });
-            canvas.add(img);
-            canvas.setActiveObject(img);
-            canvas.requestRenderAll();
-            scheduleSyncElements();
-            pushHistory();
-            setSelectedElement(id);
-            setActiveImageId(id);
-            setImageSize(Math.round(img.getScaledWidth()));
-        }, { crossOrigin: "anonymous" });
-    }, [pushHistory, scheduleSyncElements]);
-    const handleImageUpload = async ({ blob, dataUrl }) => {
-        if (!blob) {
-            return;
-        }
-        try {
-            const uploaded = await designsApi.uploadAsset(blob);
-            const uploadedUrl = uploaded?.url || uploaded?.data?.url || dataUrl;
-            addImageElement(uploadedUrl || dataUrl);
-        }
-        catch (error) {
-            toast({
-                title: "Upload failed",
-                description: error.message || "Could not upload image",
-                variant: "destructive",
-            });
-            addImageElement(dataUrl);
-        }
-    };
-    const getActiveTextElement = () => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return null;
-        const active = canvas.getActiveObject();
-        if (active && (active.type === "textbox" || active.type === "i-text" || active.type === "text")) {
-            return active;
-        }
-        if (!activeTextId)
-            return null;
-        return canvas.getObjects().find((obj) => obj.id === activeTextId) || null;
-    };
-    const getActiveImageElement = () => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return null;
-        const active = canvas.getActiveObject();
-        if (active && active.type === "image") {
-            return active;
-        }
-        if (!activeImageId)
-            return null;
-        return canvas.getObjects().find((obj) => obj.id === activeImageId) || null;
-    };
-    const handleTextChange = (value) => {
-        setTextValue(value);
-        const target = getActiveTextElement();
-        if (!target) {
-            if (value.trim()) {
-                addTextElement(value);
-            }
-            return;
-        }
-        target.set({ text: value });
-        fabricRef.current?.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-    };
-    const handleFontSizeChange = (size) => {
-        setTextFontSize(size);
-        const target = getActiveTextElement();
-        if (!target)
-            return;
-        target.set({ fontSize: size });
-        fabricRef.current?.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-    };
-    const handleTextAlignChange = (align) => {
-        setTextAlign(align);
-        const target = getActiveTextElement();
-        if (!target)
-            return;
-        target.set({ textAlign: align });
-        fabricRef.current?.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-    };
-    const handleTextColorChange = (color) => {
-        setTextColor(color);
-        const target = getActiveTextElement();
-        if (!target)
-            return;
-        target.set({ fill: color });
-        fabricRef.current?.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-    };
-    const handleFontFamilyChange = (font) => {
-        setTextFontFamily(font);
-        const target = getActiveTextElement();
-        if (!target)
-            return;
-        target.set({ fontFamily: font });
-        fabricRef.current?.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-    };
-    const handleImageSizeChange = (size) => {
-        setImageSize(size);
-        const target = getActiveImageElement();
-        if (!target)
-            return;
-        if (target.width && target.height) {
-            target.scaleX = size / target.width;
-            target.scaleY = size / target.height;
-            target.setCoords();
-            fabricRef.current?.requestRenderAll();
-            scheduleSyncElements();
-            pushHistory();
-        }
-    };
-    const updateElement = (id, updates) => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const target = canvas.getObjects().find((obj) => obj.id === id);
-        if (!target)
-            return;
-        if (updates.rotation !== undefined) {
-            target.set({ angle: updates.rotation });
-        }
-        if (updates.opacity !== undefined) {
-            target.set({ opacity: updates.opacity });
-        }
-        if (target.type === "image" && (updates.width || updates.height)) {
-            const width = updates.width || target.getScaledWidth();
-            const height = updates.height || target.getScaledHeight();
-            if (target.width && target.height) {
-                target.scaleX = width / target.width;
-                target.scaleY = height / target.height;
-            }
-        }
-        target.setCoords();
-        canvas.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-    };
-    const deleteElement = (id) => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const target = canvas.getObjects().find((obj) => obj.id === id);
-        if (!target)
-            return;
-        canvas.remove(target);
-        canvas.discardActiveObject();
-        canvas.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-        setSelectedElement(null);
-    };
-    const duplicateElement = (id) => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const target = canvas.getObjects().find((obj) => obj.id === id);
-        if (!target)
-            return;
-        target.clone((clone) => {
-            const newId = uuidv4();
-            clone.set({
-                left: (clone.left || 0) + 20,
-                top: (clone.top || 0) + 20,
-                id: newId,
-                data: { ...(clone.data || {}), id: newId },
-            });
-            canvas.add(clone);
-            canvas.setActiveObject(clone);
-            canvas.requestRenderAll();
-            scheduleSyncElements();
-            pushHistory();
-            setSelectedElement(newId);
-        });
-    };
-    const alignElements = (alignment) => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const elements = canvas.getObjects().filter((obj) => !obj.excludeFromExport);
-        if (elements.length < 2) {
-            toast({
-                title: "Not enough elements",
-                description: "You need at least 2 elements to align them",
-                variant: "destructive",
-            });
-            return;
-        }
-        if (alignment === "left") {
-            const minX = Math.min(...elements.map((el) => el.left || 0));
-            elements.forEach((el) => el.set({ left: minX }));
-        }
-        else if (alignment === "right") {
-            const maxX = Math.max(...elements.map((el) => (el.left || 0) + el.getScaledWidth()));
-            elements.forEach((el) => el.set({ left: maxX - el.getScaledWidth() }));
-        }
-        else if (alignment === "center") {
-            const avgX = elements.reduce((sum, el) => sum + (el.left || 0) + el.getScaledWidth() / 2, 0) / elements.length;
-            elements.forEach((el) => el.set({ left: avgX - el.getScaledWidth() / 2 }));
-        }
-        canvas.requestRenderAll();
-        scheduleSyncElements();
-        pushHistory();
-    };
-    const undo = () => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const key = getHistoryKey(activeColorKey, selectedPosition);
-        const historyState = historyRef.current[key];
-        if (!historyState || historyState.index <= 0)
-            return;
-        isRestoringRef.current = true;
-        const nextIndex = historyState.index - 1;
-        canvas.loadFromJSON(historyState.stack[nextIndex], () => {
-            historyState.index = nextIndex;
-            setHistoryState(activeColorKey, selectedPosition, historyState);
-            updateGuide();
-            canvas.requestRenderAll();
-            scheduleSyncElements();
-            isRestoringRef.current = false;
-        });
-    };
-    const redo = () => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return;
-        const key = getHistoryKey(activeColorKey, selectedPosition);
-        const historyState = historyRef.current[key];
-        if (!historyState || historyState.index >= historyState.stack.length - 1)
-            return;
-        isRestoringRef.current = true;
-        const nextIndex = historyState.index + 1;
-        canvas.loadFromJSON(historyState.stack[nextIndex], () => {
-            historyState.index = nextIndex;
-            setHistoryState(activeColorKey, selectedPosition, historyState);
-            updateGuide();
-            canvas.requestRenderAll();
-            scheduleSyncElements();
-            isRestoringRef.current = false;
-        });
-    };
-    const generateAIVariations = async () => {
-        if (designElements.length === 0) {
-            toast({
-                title: "Nothing to enhance",
-                description: "Please add some elements to your design first",
-                variant: "destructive",
-            });
-            return;
-        }
-        setIsGeneratingAI(true);
-        setShowAIResults(true);
-        const hasText = designElements.some((el) => el.type === "text");
-        const hasImage = designElements.some((el) => el.type === "image");
-        const textContent = designElements.filter((el) => el.type === "text").map((el) => el.content).join(" ");
-        setTimeout(() => {
-            const variations = [];
-            if (hasText && hasImage) {
-                variations.push({
-                    id: "1",
-                    imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-                    prompt: "Modern layout with balanced typography and artwork",
-                    selected: false,
-                }, {
-                    id: "2",
-                    imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-                    prompt: "Colorful layout with playful typography",
-                    selected: false,
-                }, {
-                    id: "3",
-                    imageUrl: "/bold-typography-design-on-white-tshirt.jpg",
-                    prompt: "Bold typographic layout with strong contrast",
-                    selected: false,
-                });
-            }
-            else if (hasText) {
-                variations.push({
-                    id: "1",
-                    imageUrl: "/bold-typography-design-on-white-tshirt.jpg",
-                    prompt: `"${textContent}" - bold typography`,
-                    selected: false,
-                }, {
-                    id: "2",
-                    imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-                    prompt: `"${textContent}" - modern composition`,
-                    selected: false,
-                });
-            }
-            else if (hasImage) {
-                variations.push({
-                    id: "1",
-                    imageUrl: "/enhanced-modern-graphic-design-on-white-tshirt.jpg",
-                    prompt: "Refined graphic layout",
-                    selected: false,
-                }, {
-                    id: "2",
-                    imageUrl: "/artistic-colorful-design-on-white-tshirt.jpg",
-                    prompt: "Vibrant artistic layout",
-                    selected: false,
-                });
-            }
-            setAiVariations(variations);
-            setIsGeneratingAI(false);
-            toast({
-                title: "Variations ready",
-                description: `${variations.length} AI-inspired variations generated`,
-            });
-        }, 2000);
-    };
-    const selectAIVariation = (id) => {
-        setAiVariations(aiVariations.map((v) => ({ ...v, selected: v.id === id })));
-    };
-    const addAIDesignToCart = async () => {
-        const selected = aiVariations.find((v) => v.selected);
-        if (!selected) {
-            toast({
-                title: "No design selected",
-                description: "Please select a design variation first",
-                variant: "destructive",
-            });
-            return;
-        }
-        if (!user || !isAuthenticated) {
-            toast({
-                title: "Sign in required",
-                description: "Please sign in or create an account to add designs to your cart",
-                variant: "default",
-            });
-            setTimeout(() => {
-                router.push("/login");
-            }, 1500);
-            return;
-        }
-        try {
-            const product = activeProduct;
-            if (!product) {
-                toast({
-                    title: "No studio product",
-                    description: "No active studio products are available.",
-                    variant: "destructive",
-                });
-                return;
-            }
-            await addItem({
-                id: `ai-${Date.now()}-${selected.id}`,
-                name: `AI Enhanced ${product.name}`,
-                price: product.price,
-                quantity: 1,
-                size: productSize,
-                color: selectedColorKey || productColor,
-                image: selected.imageUrl,
-                isCustom: true,
-            });
-            toast({
-                title: "AI Design added to cart",
-                description: `Custom ${product.name} (${selected.prompt}) - $${product.price}`,
-            });
-            setShowAIResults(false);
-            setAiVariations([]);
-        }
-        catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to add design to cart. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
-    const generatePreview = async () => {
-        const canvas = fabricRef.current;
-        if (!canvas)
-            return null;
-        const guide = guideRef.current;
-        if (guide) {
-            guide.set({ visible: false });
-        }
-        canvas.requestRenderAll();
-        const dataUrl = canvas.toDataURL({ format: "png", multiplier: 1 });
-        if (guide) {
-            guide.set({ visible: true });
-        }
-        canvas.requestRenderAll();
-        return dataUrl;
-    };
-    const saveDesign = async () => {
-        if (!user) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to save your design",
-                variant: "destructive",
-            });
-            router.push("/login");
-            return;
-        }
-        if (designElements.length === 0) {
-            toast({
-                title: "Nothing to save",
-                description: "Please add some elements to your design first",
-                variant: "destructive",
-            });
-            return;
-        }
-        if (!activeStudioProduct?._id) {
-            toast({
-                title: "Missing studio product",
-                description: "Please select a studio product before saving.",
-                variant: "destructive",
-            });
-            return;
-        }
-        const name = designName.trim() || `My Design ${new Date().toLocaleDateString()}`;
-        setIsSaving(true);
-        try {
-            persistCurrentView();
-            const preview = await generatePreview();
-            const views = [];
-            Object.entries(viewStatesRef.current || {}).forEach(([colorKey, viewMap]) => {
-                Object.entries(viewMap || {}).forEach(([view, state]) => {
-                    views.push({
-                        view,
-                        colorKey,
-                        canvasJson: state.canvasJson,
-                        ratioState: state.ratioState,
-                        previewSize: state.previewSize,
-                    });
-                });
-            });
-            const designData = {
-                name,
-                baseProduct: {
-                    type: selectedProduct,
-                    color: selectedColorKey || productColor,
-                    size: productSize,
-                },
-                baseProductId: activeStudioProduct._id,
-                elements: designElements.map((el) => ({
-                    id: el.id,
-                    type: el.type,
-                    content: el.content,
-                    x: el.x,
-                    y: el.y,
-                    width: el.width || 100,
-                    height: el.height || 100,
-                    rotation: el.rotation || 0,
-                    fontSize: el.fontSize,
-                    fontFamily: el.fontFamily,
-                    color: el.color,
-                    fontWeight: el.fontWeight,
-                })),
-                views,
-                thumbnail: preview || undefined,
-                designImageURL: preview || undefined,
-                designMetadata: {
-                    productType: selectedProduct,
-                    productColor: selectedColorKey || productColor,
-                    productSize,
-                    view: selectedPosition,
-                    mockup: viewImageUrl,
-                },
-                price: activeProduct?.price || activeStudioProduct?.price || 0,
-                status: "draft",
-            };
-            const savedDesign = await designsApi.createDesign(designData);
-            setCurrentDesignId(savedDesign?._id || null);
-            logger.log("Design saved successfully:", savedDesign);
-            toast({
-                title: "Design saved successfully!",
-                description: "Your design has been saved to My Designs",
-            });
-            setTimeout(() => {
-                router.push("/my-designs");
-            }, 1200);
-        }
-        catch (error) {
-            logger.error("Failed to save design:", error);
-            toast({
-                title: "Save Failed",
-                description: error.message || "Failed to save design. Please try again.",
-                variant: "destructive",
-            });
-        }
-        finally {
-            setIsSaving(false);
-        }
-    };
-    const exportDesign = useCallback(async () => {
-        if (designElements.length === 0) {
-            toast({
-                title: "Nothing to export",
-                description: "Please add some elements to your design first",
-                variant: "destructive",
-            });
-            return;
-        }
-        try {
-            persistCurrentView();
-            const viewState = viewStatesRef.current?.[activeColorKey]?.[selectedPosition];
-            const ratioState = viewState?.ratioState || buildRatioState();
-            if (!ratioState) {
-                toast({
-                    title: "Export failed",
-                    description: "No design data available",
-                    variant: "destructive",
-                });
-                return;
-            }
-            const baseImage = await new Promise((resolve, reject) => {
-                const img = new window.Image();
-                img.crossOrigin = "anonymous";
-                img.onload = () => resolve(img);
-                img.onerror = (err) => reject(err);
-                img.src = exportImageUrl;
-            });
-            const scale = EXPORT_MIN_SIZE / Math.min(baseImage.naturalWidth, baseImage.naturalHeight);
-            const exportWidth = Math.round(baseImage.naturalWidth * scale);
-            const exportHeight = Math.round(baseImage.naturalHeight * scale);
-            const exportCanvasEl = document.createElement("canvas");
-            const exportCanvas = new fabric.StaticCanvas(exportCanvasEl, { width: exportWidth, height: exportHeight });
-            await new Promise((resolve) => {
-                fabric.Image.fromURL(exportImageUrl, (img) => {
-                    if (img) {
-                        img.set({
-                            originX: "left",
-                            originY: "top",
-                            scaleX: exportWidth / img.width,
-                            scaleY: exportHeight / img.height,
-                        });
-                        exportCanvas.backgroundImage = img;
-                        exportCanvas.requestRenderAll();
-                    }
-                    resolve();
-                }, { crossOrigin: "anonymous" });
-            });
-            const areaRatio = ratioState.area || DEFAULT_DESIGN_AREA;
-            const areaPx = {
-                x: areaRatio.x * exportWidth,
-                y: areaRatio.y * exportHeight,
-                width: areaRatio.width * exportWidth,
-                height: areaRatio.height * exportHeight,
-            };
-            const objectPromises = (ratioState.objects || []).map(async (obj) => {
-                if (obj.type === "image" && obj.src) {
-                    const image = await new Promise((resolve) => {
-                        fabric.Image.fromURL(obj.src, (img) => resolve(img), { crossOrigin: "anonymous" });
-                    });
-                    if (!image)
-                        return;
-                    const width = obj.width * areaPx.width;
-                    const height = obj.height * areaPx.height;
-                    image.set({
-                        left: areaPx.x + obj.left * areaPx.width,
-                        top: areaPx.y + obj.top * areaPx.height,
-                        angle: obj.angle || 0,
-                        opacity: obj.opacity ?? 1,
-                    });
-                    image.scaleX = width / image.width;
-                    image.scaleY = height / image.height;
-                    exportCanvas.add(image);
-                }
-                if (obj.type === "text" && obj.text) {
-                    const fontSize = obj.fontSize ? obj.fontSize * areaPx.width : 32;
-                    const textObj = new fabric.Textbox(obj.text, {
-                        left: areaPx.x + obj.left * areaPx.width,
-                        top: areaPx.y + obj.top * areaPx.height,
-                        fontSize,
-                        fill: obj.fill || "#111111",
-                        fontFamily: obj.fontFamily || "Tajawal",
-                        fontWeight: obj.fontWeight || "normal",
-                        textAlign: obj.textAlign || "center",
-                        angle: obj.angle || 0,
-                        opacity: obj.opacity ?? 1,
-                        width: obj.width * areaPx.width,
-                    });
-                    exportCanvas.add(textObj);
-                }
-            });
-            await Promise.all(objectPromises);
-            const dataUrl = exportCanvas.toDataURL({ format: "png", quality: 1 });
-            const link = document.createElement("a");
-            link.href = dataUrl;
-            link.download = `${designName || "design"}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            if (currentDesignId) {
-                designsApi.exportDesign(currentDesignId, dataUrl).catch(() => { });
-            }
-            toast({
-                title: "Design exported",
-                description: "Your design has been downloaded as PNG",
-            });
-        }
-        catch (error) {
-            toast({
-                title: "Export failed",
-                description: error.message || "Could not export design",
-                variant: "destructive",
-            });
-        }
-    }, [activeColorKey, buildRatioState, currentDesignId, designElements.length, designName, exportImageUrl, persistCurrentView, selectedPosition, toast]);
-    const loadDesign = async (design) => {
-        try {
-            const fullDesign = await designsApi.getDesign(design._id);
-            setCurrentDesignId(fullDesign._id);
-            setDesignName(fullDesign.name);
-            setSelectedProduct(fullDesign.baseProduct?.type || selectedProduct);
-            setProductColor(fullDesign.baseProduct?.color || productColor);
-            setHasPickedColor(true);
-            setProductSize(fullDesign.baseProduct?.size || productSize);
-            const preferredView = fullDesign.designMetadata?.view || fullDesign.views?.[0]?.view || "front";
-            const safeView = VIEW_KEYS.includes(preferredView) ? preferredView : "front";
-            setSelectedPosition(safeView);
-            const viewStates = {};
-            if (Array.isArray(fullDesign.views) && fullDesign.views.length > 0) {
-                fullDesign.views.forEach((view) => {
-                    const colorKey = String(view.colorKey || "").toLowerCase();
-                    if (!colorKey)
-                        return;
-                    if (!viewStates[colorKey]) {
-                        viewStates[colorKey] = {};
-                    }
-                    viewStates[colorKey][view.view] = view;
-                });
-                viewStatesRef.current = viewStates;
-            }
-            else if (Array.isArray(fullDesign.elements)) {
-                const fallbackColorKey = String(fullDesign.baseProduct?.color || activeColorKey || "").trim().toLowerCase();
-                const targetColorKey = fallbackColorKey || activeColorKey;
-                viewStatesRef.current = {};
-                if (!viewStatesRef.current[targetColorKey]) {
-                    viewStatesRef.current[targetColorKey] = {};
-                }
-                viewStatesRef.current[targetColorKey][safeView] = {
-                    view: safeView,
-                    colorKey: targetColorKey,
-                    ratioState: buildRatioState(),
-                    canvasJson: null,
-                    previewSize: canvasSize,
-                };
-            }
-            setShowLoadDialog(false);
-            toast({
-                title: "Design loaded",
-                description: `${fullDesign.name} has been loaded successfully`,
-            });
-        }
-        catch (error) {
-            toast({
-                title: "Failed to load design",
-                description: error.message || "Could not load the design",
-                variant: "destructive",
-            });
-        }
-    };
-    const handleAddToCart = async () => {
-        if (!user || !isAuthenticated) {
-            toast({
-                title: "Sign in required",
-                description: "Please sign in or create an account to add designs to your cart",
-                variant: "default",
-            });
-            setTimeout(() => {
-                router.push("/login");
-            }, 1500);
-            return;
-        }
-        try {
-            const product = activeProduct;
-            if (!product) {
-                toast({
-                    title: "No studio product",
-                    description: "No active studio products are available.",
-                    variant: "destructive",
-                });
-                return;
-            }
-            await addItem({
-                id: `custom-${Date.now()}-${selectedProduct}-${productSize}`,
-                name: `Custom ${product.name}`,
-                price: product.price,
-                quantity: productQuantity,
-                size: productSize,
-                color: selectedColorKey || productColor,
-                image: viewImageUrl,
-                isCustom: true,
-            });
-            toast({
-                title: "Design added to cart",
-                description: `Custom ${product.name} (Size: ${productSize}) - $${product.price}`,
-            });
-        }
-        catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to add design to cart. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
-    const selectedElementData = designElements.find((el) => el.id === selectedElement);
-    const filteredProducts = Object.entries(resolvedProductTemplates).filter(([key, product]) => {
-        const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesTab = activeTab === "all" || product.category.toLowerCase() === activeTab.toLowerCase();
-        return matchesSearch && matchesTab;
+      }
+      merged.set(key, existing);
     });
-    if (!isLoadingProducts && studioProducts.length === 0) {
-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
-        <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-20">
-          <Card className="max-w-2xl mx-auto p-8 bg-white border border-gray-200 shadow-xl text-center space-y-4">
-            <h1 className="text-2xl font-bold text-gray-900">Studio is not available</h1>
-            <p className="text-gray-600">
-              No active studio products found. Please create and activate Studio Products in the admin dashboard.
-            </p>
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <Button variant="outline" onClick={() => router.push("/")}>
-                Back Home
-              </Button>
-              <Button onClick={() => router.push("/admin")}>Go to Admin</Button>
-            </div>
-          </Card>
-        </div>
-      </div>);
+    return Array.from(merged.values());
+  }, [studioProducts]);
+
+  const availableProducts = useMemo(
+    () => (studioReady ? (mergedStudioProducts.length ? mergedStudioProducts : products) : []),
+    [mergedStudioProducts, studioReady]
+  );
+
+  const activeProduct = useMemo(() => {
+    return (
+      availableProducts.find((product) => product.id === selectedProduct) ||
+      availableProducts[0]
+    );
+  }, [availableProducts, selectedProduct]);
+  const activeColorKey = useMemo(
+    () => resolveProductColorKey(productColor, activeProduct),
+    [productColor, activeProduct]
+  );
+  const activeProductImage = useMemo(
+    () => resolveProductImage(activeProduct, selectedPosition, activeColorKey),
+    [activeProduct, selectedPosition, activeColorKey]
+  );
+  const productColorOptions = useMemo(() => {
+    if (!activeProduct) return undefined;
+    const colorViews = getColorKeys(activeProduct.colorViews);
+    const colorMockups = getColorKeys(activeProduct.colorMockups);
+    const colors = Array.isArray(activeProduct.colors) ? activeProduct.colors : [];
+    const merged = Array.from(
+      new Set(
+        [...colorViews, ...colorMockups, ...colors]
+          .map((color) => color.trim())
+          .filter(Boolean)
+      )
+    );
+    return merged.length ? merged : undefined;
+  }, [activeProduct]);
+  const productPreviewImage = useMemo(
+    () => resolveProductImage(activeProduct, "front", activeColorKey),
+    [activeProduct, activeColorKey]
+  );
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+      if (!raw) {
+        setSavedDesigns([]);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const normalized = parsed.map((design) => ({
+          ...design,
+          isFavorite: Boolean(design.isFavorite),
+        }));
+        setSavedDesigns(normalized);
+      }
+    } catch {
+      setSavedDesigns([]);
     }
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-80 border-r border-gray-200 bg-white overflow-hidden flex flex-col shadow-xl flex-shrink-0">
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_FAVORITES_KEY);
+      if (!raw) {
+        setFavoriteDesignIds([]);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setFavoriteDesignIds(parsed.map((id) => String(id)));
+      }
+    } catch {
+      setFavoriteDesignIds([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const designId = searchParams?.get("design");
+    if (!designId || designId === loadingDesignId) return;
+    let isMounted = true;
+    const loadRemoteDesign = async () => {
+      setLoadingDesignId(designId);
+      try {
+        const design = await designsApi.getDesign(designId);
+        if (!isMounted) return;
+        const studioData = design?.designMetadata?.studio?.data || null;
+        if (!studioData) {
+          toast({
+            title: "Unable to load design",
+            description: "This design doesn't include studio data yet.",
+            variant: "destructive",
+          });
+          return;
+        }
+        loadDesign({ name: design.name, data: studioData });
+      } catch (error) {
+        if (!isMounted) return;
+        toast({
+          title: "Unable to load design",
+          description: error?.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+    loadRemoteDesign();
+    return () => {
+      isMounted = false;
+    };
+  }, [searchParams, toast, loadingDesignId]);
+
+  useEffect(() => {
+    const localDesignId = searchParams?.get("localDesign");
+    if (!localDesignId || localDesignId === loadingLocalDesignId) return;
+    setLoadingLocalDesignId(localDesignId);
+    try {
+      const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const match = Array.isArray(parsed)
+        ? parsed.find((design) => String(design.id) === String(localDesignId))
+        : null;
+      if (match) {
+        loadDesign(match);
+      } else {
+        toast({
+          title: "Unable to load design",
+          description: "Local design not found.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Unable to load design",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [searchParams, toast, loadingLocalDesignId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadStudioProducts = async () => {
+      setStudioLoading(true);
+      try {
+        const data = await studioProductsApi.getActive();
+        if (!isMounted) return;
+          const normalized = Array.isArray(data)
+          ? data.map((product) => ({
+              id: product._id || product.id || product.name,
+              name: product.name || "Studio Product",
+              image: product.viewMockups?.front || product.baseMockupUrl || "",
+              price: product.price ?? 0,
+              category: "Studio",
+              colors: Array.isArray(product.colors) ? product.colors : [],
+              sizes: Array.isArray(product.sizes) ? product.sizes : [],
+              viewMockups: product.viewMockups || {},
+              colorViews: product.colorViews || {},
+              colorMockups: product.colorMockups || {},
+              baseMockupUrl: product.baseMockupUrl || "",
+              designAreas: product.designAreas || {},
+            }))
+          : [];
+        setStudioProducts(normalized);
+      } catch (error) {
+        toast({
+          title: "Failed to load studio products",
+          description: error?.message || "Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        if (isMounted) {
+          setStudioLoading(false);
+          setStudioReady(true);
+        }
+      }
+    };
+    loadStudioProducts();
+    return () => {
+      isMounted = false;
+    };
+  }, [toast]);
+
+  useEffect(() => {
+    if (!availableProducts.length) return;
+    const exists = availableProducts.some((product) => product.id === selectedProduct);
+    if (!exists) {
+      setSelectedProduct(availableProducts[0].id);
+    }
+  }, [availableProducts, selectedProduct]);
+
+  useEffect(() => {
+    if (!activeProduct) return;
+    const colors = Array.isArray(activeProduct.colors) ? activeProduct.colors : [];
+    const availableColors =
+      Array.isArray(productColorOptions) && productColorOptions.length
+        ? productColorOptions
+        : colors;
+    if (availableColors.length) {
+      const normalizedColors = availableColors
+        .map((color) => color.trim().toLowerCase())
+        .filter(Boolean);
+      const currentKey = resolveProductColorKey(productColor, activeProduct);
+      if (!normalizedColors.includes(currentKey?.toLowerCase())) {
+        setProductColor(resolveColorValue(availableColors[0]));
+      }
+    }
+    const sizes = Array.isArray(activeProduct.sizes) ? activeProduct.sizes : [];
+    if (sizes.length && !sizes.includes(productSize)) {
+      setProductSize(sizes[0]);
+    }
+  }, [activeProduct, productColor, productSize, productColorOptions]);
+
+  useEffect(() => {
+    const sideData = designBySide[selectedPosition] || createEmptySideState();
+    skipSideSyncRef.current = true;
+    setTextValue(sideData.textValue || "");
+    setTextFontSize(sideData.textFontSize || 16);
+    setTextAlign(sideData.textAlign || "center");
+    setTextColor(sideData.textColor || "#000000");
+    setTextFontFamily(sideData.textFontFamily || "Tajawal");
+    setUploadedImage(sideData.uploadedImage || null);
+    setImagePosition(sideData.imagePosition || { x: 50, y: 50 });
+    setImageSize(sideData.imageSize || 120);
+  }, [selectedPosition, designBySide]);
+
+  useEffect(() => {
+    if (skipSideSyncRef.current) {
+      skipSideSyncRef.current = false;
+      return;
+    }
+    setDesignBySide((prev) => ({
+      ...prev,
+      [selectedPosition]: {
+        ...(prev[selectedPosition] || createEmptySideState()),
+        textValue,
+        textFontSize,
+        textAlign,
+        textColor,
+        textFontFamily,
+        uploadedImage,
+        imagePosition,
+        imageSize,
+      },
+    }));
+  }, [
+    selectedPosition,
+    textValue,
+    textFontSize,
+    textAlign,
+    textColor,
+    textFontFamily,
+    uploadedImage,
+    imagePosition,
+    imageSize,
+  ]);
+
+  const persistSavedDesigns = (next) => {
+    setSavedDesigns(next);
+    try {
+      localStorage.setItem(LOCAL_DESIGNS_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const persistFavorites = (next) => {
+    setFavoriteDesignIds(next);
+    try {
+      localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const toggleFavoriteDesign = (designId) => {
+    if (!designId) return;
+    const id = String(designId);
+    const isFavorite = favoriteDesignIds.includes(id);
+    const nextFavorites = isFavorite
+      ? favoriteDesignIds.filter((item) => item !== id)
+      : [id, ...favoriteDesignIds];
+    persistFavorites(nextFavorites);
+    const nextDesigns = savedDesigns.map((design) =>
+      String(design.id) === id ? { ...design, isFavorite: !isFavorite } : design
+    );
+    persistSavedDesigns(nextDesigns);
+  };
+
+  const handleImageUpload = async (payload) => {
+    if (!payload?.dataUrl) return;
+    setUploadedImage(payload.dataUrl);
+    toast({ title: "Image uploaded" });
+  };
+
+  const handleRemoveImage = () => {
+    setUploadedImage(null);
+    setImagePosition({ x: 50, y: 50 });
+    setImageSize(120);
+    toast({ title: "Image removed" });
+  };
+
+  const handleDragStart = (event) => {
+    const container = event.currentTarget.parentElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+
+    const handleMouseMove = (moveEvent) => {
+      const x = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      const y = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+      setImagePosition({
+        x: clamp(x, 10, 90),
+        y: clamp(y, 10, 90),
+      });
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const capturePreview = async () => {
+    if (!previewRef.current) return null;
+    const borderElement = previewRef.current.querySelector(".design-area-border");
+    if (borderElement) {
+      borderElement.style.display = "none";
+    }
+    try {
+      const canvas = await html2canvas(previewRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+      });
+      return canvas.toDataURL("image/png");
+    } finally {
+      if (borderElement) {
+        borderElement.style.display = "";
+      }
+    }
+  };
+
+  const handleAddToCart = async () => {
+    try {
+      const previewImage = await capturePreview();
+      const id = `custom-${selectedProduct}-${Date.now()}`;
+      await addItem({
+        id,
+        name: `${activeProduct.name} (Custom)`,
+        price: activeProduct.price,
+        quantity: productQuantity,
+        size: productSize,
+        color: productColor,
+        image: previewImage || activeProductImage,
+        isCustom: true,
+      });
+      toast({
+        title: "Added to cart",
+        description: `${activeProduct.name} - ${productSize} x${productQuantity}`,
+      });
+    } catch {
+      toast({
+        title: "Unable to add to cart",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBuyNow = async () => {
+    await handleAddToCart();
+    router.push("/checkout");
+  };
+
+  const buildDesignPayload = (thumbnail, dataOverrides = {}) => ({
+    id: `design-${Date.now()}`,
+    name: designName || "My design",
+    createdAt: new Date().toISOString(),
+    thumbnail,
+    isFavorite: false,
+    data: {
+      selectedProduct,
+      productColor,
+      productSize,
+      selectedPosition,
+      textValue,
+      textFontSize,
+      textAlign,
+      textColor,
+      textFontFamily,
+      uploadedImage,
+      imagePosition,
+      imageSize,
+      designBySide,
+      ...dataOverrides,
+    },
+  });
+
+  const saveDesign = async () => {
+    setIsSavingDesign(true);
+    let thumbnail = null;
+    let toastDescription = "";
+    let savedToAccount = false;
+    try {
+      try {
+        thumbnail = await capturePreview();
+      } catch (error) {
+        console.warn("Failed to capture design preview, saving without thumbnail.", error);
+        toastDescription = "Saved without preview image.";
+      }
+
+      const hasAuthToken =
+        typeof window !== "undefined" && Boolean(localStorage.getItem("auth_token"));
+      const latestDesignBySide = {
+        ...designBySide,
+        [selectedPosition]: {
+          ...(designBySide[selectedPosition] || createEmptySideState()),
+          textValue,
+          textFontSize,
+          textAlign,
+          textColor,
+          textFontFamily,
+          uploadedImage,
+          imagePosition,
+          imageSize,
+        },
+      };
+      let finalDesignBySide = { ...latestDesignBySide };
+      if (hasAuthToken) {
+        const entries = Object.entries(latestDesignBySide);
+        const uploadedEntries = await Promise.all(
+          entries.map(async ([sideKey, sideData]) => {
+            if (!sideData?.uploadedImage || !sideData.uploadedImage.startsWith("data:")) {
+              return [sideKey, sideData];
+            }
+            try {
+              const response = await fetch(sideData.uploadedImage);
+              const blob = await response.blob();
+              const file = new File([blob], `studio-upload-${sideKey}-${Date.now()}.png`, {
+                type: blob.type || "image/png",
+              });
+              const uploadResult = await designsApi.uploadAsset(file);
+              if (uploadResult?.url) {
+                return [sideKey, { ...sideData, uploadedImage: uploadResult.url }];
+              }
+            } catch (error) {
+              console.warn("Failed to upload design image, using local data.", error);
+            }
+            return [sideKey, sideData];
+          })
+        );
+        finalDesignBySide = Object.fromEntries(uploadedEntries);
+      }
+
+      const currentSideData =
+        finalDesignBySide[selectedPosition] || createEmptySideState();
+      const payload = buildDesignPayload(thumbnail, {
+        textValue: currentSideData.textValue,
+        textFontSize: currentSideData.textFontSize,
+        textAlign: currentSideData.textAlign,
+        textColor: currentSideData.textColor,
+        textFontFamily: currentSideData.textFontFamily,
+        uploadedImage: currentSideData.uploadedImage,
+        imagePosition: currentSideData.imagePosition,
+        imageSize: currentSideData.imageSize,
+        designBySide: finalDesignBySide,
+      });
+      const next = [payload, ...savedDesigns].slice(0, 12);
+      persistSavedDesigns(next);
+
+      const baseProductId = activeProduct?._id || activeProduct?.id;
+      if (!hasAuthToken) {
+        toastDescription = "Saved locally. Sign in to sync with your account.";
+      } else if (isValidObjectId(baseProductId)) {
+        try {
+          await designsApi.createDesign({
+            name: payload.name,
+            baseProductId,
+            baseProduct: {
+              type: activeProduct?.type || activeProduct?.name || "Product",
+              color: activeColorKey || productColor,
+              size: productSize,
+            },
+            thumbnail,
+            elements: [],
+            views: [],
+          designMetadata: {
+            studio: {
+              data: payload.data,
+              version: 1,
+              },
+            },
+          });
+          savedToAccount = true;
+        } catch (error) {
+          toastDescription =
+            error?.message || "Saved locally. Sign in to sync with your account.";
+        }
+      } else {
+        toastDescription =
+          "Saved locally. This product isn't synced to your account yet.";
+      }
+    } finally {
+      toast({
+        title: savedToAccount ? "Design saved to My Designs" : "Design saved",
+        ...(toastDescription ? { description: toastDescription } : {}),
+      });
+      setIsSavingDesign(false);
+    }
+  };
+
+  const loadDesign = (design) => {
+    if (!design?.data) return;
+    const data = design.data;
+    const normalizedBySide = data.designBySide
+      ? {
+          front: { ...createEmptySideState(), ...(data.designBySide.front || {}) },
+          back: { ...createEmptySideState(), ...(data.designBySide.back || {}) },
+        }
+      : {
+          front: {
+            ...createEmptySideState(),
+            textValue: data.textValue || "",
+            textFontSize: data.textFontSize || 16,
+            textAlign: data.textAlign || "center",
+            textColor: data.textColor || "#000000",
+            textFontFamily: data.textFontFamily || "Tajawal",
+            uploadedImage: data.uploadedImage || null,
+            imagePosition: data.imagePosition || { x: 50, y: 50 },
+            imageSize: data.imageSize || 120,
+          },
+          back: createEmptySideState(),
+        };
+    setSelectedProduct(data.selectedProduct || availableProducts[0]?.id || products[0].id);
+    setProductColor(data.productColor || "#ffffff");
+    setProductSize(data.productSize || "M");
+    const nextPosition = data.selectedPosition || "front";
+    setDesignBySide(normalizedBySide);
+    setSelectedPosition(nextPosition);
+    const currentSideData = normalizedBySide[nextPosition] || createEmptySideState();
+    skipSideSyncRef.current = true;
+    setTextValue(currentSideData.textValue || "");
+    setTextFontSize(currentSideData.textFontSize || 16);
+    setTextAlign(currentSideData.textAlign || "center");
+    setTextColor(currentSideData.textColor || "#000000");
+    setTextFontFamily(currentSideData.textFontFamily || "Tajawal");
+    setUploadedImage(currentSideData.uploadedImage || null);
+    setImagePosition(currentSideData.imagePosition || { x: 50, y: 50 });
+    setImageSize(currentSideData.imageSize || 120);
+    setDesignName(design.name || "");
+    toast({ title: "Design loaded" });
+  };
+
+  const area = resolveDesignArea(activeProduct, selectedPosition);
+  const designShrinkFactor = 0.45;
+  const adjustedArea = {
+    ...area,
+    top: `calc(${area.top} - 2% + (${area.height} * ${(1 - designShrinkFactor) / 2}))`,
+    left: `calc(${area.left} - 0% + (${area.width} * ${(1 - designShrinkFactor) / 2}))`,
+    width: `calc(${area.width} * ${designShrinkFactor})`,
+    height: `calc(${area.height} * ${designShrinkFactor})`,
+  };
+  const sizeOptions = useMemo(() => {
+    if (Array.isArray(activeProduct?.sizes) && activeProduct.sizes.length) {
+      return activeProduct.sizes;
+    }
+    return ["XS", "S", "M", "L", "XL", "XXL"];
+  }, [activeProduct]);
+  const nudgeImage = (dx, dy) => {
+    setImagePosition((prev) => ({
+      x: clamp(prev.x + dx, 10, 90),
+      y: clamp(prev.y + dy, 10, 90),
+    }));
+  };
+  const previewThemeVars = {
+    "--background": "#ffffff",
+    "--foreground": "#111827",
+    "--card": "#ffffff",
+    "--card-foreground": "#111827",
+    "--popover": "#ffffff",
+    "--popover-foreground": "#111827",
+    "--primary": "#111827",
+    "--primary-foreground": "#ffffff",
+    "--secondary": "#f3f4f6",
+    "--secondary-foreground": "#111827",
+    "--muted": "#f3f4f6",
+    "--muted-foreground": "#6b7280",
+    "--accent": "#f3f4f6",
+    "--accent-foreground": "#111827",
+    "--destructive": "#ef4444",
+    "--destructive-foreground": "#ffffff",
+    "--border": "#e5e7eb",
+    "--input": "#e5e7eb",
+    "--ring": "#93c5fd",
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
+      <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
+        <div className="w-full xl:w-80 border-b border-gray-200 xl:border-b-0 xl:border-r bg-white overflow-hidden flex flex-col shadow-xl xl:flex-shrink-0">
           <div className="flex-1 overflow-y-auto p-4 space-y-6 studio-theme font-tajawal">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground">Products</h3>
-                <span className="text-xs text-muted-foreground">{filteredProducts.length}</span>
+                <span className="text-xs text-muted-foreground">
+                  {studioLoading ? "..." : availableProducts.length}
+                </span>
               </div>
 
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
-                <Input placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 bg-background border-border text-foreground placeholder:text-muted-foreground focus:bg-background focus:border-primary/40"/>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {filteredProducts.map(([key, product]) => (<button key={key} onClick={() => setSelectedProduct(key)} className={`aspect-square rounded-xl border-2 overflow-hidden transition-all hover:scale-105 ${selectedProduct === key
-                ? "border-primary ring-2 ring-primary/20 shadow-card"
-                : "border-border hover:border-primary/50"}`}>
-                    <div className="relative w-full h-full">
-                      <Image src={product.image || "/placeholder-logo.png"} alt={product.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw"/>
+              <div className="space-y-3">
+                <div className="rounded-2xl border-2 border-border bg-background/70 overflow-hidden">
+                  {studioReady && activeProduct ? (
+                    <>
+                      <div className="aspect-square w-full bg-muted/30">
+                        <img
+                          src={productPreviewImage || activeProduct?.image || "/placeholder-logo.png"}
+                          alt={activeProduct?.name || "Product"}
+                          className="h-full w-full object-cover"
+                          crossOrigin="anonymous"
+                        />
+                      </div>
+                      <div className="px-3 py-2 text-center space-y-2">
+                        <p className="text-xs font-semibold text-foreground">
+                          {activeProduct?.name || "Product"}
+                        </p>
+                        <ColorPicker
+                          selectedColor={productColor}
+                          onColorChange={(color) => {
+                            setProductColor(color);
+                          }}
+                          colors={productColorOptions}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="aspect-square w-full bg-muted/30 flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground">
+                        {studioLoading ? "Loading..." : "No products yet"}
+                      </span>
                     </div>
-                  </button>))}
+                  )}
+                </div>
               </div>
             </div>
 
-            <SizeSelector selectedSize={productSize} onSizeChange={setProductSize}/>
-
-            <QuantitySelector quantity={productQuantity} onQuantityChange={setProductQuantity}/>
-
-            <PositionSelector selectedPosition={selectedPosition} onPositionChange={setSelectedPosition}/>
-
-            <ColorPicker selectedColor={productColor} onColorChange={(color) => {
-            setProductColor(color);
-            setHasPickedColor(true);
-        }} colors={colorOptions}/>
-
-            <ImageUploader onImageUpload={handleImageUpload} uploadedImage={getActiveImageElement()?.data?.src || null} imageSize={imageSize} onImageSizeChange={handleImageSizeChange}/>
-
-            <TextEditor text={textValue} onTextChange={handleTextChange} fontSize={textFontSize} onFontSizeChange={handleFontSizeChange} textAlign={textAlign} onTextAlignChange={handleTextAlignChange} fontFamily={textFontFamily}/>
+            <div className="flex flex-col items-center gap-3">
+              <PositionSelector
+                selectedPosition={selectedPosition}
+                onPositionChange={setSelectedPosition}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 px-4 text-xs font-semibold"
+                onClick={() => {
+                  setDesignBySide((prev) => {
+                    const frontState = prev.front || createEmptySideState();
+                    return {
+                      ...prev,
+                      back: {
+                        ...createEmptySideState(),
+                        ...frontState,
+                      },
+                    };
+                  });
+                }}
+              >
+                Copy Front to Back
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden">
-          <div className="bg-background/95 backdrop-blur-sm border-b border-border px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-sm flex-shrink-0 gap-4 h-[48px]">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1">
-                <Button variant={showGrid ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setShowGrid(!showGrid)} title="Toggle Grid">
-                  <Grid3x3 className="h-3.5 w-3.5"/>
-                </Button>
-                <Button variant={snapToGrid ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setSnapToGrid(!snapToGrid)} title="Snap to Grid">
-                  <Move className="h-3.5 w-3.5"/>
-                </Button>
-              </div>
-              <div className="w-px h-6 bg-border"/>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={undo} disabled={historyIndex <= 0} title="Undo (Ctrl+Z)">
-                  <Undo className="h-3.5 w-3.5"/>
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={redo} disabled={historyIndex >= historyLength - 1} title="Redo (Ctrl+Shift+Z)">
-                  <Redo className="h-3.5 w-3.5"/>
-                </Button>
-              </div>
-              <div className="w-px h-6 bg-border"/>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.max(50, zoom - 10))} title="Zoom Out">
-                  <ZoomOut className="h-3.5 w-3.5"/>
-                </Button>
-                <span className="text-xs font-medium px-2 min-w-[52px] text-center">{zoom}%</span>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(Math.min(200, zoom + 10))} title="Zoom In">
-                  <ZoomIn className="h-3.5 w-3.5"/>
-                </Button>
-                {zoom !== 100 && (<Button variant="ghost" size="sm" className="h-8 px-2 text-[10px]" onClick={() => setZoom(100)} title="Reset Zoom">
-                    Reset
-                  </Button>)}
-              </div>
-              {selectedElement && designElements.length > 1 && (<>
-                  <div className="w-px h-6 bg-border"/>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => alignElements("left")} title="Align Left">
-                      <AlignLeft className="h-3.5 w-3.5"/>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => alignElements("center")} title="Align Center">
-                      <AlignCenter className="h-3.5 w-3.5"/>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => alignElements("right")} title="Align Right">
-                      <AlignRight className="h-3.5 w-3.5"/>
-                    </Button>
-                  </div>
-                </>)}
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Button size="sm" onClick={generateAIVariations} disabled={isGeneratingAI || designElements.length === 0} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-gray-900 shadow-lg hover:shadow-xl transition-all text-xs h-8 px-3 font-medium">
-                {isGeneratingAI ? (<>
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin"/>
-                    Generating...
-                  </>) : (<>
-                    <Sparkles className="mr-1.5 h-3.5 w-3.5"/>
-                    AI Enhance
-                  </>)}
-              </Button>
-              <Button size="sm" variant="outline" onClick={exportDesign} disabled={designElements.length === 0} className="text-xs h-8 px-3 font-medium border-2">
-                <Download className="mr-1.5 h-3.5 w-3.5"/>
-                Export
-              </Button>
-            </div>
-          </div>
 
-          <div className="flex-1 overflow-auto p-6 min-h-0">
-            <div className="max-w-4xl mx-auto pt-6">
-              <div className="relative mx-auto max-h-[650px] shadow-2xl rounded-lg overflow-hidden bg-background" style={{
-            backgroundImage: showGrid
-                ? `linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)`
-                : "linear-gradient(45deg, #f3f4f6 25%, transparent 25%), linear-gradient(-45deg, #f3f4f6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f3f4f6 75%), linear-gradient(-45deg, transparent 75%, #f3f4f6 75%)",
-            backgroundSize: showGrid ? `${gridSize}px ${gridSize}px` : "20px 20px",
-            backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
-            backgroundColor: "#f9fafb",
-        }}>
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                  <div ref={canvasWrapperRef} className="relative w-full h-full rounded-lg overflow-hidden" style={{ aspectRatio: `${viewImageSize.width} / ${viewImageSize.height}` }}>
-                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full"/>
+        <div className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden">
+
+          <div className="flex-1 overflow-auto p-4 lg:p-6 min-h-0">
+            <div className="max-w-[1280px] mx-auto pt-4 lg:pt-6">
+              <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+                <div className="w-full lg:w-[200px] space-y-5 order-2 lg:order-1">
+                  <div className="rounded-xl border border-border bg-background/80 p-3 text-center space-y-3 shadow-sm">
+                    <div>
+                      <h3 className="text-xs font-semibold text-foreground tracking-wide">Font Type</h3>
+                      <Select value={textFontFamily} onValueChange={setTextFontFamily}>
+                        <SelectTrigger className="w-full bg-background mt-2">
+                          <SelectValue placeholder="Select font" />
+                        </SelectTrigger>
+                        <SelectContent className="text-left">
+                          {textFontGroups.map((group) => (
+                            <div key={group.id} className="pb-1">
+                              <div className="px-2 py-1 text-[11px] font-semibold uppercase text-muted-foreground">
+                                {group.label}
+                              </div>
+                              {group.items.map((font) => (
+                                <SelectItem key={font.id} value={font.family}>
+                                  <span className="flex w-full items-center justify-between gap-2">
+                                    <span className="text-sm" style={{ fontFamily: font.family }}>
+                                      {font.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">{font.style}</span>
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </div>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-semibold text-foreground tracking-wide">Font Color</h3>
+                      <Select value={textColor} onValueChange={setTextColor}>
+                        <SelectTrigger className="w-full bg-background mt-2">
+                          <SelectValue placeholder="Select color" />
+                        </SelectTrigger>
+                        <SelectContent className="text-left">
+                          {textColors.map((color) => (
+                            <SelectItem key={color.value} value={color.value}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className={cn(
+                                    "h-4 w-4 rounded-full border",
+                                    color.value === "#ffffff" ? "border-border" : "border-transparent"
+                                  )}
+                                  style={{ backgroundColor: color.value }}
+                                />
+                                <span className="text-sm">{color.label}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+
+                  <div className="rounded-xl border border-border bg-background/80 p-3 text-center shadow-sm">
+                    <ImageUploader
+                      onImageUpload={handleImageUpload}
+                      uploadedImage={uploadedImage}
+                      imageSize={imageSize}
+                      onImageSizeChange={setImageSize}
+                    />
+                    {uploadedImage && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="mt-2 text-xs"
+                        onClick={handleRemoveImage}
+                      >
+                        Remove image
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0 order-1 lg:order-2">
+                  <div className="relative mx-auto w-full max-w-[1040px] 2xl:max-w-[1280px] shadow-2xl rounded-2xl overflow-hidden bg-background border border-border">
+                    <div
+                      style={{
+                        backgroundImage: showGrid
+                          ? `linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)`
+                          : "linear-gradient(45deg, #f3f4f6 25%, transparent 25%), linear-gradient(-45deg, #f3f4f6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f3f4f6 75%), linear-gradient(-45deg, transparent 75%, #f3f4f6 75%)",
+                        backgroundSize: showGrid ? `${gridSize}px ${gridSize}px` : "20px 20px",
+                        backgroundPosition: "0 0, 0 10px, 10px -10px, -10px 0px",
+                        backgroundColor: "#f9fafb",
+                        transform: `scale(${zoom / 100})`,
+                        transformOrigin: "top center",
+                      }}
+                    >
+                    <div className="flex items-center justify-center p-2 lg:p-3">
+                      <div
+                        ref={previewRef}
+                        className="relative w-full max-w-4xl mx-auto"
+                        style={previewThemeVars}
+                      >
+                        <div className="absolute inset-0 bg-muted/30 rounded-2xl" />
+                        <div className="relative p-0">
+                          <img
+                            src={activeProductImage || "/placeholder-logo.png"}
+                            alt={`${activeProduct?.name || "Product"} preview`}
+                            className="w-full h-full rounded-2xl object-contain"
+                            crossOrigin="anonymous"
+                          />
+
+                          <div
+                            className="absolute border-2 border-dashed border-foreground/30 rounded-sm pointer-events-none design-area-border"
+                            style={{
+                              top: adjustedArea.top,
+                              left: adjustedArea.left,
+                              width: adjustedArea.width,
+                              height: adjustedArea.height,
+                            }}
+                          />
+
+                          {uploadedImage && (
+                            <div
+                              className="absolute cursor-move group overflow-hidden"
+                              style={{
+                                left: adjustedArea.left,
+                                top: adjustedArea.top,
+                                width: adjustedArea.width,
+                                height: adjustedArea.height,
+                              }}
+                            >
+                              <div
+                                className="absolute"
+                                style={{
+                                  left: `${imagePosition.x}%`,
+                                  top: `${imagePosition.y}%`,
+                                  transform: "translate(-50%, -50%)",
+                                  width: `${imageSize}px`,
+                                  height: `${imageSize}px`,
+                                  maxWidth: "100%",
+                                  maxHeight: "100%",
+                                }}
+                                onMouseDown={handleDragStart}
+                              >
+                                <img
+                                  src={uploadedImage}
+                                  alt="Uploaded design"
+                                  className="w-full h-full object-contain"
+                                  draggable={false}
+                                />
+                                <div className="absolute -left-7 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => nudgeImage(-2, 0)}
+                                    className="h-6 w-6 rounded-full border border-border bg-background/90 shadow-sm hover:bg-muted"
+                                    aria-label="Move image left"
+                                  >
+                                    <ArrowLeft className="h-3 w-3 mx-auto" />
+                                  </button>
+                                </div>
+                                <div className="absolute -right-7 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => nudgeImage(0, -2)}
+                                    className="h-6 w-6 rounded-full border border-border bg-background/90 shadow-sm hover:bg-muted"
+                                    aria-label="Move image up"
+                                  >
+                                    <ArrowUp className="h-3 w-3 mx-auto" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => nudgeImage(0, 2)}
+                                    className="h-6 w-6 rounded-full border border-border bg-background/90 shadow-sm hover:bg-muted"
+                                    aria-label="Move image down"
+                                  >
+                                    <ArrowDown className="h-3 w-3 mx-auto" />
+                                  </button>
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                  <Move className="w-6 h-6 text-foreground/50" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {textValue && (
+                            <div
+                              className="absolute flex items-center justify-center p-2 overflow-hidden pointer-events-none"
+                              style={{
+                                top: adjustedArea.top,
+                                left: adjustedArea.left,
+                                width: adjustedArea.width,
+                                height: adjustedArea.height,
+                                textAlign,
+                              }}
+                            >
+                              <span
+                                className="font-bold leading-tight break-words w-full"
+                                style={{
+                                  color: textColor,
+                                  fontSize: `${textFontSize}px`,
+                                  textAlign,
+                                  fontFamily: textFontFamily,
+                                  textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                                }}
+                              >
+                                {textValue}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                </div>
+
+                <div className="w-full lg:w-[220px] space-y-5 order-3">
+                  <div className="rounded-xl border border-border bg-background/80 p-4 text-center shadow-sm">
+                    <h3 className="text-xs font-semibold text-foreground tracking-wide">Text</h3>
+                    <div className="flex w-full flex-col gap-2 rounded-md border border-border bg-background px-2 py-2 mt-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => setTextFontSize(clamp(textFontSize - 2, 12, 72))}
+                          className="h-8 w-8 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors"
+                          aria-label="Decrease font size"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="text-xs font-medium min-w-[44px] text-center">
+                          {textFontSize}px
+                        </span>
+                        <button
+                          onClick={() => setTextFontSize(clamp(textFontSize + 2, 12, 72))}
+                          className="h-8 w-8 rounded border border-border flex items-center justify-center hover:bg-muted transition-colors"
+                          aria-label="Increase font size"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-center gap-1 border border-border rounded-md p-1">
+                        <button
+                          onClick={() => setTextAlign("right")}
+                          className={cn(
+                            "h-7 w-7 rounded flex items-center justify-center transition-colors",
+                            textAlign === "right" ? "bg-muted" : "hover:bg-muted/50"
+                          )}
+                          aria-label="Align right"
+                        >
+                          <AlignRight className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setTextAlign("center")}
+                          className={cn(
+                            "h-7 w-7 rounded flex items-center justify-center transition-colors",
+                            textAlign === "center" ? "bg-muted" : "hover:bg-muted/50"
+                          )}
+                          aria-label="Align center"
+                        >
+                          <AlignCenter className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setTextAlign("left")}
+                          className={cn(
+                            "h-7 w-7 rounded flex items-center justify-center transition-colors",
+                            textAlign === "left" ? "bg-muted" : "hover:bg-muted/50"
+                          )}
+                          aria-label="Align left"
+                        >
+                          <AlignLeft className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <Textarea
+                      value={textValue}
+                      onChange={(event) => setTextValue(event.target.value)}
+                      placeholder="Type your text here..."
+                      dir="auto"
+                      className="min-h-[96px] w-full resize-none bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/30 mt-3"
+                      style={{ fontFamily: textFontFamily }}
+                    />
+                  </div>
+
                 </div>
               </div>
             </div>
-
-            <div className="mt-4 w-full max-w-3xl mx-auto">
-              <TextStyleControls fontFamily={textFontFamily} onFontFamilyChange={handleFontFamilyChange} textColor={textColor} onTextColorChange={handleTextColorChange}/>
-            </div>
-            {showAIResults && (<div className="mt-6 bg-background border border-border rounded-lg p-6 shadow-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-purple-600"/>
-                      AI Enhanced Variations
-                    </h3>
-                    <Button variant="ghost" size="sm" onClick={() => setShowAIResults(false)}>
-                      <X className="h-4 w-4"/>
-                    </Button>
-                  </div>
-
-                  {isGeneratingAI ? (<div className="grid grid-cols-4 gap-4">
-                      {[1, 2, 3, 4].map((i) => (<div key={i} className="aspect-square bg-muted rounded-lg animate-pulse"/>))}
-                    </div>) : (<>
-                      <div className="grid grid-cols-4 gap-4 mb-4">
-                        {aiVariations.map((variation) => (<button key={variation.id} onClick={() => selectAIVariation(variation.id)} className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${variation.selected
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/50"}`}>
-                            <div className="relative w-full h-full">
-                              <Image src={variation.imageUrl || "/placeholder-logo.png"} alt={variation.prompt} fill className="object-cover" sizes="(max-width: 768px) 25vw, 20vw"/>
-                            </div>
-                            {variation.selected && (<div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
-                                <Check className="w-4 h-4"/>
-                              </div>)}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                              <p className="text-xs text-gray-900 font-medium">{variation.prompt}</p>
-                            </div>
-                          </button>))}
-                      </div>
-                      <Button className="w-full" onClick={addAIDesignToCart} disabled={!aiVariations.some((v) => v.selected)}>
-                        <ShoppingBag className="mr-2 h-4 w-4"/>
-                        Add Selected AI Design to Cart
-                      </Button>
-                    </>)}
-                </div>)}
-            </div>
           </div>
-        <div className="w-96 border-l border-border bg-background overflow-hidden flex flex-col shadow-sm flex-shrink-0">
+        </div>
+
+        <div className="w-full xl:w-96 border-t border-border xl:border-t-0 xl:border-l bg-background overflow-hidden flex flex-col shadow-sm xl:flex-shrink-0">
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <div className="p-4 space-y-4 overflow-y-auto bg-muted/20 flex-1 min-h-0">
-            <Card className="p-4 bg-background shadow-sm">
-              <h3 className="font-semibold mb-4 text-sm flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4"/>
-                Product Settings
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-xs mb-2 block text-muted-foreground font-medium">Product</Label>
-                  <p className="text-sm font-semibold">{activeProduct?.name || "Studio Product"}</p>
-                </div>
-
-                <div>
-                  <Label className="text-xs mb-2 block text-muted-foreground font-medium">Size</Label>
-                  <Select value={productSize} onValueChange={setProductSize}>
-                    <SelectTrigger className="h-9 bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="XS">XS - Extra Small</SelectItem>
-                      <SelectItem value="S">S - Small</SelectItem>
-                      <SelectItem value="M">M - Medium</SelectItem>
-                      <SelectItem value="L">L - Large</SelectItem>
-                      <SelectItem value="XL">XL - Extra Large</SelectItem>
-                      <SelectItem value="XXL">XXL - 2X Large</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="pt-2 border-t">
-                  <Label className="text-xs mb-2 block text-muted-foreground font-medium">Price</Label>
-                  <p className="text-3xl font-bold text-primary">${activeProduct?.price ?? 0}</p>
-                </div>
-              </div>
-            </Card>
-
-            {selectedElementData && (<Card className="p-4 bg-background shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-sm flex items-center gap-2">
-                    <MousePointer className="h-4 w-4"/>
-                    Selected Element
-                  </h3>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => duplicateElement(selectedElement)} title="Duplicate (Ctrl+D)">
-                      <Copy className="h-4 w-4"/>
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/10" onClick={() => deleteElement(selectedElement)} title="Delete (Delete)">
-                      <Trash2 className="h-4 w-4 text-destructive"/>
-                    </Button>
-                  </div>
-                </div>
-
+              <Card className="p-4 bg-background shadow-sm">
+                <h3 className="font-semibold mb-4 text-sm flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4" />
+                  Product Settings
+                </h3>
                 <div className="space-y-4">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Rotation</Label>
-                      <span className="text-xs font-semibold">{selectedElementData.rotation || 0}deg</span>
-                    </div>
-                    <Slider value={[selectedElementData.rotation || 0]} onValueChange={([value]) => updateElement(selectedElement, { rotation: value })} min={0} max={360} step={1}/>
+                    <Label className="text-xs mb-2 block text-muted-foreground font-medium">
+                      Product
+                    </Label>
+                    <p className="text-sm font-semibold">{activeProduct?.name || "Product"}</p>
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-xs font-medium text-muted-foreground">Opacity</Label>
-                      <span className="text-xs font-semibold">{Math.round((selectedElementData.opacity || 1) * 100)}%</span>
-                    </div>
-                    <Slider value={[(selectedElementData.opacity || 1) * 100]} onValueChange={([value]) => updateElement(selectedElement, { opacity: value / 100 })} min={0} max={100} step={1}/>
+                    <Label className="text-xs mb-2 block text-muted-foreground font-medium">
+                      Size
+                    </Label>
+                    <Select value={productSize} onValueChange={setProductSize}>
+                      <SelectTrigger className="h-9 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sizeOptions.map((size) => (
+                          <SelectItem key={size} value={size}>
+                            {size}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {selectedElementData.type === "image" && (<>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-xs font-medium text-muted-foreground">Width</Label>
-                          <span className="text-xs font-semibold">{Math.round(selectedElementData.width || 200)}px</span>
-                        </div>
-                        <Slider value={[selectedElementData.width || 200]} onValueChange={([value]) => updateElement(selectedElement, { width: value })} min={50} max={500} step={10}/>
-                      </div>
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <Label className="text-xs font-medium text-muted-foreground">Height</Label>
-                          <span className="text-xs font-semibold">{Math.round(selectedElementData.height || 200)}px</span>
-                        </div>
-                        <Slider value={[selectedElementData.height || 200]} onValueChange={([value]) => updateElement(selectedElement, { height: value })} min={50} max={500} step={10}/>
-                      </div>
-                    </>)}
+                  <div>
+                    <QuantitySelector
+                      quantity={productQuantity}
+                      onQuantityChange={setProductQuantity}
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t">
+                    <Label className="text-xs mb-2 block text-muted-foreground font-medium">
+                      Price
+                    </Label>
+                    <p className="text-3xl font-bold text-primary">
+                      ${activeProduct?.price ?? 0}
+                    </p>
+                  </div>
                 </div>
-              </Card>)}
+              </Card>
 
-            <Card className="p-4 bg-background shadow-sm">
-              <Label htmlFor="design-name" className="text-xs mb-2 block text-muted-foreground font-medium">
-                Design Name
-              </Label>
-              <Input id="design-name" placeholder="Enter design name..." value={designName} onChange={(e) => setDesignName(e.target.value)} className="h-9 bg-background"/>
-            </Card>
+              <Card className="p-4 bg-background shadow-sm">
+                <Label
+                  htmlFor="design-name"
+                  className="text-xs mb-2 block text-muted-foreground font-medium"
+                >
+                  Design Name
+                </Label>
+                <Input
+                  id="design-name"
+                  placeholder="Enter design name..."
+                  value={designName}
+                  onChange={(event) => setDesignName(event.target.value)}
+                  className="h-9 bg-background"
+                />
+              </Card>
 
+              <Card className="p-4 bg-background shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-sm">Saved Designs</h3>
+                  <span className="text-xs text-muted-foreground">{savedDesigns.length}</span>
+                </div>
+                {savedDesigns.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    No saved designs yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {savedDesigns.map((design) => (
+                      <div
+                        key={design.id}
+                        className="rounded-lg border border-border overflow-hidden text-left hover:border-primary/50 transition-colors"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => loadDesign(design)}
+                          className="w-full text-left"
+                        >
+                          <div className="relative w-full h-20 bg-muted">
+                            {design.thumbnail ? (
+                              <img
+                                src={design.thumbnail}
+                                alt={design.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : null}
+                          </div>
+                          <div className="p-2">
+                            <p className="text-xs font-medium truncate">{design.name}</p>
+                          </div>
+                        </button>
+                        <div className="px-2 pb-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleFavoriteDesign(design.id);
+                            }}
+                            className={cn(
+                              "flex items-center justify-center gap-1 w-full text-[11px] font-medium rounded-md border border-border py-1 transition-colors",
+                              favoriteDesignIds.includes(String(design.id))
+                                ? "text-rose-600 bg-rose-50 border-rose-200"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                            )}
+                            aria-label="Favorite design"
+                          >
+                            <Heart
+                              className="h-3 w-3"
+                              fill={
+                                favoriteDesignIds.includes(String(design.id))
+                                  ? "currentColor"
+                                  : "none"
+                              }
+                            />
+                            {favoriteDesignIds.includes(String(design.id))
+                              ? "Favorited"
+                              : "Favorite"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
             </div>
             <div className="space-y-3 pt-4 px-4 pb-4 border-t border-border bg-gradient-to-b from-background/95 to-background backdrop-blur-sm shadow-lg sticky bottom-0 z-20 flex-shrink-0">
-              <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full h-11 font-semibold shadow-md hover:shadow-lg transition-all border-2 hover:border-primary/50">
-                    <FolderOpen className="mr-2 h-4 w-4"/>
-                    Load Design
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Load Saved Design</DialogTitle>
-                    <DialogDescription>Choose a design to load and continue editing</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    {savedDesigns.map((design) => (<button key={design._id} onClick={() => loadDesign(design)} className="relative aspect-square rounded-lg border-2 border-border hover:border-primary overflow-hidden transition-all hover:scale-105">
-                        {design.thumbnail ? (<Image src={design.thumbnail} alt={design.name} fill className="object-cover"/>) : (<div className="w-full h-full bg-muted flex items-center justify-center">
-                            <FileText className="h-12 w-12 text-muted-foreground"/>
-                          </div>)}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                          <p className="text-sm font-medium text-gray-900">{design.name}</p>
-                          <p className="text-xs text-gray-300">{new Date(design.createdAt).toLocaleDateString()}</p>
-                        </div>
-                      </button>))}
-                    {savedDesigns.length === 0 && (<div className="col-span-2 text-center py-8 text-muted-foreground">
-                        <FolderOpen className="h-12 w-12 mx-auto mb-2 opacity-50"/>
-                        <p>No saved designs yet</p>
-                      </div>)}
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <Button className="w-full h-12 text-base font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-gray-900 shadow-xl hover:shadow-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98]" onClick={handleAddToCart}>
-                <ShoppingBag className="mr-2 h-5 w-5"/>
+              <Button
+                className="w-full h-12 text-base font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-gray-900 shadow-xl hover:shadow-2xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                onClick={handleAddToCart}
+              >
+                <ShoppingBag className="mr-2 h-5 w-5" />
                 Add to Cart x{productQuantity} - ${activeProduct?.price ?? 0}
               </Button>
-              <Button variant="outline" className="w-full h-11 bg-background hover:bg-primary hover:text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all border-2" onClick={saveDesign} disabled={isSaving}>
-                {isSaving ? (<>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
-                    Saving...
-                  </>) : (<>
-                    <Save className="mr-2 h-4 w-4"/>
-                    Save Design (Ctrl+S)
-                  </>)}
+              <Button
+                variant="outline"
+                className="w-full h-11 bg-background hover:bg-primary hover:text-primary-foreground font-semibold shadow-md hover:shadow-lg transition-all border-2"
+                onClick={handleBuyNow}
+              >
+                Buy Now
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 bg-background font-semibold shadow-md hover:shadow-lg transition-all border-2"
+                onClick={saveDesign}
+                disabled={isSavingDesign}
+              >
+                {isSavingDesign ? "Saving..." : "Save Design"}
               </Button>
             </div>
           </div>
         </div>
       </div>
-    </div>);
+    </div>
+  );
 }

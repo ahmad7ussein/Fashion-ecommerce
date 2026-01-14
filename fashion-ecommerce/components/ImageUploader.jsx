@@ -13,17 +13,29 @@ const createImage = (url) => new Promise((resolve, reject) => {
     image.setAttribute("crossOrigin", "anonymous");
     image.src = url;
 });
-const getCroppedImage = async (imageSrc, cropPixels, scale = 1) => {
+const getCroppedImage = async (imageSrc, cropPixels, scale = 1, zoom = 1) => {
     const image = await createImage(imageSrc);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(cropPixels.width * scale));
-    canvas.height = Math.max(1, Math.round(cropPixels.height * scale));
+    const targetWidth = Math.max(1, Math.round(cropPixels.width * scale));
+    const targetHeight = Math.max(1, Math.round(cropPixels.height * scale));
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) {
         throw new Error("Canvas context unavailable");
     }
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(image, cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height, 0, 0, canvas.width, canvas.height);
+    if (zoom < 1) {
+        const fitScale = Math.min(targetWidth / image.width, targetHeight / image.height);
+        const drawWidth = image.width * fitScale;
+        const drawHeight = image.height * fitScale;
+        const offsetX = (targetWidth - drawWidth) / 2;
+        const offsetY = (targetHeight - drawHeight) / 2;
+        ctx.drawImage(image, 0, 0, image.width, image.height, offsetX, offsetY, drawWidth, drawHeight);
+    }
+    else {
+        ctx.drawImage(image, cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height, 0, 0, canvas.width, canvas.height);
+    }
     return new Promise((resolve) => {
         canvas.toBlob((blob) => resolve(blob), "image/png");
     });
@@ -73,9 +85,13 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
         }
         setIsProcessing(true);
         try {
-            let blob = await getCroppedImage(imageSrc, cropPixels, outputScale);
+            let blob = await getCroppedImage(imageSrc, cropPixels, outputScale, zoom);
             if (removeBg && blob) {
-                const { removeBackground } = await import("@imgly/background-removal");
+                const module = await import("@imgly/background-removal");
+                const removeBackground = module.removeBackground || module.default || module;
+                if (typeof removeBackground !== "function") {
+                    throw new Error("Background removal module is unavailable");
+                }
                 blob = await removeBackground(blob);
             }
             if (!blob) {
@@ -136,7 +152,7 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">Zoom</div>
-                <Slider value={[zoom]} onValueChange={([value]) => setZoom(value)} min={1} max={3} step={0.05}/>
+                <Slider value={[zoom]} onValueChange={([value]) => setZoom(value)} min={0.5} max={3} step={0.05}/>
               </div>
               <div className="space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">Output size</div>

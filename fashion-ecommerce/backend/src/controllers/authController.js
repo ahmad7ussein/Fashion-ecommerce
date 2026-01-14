@@ -80,8 +80,10 @@ const login = async (req, res) => {
                 message: 'Email and password are required',
             });
         }
-        const normalizedEmail = identifier.toLowerCase().trim();
-        const user = await User_1.default.findOne({ email: normalizedEmail }).select('+password');
+        const normalizedIdentifier = String(identifier).trim();
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(normalizedIdentifier);
+        const normalizedEmail = normalizedIdentifier.toLowerCase();
+        const user = await User_1.default.findOne(isObjectId ? { _id: normalizedIdentifier } : { email: normalizedEmail }).select('+password');
         if (!user) {
             console.log('❌ User not found for email:', normalizedEmail);
             return res.status(401).json({
@@ -234,6 +236,7 @@ const googleAuth = async (req, res) => {
                 { googleId: googleId },
             ],
         });
+        let isNewUser = false;
         if (user) {
             if (!user.googleId) {
                 user.googleId = googleId;
@@ -250,6 +253,19 @@ const googleAuth = async (req, res) => {
                 provider: 'google',
                 role: 'customer',
             });
+            isNewUser = true;
+        }
+        if (isNewUser) {
+            try {
+                const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+                const emailSent = await (0, emailService_1.sendWelcomeEmail)(user.email, fullName);
+                if (!emailSent) {
+                    console.warn('Welcome email not sent for:', user.email);
+                }
+            }
+            catch (emailError) {
+                console.warn('Welcome email failed:', emailError?.message || emailError);
+            }
         }
         const token = generateToken(user._id.toString());
         if (user.role === 'employee' || user.role === 'admin') {

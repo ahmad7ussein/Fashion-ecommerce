@@ -40,7 +40,7 @@ exports.env = {
     smtpFrom: process.env.SMTP_FROM,
     smtpHost: process.env.SMTP_HOST,
     smtpPort: process.env.SMTP_PORT,
-    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    googleClientId: process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     cloudinary: {
         cloudName: process.env.CLOUDINARY_CLOUD_NAME,
         apiKey: process.env.CLOUDINARY_API_KEY,

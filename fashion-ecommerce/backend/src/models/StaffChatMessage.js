@@ -19,7 +19,7 @@ const staffChatMessageSchema = new mongoose.Schema({
   },
   senderRole: {
     type: String,
-    enum: ["admin", "employee"],
+    enum: ["admin", "employee", "partner"],
     required: true,
   },
   message: {

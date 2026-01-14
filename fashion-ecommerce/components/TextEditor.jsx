@@ -2,7 +2,7 @@
 import { AlignLeft, AlignCenter, AlignRight, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-const textColors = [
+export const textColors = [
     { value: "#000000", label: "#000000" },
     { value: "#ffffff", label: "#ffffff" },
     { value: "#7c3aed", label: "#7c3aed" },
@@ -14,7 +14,7 @@ const textColors = [
     { value: "#3b82f6", label: "#3b82f6" },
     { value: "#8b5cf6", label: "#8b5cf6" },
 ];
-const arabicFonts = [
+export const arabicFonts = [
     { id: "tajawal", name: "تجوال", family: "Tajawal", style: "حديث" },
     { id: "cairo", name: "القاهرة", family: "Cairo", style: "حديث" },
     { id: "kufi", name: "الكوفي", family: "Noto Kufi Arabic", style: "كوفي" },
@@ -23,6 +23,18 @@ const arabicFonts = [
     { id: "scheherazade", name: "شهرزاد", family: "Scheherazade New", style: "نسخ" },
     { id: "lateef", name: "لطيف", family: "Lateef", style: "نستعليق" },
     { id: "ruqaa", name: "الرقعة", family: "Aref Ruqaa", style: "رقعة" },
+];
+export const englishFonts = [
+    { id: "poppins", name: "Poppins", family: "Poppins", style: "Modern Sans" },
+    { id: "montserrat", name: "Montserrat", family: "Montserrat", style: "Geometric Sans" },
+    { id: "playfair", name: "Playfair Display", family: "Playfair Display", style: "Elegant Serif" },
+    { id: "oswald", name: "Oswald", family: "Oswald", style: "Condensed" },
+    { id: "bebas", name: "Bebas Neue", family: "Bebas Neue", style: "Display" },
+    { id: "raleway", name: "Raleway", family: "Raleway", style: "Light Sans" },
+];
+export const textFontGroups = [
+    { id: "arabic", label: "Arabic Fonts", items: arabicFonts },
+    { id: "english", label: "English Fonts", items: englishFonts },
 ];
 export const TextEditor = ({ text, onTextChange, fontSize, onFontSizeChange, textAlign, onTextAlignChange, fontFamily, }) => {
     return (<div className="space-y-4">
@@ -62,26 +74,31 @@ export const TextEditor = ({ text, onTextChange, fontSize, onFontSizeChange, tex
 export const TextStyleControls = ({ fontFamily, onFontFamilyChange, textColor, onTextColorChange, }) => {
     return (<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div className="space-y-3 min-w-0">
-        <h3 className="text-sm font-medium text-foreground text-center">????</h3>
+        <h3 className="text-sm font-medium text-foreground text-center">Font Type</h3>
         <Select value={fontFamily} onValueChange={onFontFamilyChange}>
           <SelectTrigger className="w-full bg-background">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="text-right">
-            {arabicFonts.map((font) => (<SelectItem key={font.id} value={font.family}>
-                <span className="flex w-full items-center justify-between gap-2">
-                  <span className="text-sm" style={{ fontFamily: font.family }}>
-                    {font.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{font.style}</span>
-                </span>
-              </SelectItem>))}
+            {textFontGroups.map((group) => (<div key={group.id} className="pb-1">
+                <div className="px-2 py-1 text-[11px] font-semibold uppercase text-muted-foreground">
+                  {group.label}
+                </div>
+                {group.items.map((font) => (<SelectItem key={font.id} value={font.family}>
+                    <span className="flex w-full items-center justify-between gap-2">
+                      <span className="text-sm" style={{ fontFamily: font.family }}>
+                        {font.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{font.style}</span>
+                    </span>
+                  </SelectItem>))}
+              </div>))}
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2 min-w-0">
-        <h3 className="text-sm font-medium text-foreground text-center">??? ????</h3>
+        <h3 className="text-sm font-medium text-foreground text-center">Text Color</h3>
         <Select value={textColor} onValueChange={onTextColorChange}>
           <SelectTrigger className="w-full bg-background">
             <SelectValue />

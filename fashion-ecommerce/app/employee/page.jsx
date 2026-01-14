@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, useMemo, Fragment } from "react";
+import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LayoutDashboard, Package, ShoppingCart, Users, Eye, Edit, CheckCircle, Clock, Truck, Printer, PackageCheck, Moon, Sun, Languages, MessageSquare, } from "lucide-react";
+import { Bell, LayoutDashboard, Package, ShoppingCart, Users, Eye, Edit, CheckCircle, Clock, Truck, Printer, PackageCheck, Moon, Sun, Languages, MessageSquare, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,6 +27,9 @@ import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { StaffChatPanel } from "@/components/staff-chat-panel";
 import { StaffChatWidget } from "@/components/staff-chat-widget";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
+import { getNotifications, markAllAsRead } from "@/lib/api/notifications";
+import { staffChatApi } from "@/lib/api/staffChat";
 const getStatusColor = (status) => {
     switch (status) {
         case "pending":
@@ -104,6 +107,10 @@ export default function EmployeeDashboard() {
     const [additionalImageFiles, setAdditionalImageFiles] = useState([]);
     const [newSize, setNewSize] = useState("");
     const [newColor, setNewColor] = useState("");
+    const [notifications, setNotifications] = useState([]);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [unreadMessages, setUnreadMessages] = useState(0);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
     const { user, logout, isLoading: authLoading } = useAuth();
     const { theme, setTheme } = useTheme();
     const { language, setLanguage } = useLanguage();
@@ -111,6 +118,46 @@ export default function EmployeeDashboard() {
     const router = useRouter();
     const productColorSet = new Set(productForm.colors.map(normalizeColorKey));
     const normalizeGender = (value) => value?.toLowerCase().trim() || "";
+    const loadNotifications = useCallback(async () => {
+        if (!user)
+            return;
+        try {
+            const response = await getNotifications({ page: 1, limit: 5 });
+            setNotifications(response?.data || []);
+            setUnreadNotifications(response?.unreadCount || 0);
+        }
+        catch {
+        }
+    }, [user]);
+    const loadUnreadMessages = useCallback(async () => {
+        if (!user)
+            return;
+        try {
+            const threads = await staffChatApi.getThreads();
+            const totalUnread = Array.isArray(threads)
+                ? threads.reduce((sum, thread) => sum + (thread.unreadCount || 0), 0)
+                : 0;
+            setUnreadMessages(totalUnread);
+        }
+        catch {
+        }
+    }, [user]);
+    useEffect(() => {
+        if (!user)
+            return;
+        loadNotifications();
+        loadUnreadMessages();
+        const interval = setInterval(() => {
+            loadNotifications();
+            loadUnreadMessages();
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [user, loadNotifications, loadUnreadMessages]);
+    useEffect(() => {
+        if (notificationsOpen) {
+            loadNotifications();
+        }
+    }, [notificationsOpen, loadNotifications]);
     const groupedProducts = useMemo(() => {
         const groups = {
             men: [],
@@ -566,6 +613,59 @@ export default function EmployeeDashboard() {
 
       
       <div className="ml-64 p-8">
+        <div className="flex items-center justify-end gap-2 mb-6">
+          <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="relative h-9 w-9" aria-label="Notifications">
+                <Bell className="h-4 w-4" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {notifications.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground">
+                  No notifications yet.
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <div key={notification._id} className="px-3 py-3 text-sm">
+                    <div className="font-medium">{notification.title || "Notification"}</div>
+                    <div className="text-muted-foreground">{notification.message}</div>
+                  </div>
+                ))
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={async () => {
+                  await markAllAsRead();
+                  setUnreadNotifications(0);
+                }}
+              >
+                Mark all as read
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="outline"
+            size="icon"
+            className="relative h-9 w-9"
+            aria-label="Staff chat"
+            onClick={() => setActiveTab("chat")}
+          >
+            <MessageSquare className="h-4 w-4" />
+            {unreadMessages > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold text-white">
+                {unreadMessages > 99 ? "99+" : unreadMessages}
+              </span>
+            )}
+          </Button>
+        </div>
         {loading ? (<div className="flex items-center justify-center h-screen">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -1174,7 +1274,7 @@ export default function EmployeeDashboard() {
                         setAdditionalImageFiles([]);
                     }
                 }}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-2 shadow-2xl">
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border-2 shadow-2xl">
                 <DialogHeader>
                   <DialogTitle>
                     {isEditingProduct
