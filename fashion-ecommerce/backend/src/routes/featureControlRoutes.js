@@ -14,8 +14,6 @@ router.get('/virtual-experience', (0, auth_1.authorize)('admin'), featureControl
 router.put('/virtual-experience', (0, auth_1.authorize)('admin'), featureControlController_1.updateVirtualExperienceSettings);
 router.post('/virtual-experience/usage', featureControlController_1.logVirtualExperienceUsage);
 router.post('/virtual-experience/conversion', featureControlController_1.logVirtualExperienceConversion);
-router.get('/custom-design', (0, auth_1.authorize)('admin'), featureControlController_1.getCustomDesignSettings);
-router.put('/custom-design', (0, auth_1.authorize)('admin'), featureControlController_1.updateCustomDesignSettings);
 router.post('/home-slider/upload', (0, auth_1.authorize)('admin'), upload_1.uploadSingle, featureControlController_1.uploadHomeSliderImage);
 router.put('/home-slider', (0, auth_1.authorize)('admin'), featureControlController_1.updateHomeSliderSettings);
 exports.default = router;

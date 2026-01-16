@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingBag, Search, Trash2, Edit, Heart, Grid3x3, List, Plus, Loader2 } from "lucide-react";
-import { Logo } from "@/components/logo";
+import { ShoppingBag, Search, Trash2, Edit, Grid3x3, List, Plus, Loader2 } from "lucide-react";
 import { designsApi } from "@/lib/api/designs";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import logger from "@/lib/logger";
+import { ProfessionalNavbar } from "@/components/professional-navbar";
+import { useCart } from "@/lib/cart";
+import { useLanguage } from "@/lib/language";
 
 const LOCAL_DESIGNS_KEY = "fashionhub_simple_studio_designs";
 
@@ -61,6 +63,8 @@ export default function MyDesignsPage() {
     const { user, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
+    const { addItem } = useCart();
+    const { language } = useLanguage();
     const [designs, setDesigns] = useState([]);
     const [localDesigns, setLocalDesigns] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -137,48 +141,77 @@ export default function MyDesignsPage() {
     });
     const getDesignLink = (design) =>
         design.isLocal ? `/studio?localDesign=${design._id}` : `/studio?design=${design._id}`;
+    const handleOrderDesign = async (design, event) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        if (design.isLocal) {
+            toast({
+                title: language === "ar" ? "احفظ التصميم أولاً" : "Save your design first",
+                description: language === "ar"
+                    ? "الطلب يتطلب حفظ التصميم بحسابك. افتح التصميم ثم احفظه."
+                    : "Ordering requires saving the design to your account. Open it and save first.",
+                variant: "default",
+            });
+            return;
+        }
+        try {
+            const size = design.baseProduct?.size || "M";
+            const color = design.baseProduct?.color || "white";
+            const orderNotes = design?.designMetadata?.studio?.data?.orderNotes || "";
+            const cartId = `design-${design._id}-${size}-${color}`;
+            await addItem({
+                id: cartId,
+                name: `${design.name} (Custom)`,
+                price: Number(design.price) || 39.99,
+                quantity: 1,
+                size,
+                color,
+                image: design.thumbnail || design.designImageURL || "",
+                isCustom: true,
+                notes: orderNotes || undefined,
+                design: design._id,
+                baseProductId: design.baseProductId,
+                baseProduct: design.baseProduct,
+                designMetadata: design.designMetadata,
+                designImageURL: design.designImageURL,
+            });
+            toast({
+                title: language === "ar" ? "تمت الإضافة للسلة" : "Added to cart",
+                description: language === "ar"
+                    ? `${design.name} تمت إضافته إلى السلة`
+                    : `${design.name} added to cart`,
+            });
+        }
+        catch (error) {
+            if (error?.name === "AuthenticationRequired" || error?.message === "AUTHENTICATION_REQUIRED") {
+                toast({
+                    title: language === "ar" ? "تسجيل الدخول مطلوب" : "Sign in required",
+                    description: language === "ar"
+                        ? "يرجى تسجيل الدخول لإضافة التصميم إلى السلة"
+                        : "Please sign in to add designs to your cart",
+                    variant: "default",
+                });
+                setTimeout(() => {
+                    router.push("/login");
+                }, 1500);
+                return;
+            }
+            toast({
+                title: "Error",
+                description: error?.message || (language === "ar" ? "فشل إضافة التصميم إلى السلة" : "Failed to add design to cart"),
+                variant: "destructive",
+            });
+        }
+    };
     if (authLoading || isLoading) {
         return (<div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/>
       </div>);
     }
     return (<div className="min-h-screen bg-background">
-      
-      <header className="border-b border-border bg-background shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <Link href="/">
-              <Logo />
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/products" className="text-sm font-medium hover:text-primary transition-colors">
-                Shop
-              </Link>
-              <Link href="/studio" className="text-sm font-medium hover:text-primary transition-colors">
-                Design Studio
-              </Link>
-              <Link href="/my-designs" className="text-sm font-medium text-primary">
-                My Designs
-              </Link>
-            </nav>
-            <div className="flex items-center gap-3">
-              <Link href="/cart">
-                <Button variant="ghost" size="icon">
-                  <ShoppingBag className="h-5 w-5"/>
-                </Button>
-              </Link>
-              <Link href="/profile">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold">
-                  U
-                </div>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <ProfessionalNavbar />
 
-      
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 pt-24">
         
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">My Designs</h1>
@@ -275,7 +308,7 @@ export default function MyDesignsPage() {
                         Edit
                       </Button>
                     </Link>
-                    <Button size="sm" variant="secondary">
+                    <Button size="sm" variant="secondary" onClick={(event) => handleOrderDesign(design, event)}>
                       <ShoppingBag className="h-4 w-4 mr-1"/>
                       Order
                     </Button>
@@ -328,6 +361,10 @@ export default function MyDesignsPage() {
                             Edit Design
                           </Button>
                         </Link>
+                        <Button size="sm" variant="outline" onClick={(event) => handleOrderDesign(design, event)}>
+                          <ShoppingBag className="h-4 w-4 mr-1"/>
+                          Order
+                        </Button>
                         <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => deleteDesign(design._id)}>
                           <Trash2 className="h-4 w-4 mr-1"/>
                           Delete

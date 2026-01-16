@@ -216,13 +216,19 @@ function ProductsPageContent() {
             });
             return;
         }
-        const isCurrentlyFavorite = favoriteIds.has(productId);
         setLoadingFavorites((prev) => new Set(prev).add(productId));
         try {
-            const result = await favoritesApi.toggleFavorite(productId);
+            const isCurrentlyFavorite = favoriteIds.has(productId);
+            const nextIsFavorite = !isCurrentlyFavorite;
+            if (isCurrentlyFavorite) {
+                await favoritesApi.removeFavorite(productId);
+            }
+            else {
+                await favoritesApi.addFavorite(productId);
+            }
             setFavoriteIds((prev) => {
                 const newSet = new Set(prev);
-                if (result.isFavorite) {
+                if (nextIsFavorite) {
                     newSet.add(productId);
                 }
                 else {
@@ -231,10 +237,10 @@ function ProductsPageContent() {
                 return newSet;
             });
             toast({
-                title: result.isFavorite
+                title: nextIsFavorite
                     ? (language === "ar" ? "تمت الإضافة" : "Added to favorites")
                     : (language === "ar" ? "تم الحذف" : "Removed from favorites"),
-                description: result.isFavorite
+                description: nextIsFavorite
                     ? (language === "ar" ? `${product.name} تمت إضافته للمفضلة` : `${product.name} added to favorites`)
                     : (language === "ar" ? `${product.name} تم حذفه من المفضلة` : `${product.name} removed from favorites`),
                 duration: 2000,
@@ -533,12 +539,21 @@ function ProductsPageContent() {
                           {product.gender}
                         </Badge>
                       </div>
-                      <Button variant="ghost" size="icon" className={`absolute top-2 right-2 sm:top-3 sm:right-3 h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-white/90 hover:bg-white border-2 shadow-md z-10 transition-all ${favoriteIds.has(product._id || product.id?.toString() || "")
-                        ? "border-rose-500 bg-rose-50"
-                        : "border-gray-200 hover:border-rose-300"}`} onClick={(e) => handleToggleFavorite(product, e)} disabled={loadingFavorites.has(product._id || product.id?.toString() || "")}>
-                        <Heart fill={favoriteIds.has(product._id || product.id?.toString() || "") ? "currentColor" : "none"} className={`h-4 w-4 sm:h-5 sm:w-5 transition-all duration-200 ${favoriteIds.has(product._id || product.id?.toString() || "")
-                        ? "text-rose-500"
-                        : "text-gray-600 hover:text-rose-500"}`}/>
+                      <Button
+                        variant="ghost"
+                        className={`absolute top-2 right-2 sm:top-3 sm:right-3 h-8 sm:h-9 px-3 rounded-full border shadow-md z-10 transition-all flex items-center gap-1 text-[11px] font-semibold ${favoriteIds.has(product._id || product.id?.toString() || "")
+                        ? "border-rose-500 bg-rose-50 text-rose-600"
+                        : "border-gray-200 bg-white/90 text-gray-600 hover:border-rose-300 hover:text-rose-500"}`}
+                        onClick={(e) => handleToggleFavorite(product, e)}
+                        disabled={loadingFavorites.has(product._id || product.id?.toString() || "")}
+                      >
+                        <Heart
+                          fill={favoriteIds.has(product._id || product.id?.toString() || "") ? "currentColor" : "none"}
+                          className="h-4 w-4"
+                        />
+                        {favoriteIds.has(product._id || product.id?.toString() || "")
+                          ? (language === "ar" ? "مفضلة" : "Favorited")
+                          : (language === "ar" ? "مفضل" : "Favorite")}
                       </Button>
                     </div>
                   <CardContent className="p-3 sm:p-4 md:p-5 flex-1 flex flex-col">

@@ -8,6 +8,12 @@ export const studioProductsApi = {
             return Array.isArray(res.data) ? res.data : [];
         return [];
     },
+    async getById(id) {
+        const res = await apiClient.get(`/studio-products/${id}`);
+        if (res && typeof res === "object" && "data" in res)
+            return res.data || null;
+        return res || null;
+    },
     async getAll() {
         const res = await apiClient.get("/studio-products");
         if (Array.isArray(res))

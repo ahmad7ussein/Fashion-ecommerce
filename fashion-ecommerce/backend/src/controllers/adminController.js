@@ -5,13 +5,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSalesReport = exports.createEmployee = exports.deleteUser = exports.updateUserRole = exports.getUser = exports.getAllUsers = exports.getDashboardStats = void 0;
 const User_1 = __importDefault(require("../models/User"));
+const crypto_1 = __importDefault(require("crypto"));
 const Order_1 = __importDefault(require("../models/Order"));
 const Product_1 = __importDefault(require("../models/Product"));
 const Design_1 = __importDefault(require("../models/Design"));
+const Cart_1 = __importDefault(require("../models/Cart"));
+const Favorite_1 = __importDefault(require("../models/Favorite"));
+const Notification_1 = __importDefault(require("../models/Notification"));
+const Review_1 = __importDefault(require("../models/Review"));
+const RoleAssignment_1 = __importDefault(require("../models/RoleAssignment"));
+const UserPreferences_1 = __importDefault(require("../models/UserPreferences"));
+const EmployeeActivity_1 = __importDefault(require("../models/EmployeeActivity"));
+const StaffChatMessage_1 = __importDefault(require("../models/StaffChatMessage"));
+const Supplier_1 = __importDefault(require("../models/Supplier"));
+const SupplierProduct_1 = __importDefault(require("../models/SupplierProduct"));
+const PartnerProduct_1 = __importDefault(require("../models/PartnerProduct"));
+const ContactMessage_1 = __importDefault(require("../models/ContactMessage"));
 const employeeActivityController_1 = require("./employeeActivityController");
 const getDashboardStats = async (req, res) => {
     try {
-        const totalUsers = await User_1.default.countDocuments({ role: 'customer' });
+        const totalUsers = await User_1.default.countDocuments({ role: 'customer', isDeleted: { $ne: true } });
         const totalOrders = await Order_1.default.countDocuments();
         const totalProducts = await Product_1.default.countDocuments();
         const totalDesigns = await Design_1.default.countDocuments();
@@ -74,7 +87,7 @@ const getAllUsers = async (req, res) => {
     try {
         const { role, page = 1, limit = 20, search } = req.query;
         console.log('🔍 getAllUsers called with params:', { role, page, limit, search });
-        const query = {};
+        const query = { isDeleted: { $ne: true } };
         if (role && role !== 'all') {
             query.role = role;
             console.log('✅ Filtering by role:', role);
@@ -135,6 +148,12 @@ const getUser = async (req, res) => {
         }
         const user = await User_1.default.findById(req.params.id).select('-password');
         if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+        if (user.isDeleted) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found',
@@ -219,7 +238,57 @@ const deleteUser = async (req, res) => {
                 message: 'You cannot delete your own account',
             });
         }
-        await user.deleteOne();
+        const userId = user._id;
+        const anonymizedEmail = `deleted+${userId.toString()}@deleted.local`;
+        await Promise.all([
+            Cart_1.default.deleteMany({ user: userId }),
+            Design_1.default.deleteMany({ user: userId }),
+            Favorite_1.default.deleteMany({ user: userId }),
+            Notification_1.default.deleteMany({ user: userId }),
+            Review_1.default.deleteMany({ user: userId }),
+            RoleAssignment_1.default.deleteMany({ user: userId }),
+            UserPreferences_1.default.deleteMany({ user: userId }),
+            EmployeeActivity_1.default.deleteMany({ employee: userId }),
+            StaffChatMessage_1.default.deleteMany({
+                $or: [{ admin: userId }, { employee: userId }, { sender: userId }],
+            }),
+            Supplier_1.default.deleteMany({ createdBy: userId }),
+        ]);
+        await Promise.all([
+            ContactMessage_1.default.updateMany({ repliedBy: userId }, { $unset: { repliedBy: "" } }),
+            PartnerProduct_1.default.updateMany({ reviewedBy: userId }, { $unset: { reviewedBy: "", reviewedAt: "" } }),
+            SupplierProduct_1.default.updateMany({ reviewedBy: userId }, { $unset: { reviewedBy: "", reviewedAt: "" } }),
+            Order_1.default.updateMany({ user: userId }, {
+                $set: {
+                    "shippingAddress.firstName": "Deleted",
+                    "shippingAddress.lastName": "User",
+                    "shippingAddress.email": anonymizedEmail,
+                    "shippingAddress.phone": "",
+                    "shippingAddress.street": "",
+                    "shippingAddress.city": "",
+                    "shippingAddress.state": "",
+                    "shippingAddress.zip": "",
+                    "shippingAddress.country": "",
+                },
+            }),
+            Order_1.default.updateMany({ "trackingHistory.updatedBy": userId }, {
+                $set: { "trackingHistory.$[entry].updatedBy": null },
+            }, { arrayFilters: [{ "entry.updatedBy": userId }] }),
+        ]);
+        user.firstName = 'Deleted';
+        user.lastName = 'User';
+        user.email = anonymizedEmail;
+        user.phone = undefined;
+        user.address = undefined;
+        user.googleId = undefined;
+        user.provider = 'local';
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+        user.role = 'customer';
+        user.isDeleted = true;
+        user.deletedAt = new Date();
+        user.password = crypto_1.default.randomBytes(32).toString('hex');
+        await user.save();
         res.status(200).json({
             success: true,
             message: 'User deleted successfully',

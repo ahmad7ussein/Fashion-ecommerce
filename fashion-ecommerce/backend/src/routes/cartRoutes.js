@@ -102,6 +102,11 @@ router.get('/', async (req, res) => {
                     color: item.color || '',
                     image: item.image || '',
                     isCustom: item.isCustom || false,
+                    notes: item.notes || '',
+                    baseProductId: item.baseProductId?.toString(),
+                    baseProduct: item.baseProduct || null,
+                    designMetadata: item.designMetadata || null,
+                    designKey: item.designKey || '',
                 };
             }),
             subtotal: cart.subtotal || 0,
@@ -132,7 +137,7 @@ router.post('/items', async (req, res) => {
     try {
         const authReq = req;
         const userId = authReq.user?._id;
-        const { product, design, name, price, quantity, size, color, image, isCustom } = req.body;
+        const { product, design, baseProductId, baseProduct, name, price, quantity, size, color, image, isCustom, notes, designMetadata, designKey } = req.body;
         if (!name || !price || !quantity || !size || !color || !image) {
             return res.status(400).json({
                 success: false,
@@ -159,17 +164,34 @@ router.post('/items', async (req, res) => {
                 subtotal: 0,
             });
         }
-        const existingItemIndex = cart.items.findIndex((item) => item.product?.toString() === product &&
-            item.size === size &&
-            item.color === color &&
-            item.isCustom === isCustom);
+        const existingItemIndex = cart.items.findIndex((item) => {
+            if (item.size !== size || item.color !== color || item.isCustom !== isCustom) {
+                return false;
+            }
+            if (isCustom) {
+                const incomingDesignKey = typeof designKey === 'string' ? designKey : undefined;
+                if (design && item.design?.toString() === design) {
+                    return true;
+                }
+                if (incomingDesignKey && item.designKey === incomingDesignKey) {
+                    return true;
+                }
+                return false;
+            }
+            return item.product?.toString() === product;
+        });
         if (existingItemIndex > -1) {
             cart.items[existingItemIndex].quantity += quantity;
+            if (typeof notes === 'string' && notes.trim()) {
+                cart.items[existingItemIndex].notes = notes.trim().slice(0, 1000);
+            }
         }
         else {
             cart.items.push({
                 product,
                 design,
+                baseProductId,
+                baseProduct,
                 name,
                 price,
                 quantity,
@@ -177,6 +199,9 @@ router.post('/items', async (req, res) => {
                 color,
                 image,
                 isCustom: isCustom || false,
+                designMetadata,
+                designKey,
+                notes: typeof notes === 'string' && notes.trim() ? notes.trim().slice(0, 1000) : undefined,
             });
         }
         await cart.save();

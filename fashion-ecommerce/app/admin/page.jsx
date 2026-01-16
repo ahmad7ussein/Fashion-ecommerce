@@ -166,6 +166,60 @@ function AdminDashboardContent() {
         phone: "",
     });
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [designPreviewItem, setDesignPreviewItem] = useState(null);
+    const [designPreviewSide, setDesignPreviewSide] = useState("front");
+    const [studioPreviewProducts, setStudioPreviewProducts] = useState({});
+
+    const defaultPreviewAreas = {
+        front: { top: "30%", left: "30%", width: "40%", height: "22%" },
+        back: { top: "30%", left: "30%", width: "40%", height: "22%" },
+    };
+    const resolvePreviewArea = (studioProduct, side) => {
+        const fallback = defaultPreviewAreas[side] || defaultPreviewAreas.front;
+        const raw = studioProduct?.designAreas?.[side];
+        if (!raw || typeof raw !== "object")
+            return fallback;
+        const top = Number(raw.y);
+        const left = Number(raw.x);
+        const width = Number(raw.width);
+        const height = Number(raw.height);
+        if ([top, left, width, height].some((val) => Number.isNaN(val)))
+            return fallback;
+        return {
+            top: `${top * 100}%`,
+            left: `${left * 100}%`,
+            width: `${width * 100}%`,
+            height: `${height * 100}%`,
+        };
+    };
+    const resolvePreviewBaseImage = (item, studioProduct, side) => {
+        const viewMockups = studioProduct?.viewMockups || {};
+        if (side === "back") {
+            return viewMockups.back || studioProduct?.baseMockupUrl || item?.image || "";
+        }
+        return viewMockups.front || studioProduct?.baseMockupUrl || item?.image || "";
+    };
+    const openDesignPreview = (item) => {
+        setDesignPreviewItem(item);
+        setDesignPreviewSide("front");
+    };
+
+    useEffect(() => {
+        const baseProductId = designPreviewItem?.baseProductId;
+        if (!baseProductId || studioPreviewProducts[baseProductId])
+            return;
+        let isMounted = true;
+        studioProductsApi.getById(baseProductId)
+            .then((product) => {
+            if (!isMounted || !product)
+                return;
+            setStudioPreviewProducts((prev) => ({ ...prev, [baseProductId]: product }));
+        })
+            .catch(() => { });
+        return () => {
+            isMounted = false;
+        };
+    }, [designPreviewItem, studioPreviewProducts]);
     const [showOrderDetails, setShowOrderDetails] = useState(false);
     const [showEditOrder, setShowEditOrder] = useState(false);
     const [editOrderStatus, setEditOrderStatus] = useState("pending");
@@ -1244,6 +1298,12 @@ function AdminDashboardContent() {
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>);
     }
+    const previewProduct = designPreviewItem?.baseProductId
+        ? studioPreviewProducts[designPreviewItem.baseProductId]
+        : null;
+    const previewSideData = designPreviewItem?.designMetadata?.studio?.data?.designBySide?.[designPreviewSide] || {};
+    const previewArea = resolvePreviewArea(previewProduct, designPreviewSide);
+    const previewBaseImage = resolvePreviewBaseImage(designPreviewItem, previewProduct, designPreviewSide);
     return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="flex min-h-screen">
         <aside className="w-64 h-screen sticky top-0 shrink-0 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
@@ -2192,7 +2252,7 @@ function AdminDashboardContent() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold mb-2">Studio Products</h1>
-                <p className="text-muted-foreground">Manage custom-designable products for the studio experience.</p>
+                <p className="text-muted-foreground">Manage studio products for the studio experience.</p>
               </div>
               <Button onClick={() => {
                     resetStudioForm();
@@ -3436,6 +3496,14 @@ function AdminDashboardContent() {
                           <p className="text-sm text-muted-foreground">
                             {language === "ar" ? "الكمية" : "Quantity"}: {item.quantity} • {language === "ar" ? "الحجم" : "Size"}: {item.size} • {language === "ar" ? "اللون" : "Color"}: {item.color}
                           </p>
+                          {item.notes && (<p className="text-xs text-muted-foreground mt-1">
+                              <span className="font-medium">{language === "ar" ? "ملاحظات" : "Notes"}:</span> {item.notes}
+                            </p>)}
+                          {item.isCustom && item.design && (<div className="mt-2">
+                              <Button type="button" variant="link" className="h-auto p-0 text-xs text-rose-600" onClick={() => openDesignPreview(item)}>
+                                {language === "ar" ? "عرض التصميم" : "View design"}
+                              </Button>
+                            </div>)}
                         </div>
                         <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
                       </div>))}
@@ -3496,6 +3564,64 @@ function AdminDashboardContent() {
                 {language === "ar" ? "إغلاق" : "Close"}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={Boolean(designPreviewItem)} onOpenChange={(open) => {
+            if (!open) {
+                setDesignPreviewItem(null);
+            }
+        }}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{language === "ar" ? "معاينة التصميم" : "Design preview"}</DialogTitle>
+              <DialogDescription>
+                {designPreviewItem?.name}
+              </DialogDescription>
+            </DialogHeader>
+            {designPreviewItem && (<div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant={designPreviewSide === "front" ? "default" : "outline"} onClick={() => setDesignPreviewSide("front")}>
+                    {language === "ar" ? "أمام" : "Front"}
+                  </Button>
+                  <Button size="sm" variant={designPreviewSide === "back" ? "default" : "outline"} onClick={() => setDesignPreviewSide("back")}>
+                    {language === "ar" ? "خلف" : "Back"}
+                  </Button>
+                </div>
+                <div className="relative overflow-hidden rounded-2xl border border-rose-200 bg-white shadow-sm">
+                  <div className="relative aspect-[4/5]">
+                    {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                        {language === "ar" ? "لا توجد معاينة" : "No preview available"}
+                      </div>)}
+                    <div className="absolute" style={previewArea}>
+                      {previewSideData?.uploadedImage && (<div className="absolute inset-0">
+                          <div className="absolute" style={{
+                    left: `${previewSideData?.imagePosition?.x ?? 50}%`,
+                    top: `${previewSideData?.imagePosition?.y ?? 50}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: `${previewSideData?.imageSize || 120}px`,
+                    height: `${previewSideData?.imageSize || 120}px`,
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                }}>
+                            <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
+                          </div>
+                        </div>)}
+                      {previewSideData?.textValue && (<div className="absolute inset-0 flex items-center justify-center p-2">
+                          <span className="w-full font-bold leading-tight break-words" style={{
+                    color: previewSideData?.textColor || "#000000",
+                    fontSize: `${previewSideData?.textFontSize || 16}px`,
+                    textAlign: previewSideData?.textAlign || "center",
+                    fontFamily: previewSideData?.textFontFamily || "Tajawal",
+                    textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+                }}>
+                            {previewSideData.textValue}
+                          </span>
+                        </div>)}
+                    </div>
+                  </div>
+                </div>
+              </div>)}
           </DialogContent>
         </Dialog>
 
@@ -3583,7 +3709,7 @@ function AdminDashboardContent() {
 
                 <div>
                   <Label>{language === "ar" ? "الموقع الحالي" : "Current Location"}</Label>
-                  <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder={language === "ar" ? "مثال: الرياض، السعودية" : "e.g., Riyadh, Saudi Arabia"}/>
+                  <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder={language === "ar" ? "Nablus - Rafidia" : "e.g., Nablus - Rafidia"}/>
                 </div>
 
                 <div>

@@ -12,12 +12,6 @@ export const featureControlsApi = {
     logVirtualExperienceConversion() {
         return apiClient.post('/feature-controls/virtual-experience/conversion');
     },
-    getCustomDesignSettings() {
-        return apiClient.get('/feature-controls/custom-design');
-    },
-    updateCustomDesignSettings(payload) {
-        return apiClient.put('/feature-controls/custom-design', payload);
-    },
     getHomeSliderSettings() {
         return apiClient.get('/feature-controls/home-slider');
     },

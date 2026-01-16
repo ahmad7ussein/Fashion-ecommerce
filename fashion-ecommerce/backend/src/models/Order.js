@@ -67,6 +67,7 @@ const orderSchema = new mongoose_1.Schema({
             color: { type: String, required: true },
             image: { type: String, required: true },
             isCustom: { type: Boolean, default: false },
+            notes: { type: String, trim: true },
             designMetadata: mongoose_1.Schema.Types.Mixed,
             designImageURL: String,
         },

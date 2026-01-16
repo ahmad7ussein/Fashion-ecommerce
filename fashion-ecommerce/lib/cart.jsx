@@ -78,6 +78,11 @@ export function CartProvider({ children }) {
                 color: item.color,
                 image: item.image,
                 isCustom: item.isCustom || false,
+                notes: item.notes || "",
+                baseProductId: item.baseProductId,
+                baseProduct: item.baseProduct || null,
+                designMetadata: item.designMetadata || null,
+                designKey: item.designKey || "",
             }));
             setItems(cartItems);
             logger.log("Cart loaded successfully:", { itemsCount: cartItems.length });
@@ -124,6 +129,11 @@ export function CartProvider({ children }) {
                     color: item.color,
                     image: item.image,
                     isCustom: item.isCustom || false,
+                    notes: item.notes || "",
+                    baseProductId: item.baseProductId,
+                    baseProduct: item.baseProduct,
+                    designMetadata: item.designMetadata,
+                    designKey: item.designKey,
                 });
                 await loadCart();
                 return;

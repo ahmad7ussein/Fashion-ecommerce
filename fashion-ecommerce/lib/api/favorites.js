@@ -24,9 +24,9 @@ export const favoritesApi = {
         return response;
     },
     async addFavorite(productId) {
-        await apiClient.post(`/favorites/${productId}`);
+        return apiClient.post(`/favorites/${productId}`);
     },
     async removeFavorite(productId) {
-        await apiClient.delete(`/favorites/${productId}`);
+        return apiClient.delete(`/favorites/${productId}`);
     },
 };

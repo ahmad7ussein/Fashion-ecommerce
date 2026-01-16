@@ -28,6 +28,12 @@ const protect = async (req, res, next) => {
                     message: 'User not found',
                 });
             }
+            if (user.isDeleted) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not found',
+                });
+            }
             req.user = user;
             next();
         }
@@ -58,7 +64,7 @@ const optionalAuth = async (req, res, next) => {
         try {
             const decoded = jsonwebtoken_1.default.verify(token, env_1.default.jwtSecret);
             const user = await User_1.default.findById(decoded.id).select('-password');
-            if (user) {
+            if (user && !user.isDeleted) {
                 req.user = user;
             }
             next();

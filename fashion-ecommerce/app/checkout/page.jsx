@@ -14,6 +14,7 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useRegion } from "@/lib/region";
 import { ordersApi } from "@/lib/api/orders";
+import { designsApi } from "@/lib/api/designs";
 import logger from "@/lib/logger";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -49,6 +50,7 @@ export default function CheckoutPage() {
             return maybeId;
         return undefined;
     };
+    const isValidObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ""));
     const form = useForm({
         resolver: zodResolver(CheckoutSchema),
         defaultValues: {
@@ -94,9 +96,37 @@ export default function CheckoutPage() {
                 });
                 return;
             }
+            const preparedItems = await Promise.all(normalizedItems.map(async (item) => {
+                if (item.isCustom && !item.design && item.designMetadata && isValidObjectId(item.baseProductId)) {
+                    try {
+                        const created = await designsApi.createDesign({
+                            name: item.name || "Custom design",
+                            baseProductId: item.baseProductId,
+                            baseProduct: item.baseProduct || {
+                                type: item.name || "Studio Product",
+                                color: item.color,
+                                size: item.size,
+                            },
+                            thumbnail: item.image,
+                            elements: [],
+                            views: [],
+                            designMetadata: item.designMetadata,
+                        });
+                        return {
+                            ...item,
+                            design: created?._id || created?.id,
+                        };
+                    }
+                    catch (error) {
+                        throw new Error(error?.message || "Failed to create design for checkout");
+                    }
+                }
+                return item;
+            }));
             const orderData = {
-                items: normalizedItems.map(item => ({
+                items: preparedItems.map(item => ({
                     product: item.product,
+                    design: item.design,
                     name: item.name,
                     price: item.price,
                     quantity: item.quantity,
@@ -104,6 +134,8 @@ export default function CheckoutPage() {
                     color: item.color,
                     image: item.image,
                     isCustom: item.isCustom || false,
+                    notes: item.notes || "",
+                    designMetadata: item.designMetadata || undefined,
                 })),
                 shippingAddress: {
                     firstName: values.firstName,

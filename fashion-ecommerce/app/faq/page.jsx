@@ -85,8 +85,8 @@ export default function FAQPage() {
                 ? "كيف يمكنني التواصل مع خدمة العملاء؟"
                 : "How can I contact customer service?",
             answer: language === "ar"
-                ? "يمكنك التواصل معنا عبر البريد الإلكتروني support@fashionhub.com أو الهاتف +1 (555) 123-4567 أو استخدام نموذج الاتصال على موقعنا."
-                : "You can contact us via email at support@fashionhub.com, phone at +1 (555) 123-4567, or use the contact form on our website.",
+                ? "يمكنك التواصل معنا عبر البريد الإلكتروني support@fashionhub.com أو الهاتف 0592639933 أو استخدام نموذج الاتصال على موقعنا."
+                : "You can contact us via email at support@fashionhub.com, phone at 0592639933, or use the contact form on our website.",
         },
     ];
     return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
