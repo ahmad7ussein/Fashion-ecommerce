@@ -8,6 +8,8 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
 const google_auth_library_1 = require("google-auth-library");
 const User_1 = __importDefault(require("../models/User"));
+const Cart_1 = __importDefault(require("../models/Cart"));
+const UserPreferences_1 = __importDefault(require("../models/UserPreferences"));
 const env_1 = __importDefault(require("../config/env"));
 const employeeActivityController_1 = require("./employeeActivityController");
 const emailService_1 = require("../utils/emailService");
@@ -35,6 +37,15 @@ const register = async (req, res) => {
             password,
             role: allowedRole,
         });
+        try {
+            await Promise.all([
+                Cart_1.default.create({ user: user._id, items: [] }),
+                UserPreferences_1.default.create({ user: user._id }),
+            ]);
+        }
+        catch (initError) {
+            console.warn('Failed to initialize user data:', initError?.message || initError);
+        }
         const token = generateToken(user._id.toString());
         try {
             const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
@@ -86,6 +97,13 @@ const login = async (req, res) => {
         const user = await User_1.default.findOne(isObjectId ? { _id: normalizedIdentifier } : { email: normalizedEmail }).select('+password');
         if (!user) {
             console.log('❌ User not found for email:', normalizedEmail);
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials',
+            });
+        }
+        if (user.isDeleted) {
+            console.log('❌ Deleted user attempted login:', normalizedEmail);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials',
@@ -256,6 +274,15 @@ const googleAuth = async (req, res) => {
             isNewUser = true;
         }
         if (isNewUser) {
+            try {
+                await Promise.all([
+                    Cart_1.default.create({ user: user._id, items: [] }),
+                    UserPreferences_1.default.create({ user: user._id }),
+                ]);
+            }
+            catch (initError) {
+                console.warn('Failed to initialize user data:', initError?.message || initError);
+            }
             try {
                 const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
                 const emailSent = await (0, emailService_1.sendWelcomeEmail)(user.email, fullName);

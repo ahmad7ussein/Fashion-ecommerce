@@ -25,7 +25,6 @@ const navigationSections = [
         title: { en: "Employees", ar: "Employees" },
         items: [
             { type: "tab", key: "staff", icon: UserCog, labelKey: "staff" },
-            { type: "module", href: "/admin/role-assignments", icon: UserCog, label: { en: "Role Assignments", ar: "OO_OOñOc OU,OœO_U^OOñ" } },
         ],
     },
     {
@@ -40,7 +39,6 @@ const navigationSections = [
         title: { en: "Features", ar: "Features" },
         items: [
             { type: "module", href: "/admin/virtual-experience", icon: Camera, label: { en: "Virtual Experience", ar: "OU,O¦OªOñO\"Oc OU,OU?O¦OñOOUSOc" } },
-            { type: "module", href: "/admin/custom-design", icon: BadgeCheck, label: { en: "Custom Design", ar: "OU,O¦OæU.USU. OU,U.OrOæOæ" } },
             { type: "module", href: "/admin/home-slider", icon: SlidersHorizontal, label: { en: "Home Slider", ar: "Home Slider" } },
         ],
     },

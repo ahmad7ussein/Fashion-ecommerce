@@ -54,6 +54,11 @@ const cartSchema = new mongoose_1.Schema({
                 type: mongoose_1.Schema.Types.ObjectId,
                 ref: 'Design',
             },
+            baseProductId: {
+                type: mongoose_1.Schema.Types.ObjectId,
+                ref: 'StudioProduct',
+            },
+            baseProduct: mongoose_1.Schema.Types.Mixed,
             name: { type: String, required: true },
             price: { type: Number, required: true },
             quantity: { type: Number, required: true, min: 1 },
@@ -61,6 +66,9 @@ const cartSchema = new mongoose_1.Schema({
             color: { type: String, required: true },
             image: { type: String, required: true },
             isCustom: { type: Boolean, default: false },
+            designMetadata: mongoose_1.Schema.Types.Mixed,
+            designKey: { type: String, trim: true },
+            notes: { type: String, trim: true },
         },
     ],
     subtotal: {

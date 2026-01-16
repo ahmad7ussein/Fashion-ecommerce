@@ -117,7 +117,7 @@ export default function TermsPage() {
                 </a>
               </p>
               <p>
-                <strong>{language === "ar" ? "الهاتف:" : "Phone:"}</strong> +1 (555) 123-4567
+                <strong>{language === "ar" ? "الهاتف:" : "Phone:"}</strong> 0592639933
               </p>
             </div>
           </Card>

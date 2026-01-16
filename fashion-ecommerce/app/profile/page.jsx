@@ -74,7 +74,7 @@ export default function ProfilePage() {
         firstName: user?.firstName || user?.name?.split(" ")[0] || "",
         lastName: user?.lastName || user?.name?.split(" ")[1] || "",
         email: user?.email || "",
-        phone: "+1 (555) 123-4567",
+        phone: "0592639933",
         dateOfBirth: "",
         address: "",
         city: "",

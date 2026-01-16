@@ -258,6 +258,9 @@ export default function DesignStudioPage() {
   const [textAlign, setTextAlign] = useState("center");
   const [textColor, setTextColor] = useState("#000000");
   const [textFontFamily, setTextFontFamily] = useState("Tajawal");
+  const [orderNotes, setOrderNotes] = useState("");
+  const [isCopyActive, setIsCopyActive] = useState(false);
+  const copyFlashRef = useRef(null);
 
   const [uploadedImage, setUploadedImage] = useState(null);
   const [imagePosition, setImagePosition] = useState({ x: 50, y: 50 });
@@ -352,6 +355,15 @@ export default function DesignStudioPage() {
       availableProducts[0]
     );
   }, [availableProducts, selectedProduct]);
+
+  useEffect(() => {
+    const studioProductId = searchParams?.get("product");
+    if (!studioProductId || !availableProducts.length) return;
+    const match = availableProducts.find((product) => String(product.id) === String(studioProductId));
+    if (match && match.id !== selectedProduct) {
+      setSelectedProduct(match.id);
+    }
+  }, [availableProducts, searchParams, selectedProduct]);
   const activeColorKey = useMemo(
     () => resolveProductColorKey(productColor, activeProduct),
     [productColor, activeProduct]
@@ -396,6 +408,12 @@ export default function DesignStudioPage() {
       }
     } catch {
       setSavedDesigns([]);
+    }
+  }, []);
+
+  useEffect(() => () => {
+    if (copyFlashRef.current) {
+      clearTimeout(copyFlashRef.current);
     }
   }, []);
 
@@ -685,8 +703,64 @@ export default function DesignStudioPage() {
 
   const handleAddToCart = async () => {
     try {
-      const previewImage = await capturePreview();
-      const id = `custom-${selectedProduct}-${Date.now()}`;
+      if (!activeProduct) {
+        toast({
+          title: "Unable to add to cart",
+          description: "Product data is still loading. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      let previewImage = null;
+      try {
+        previewImage = await capturePreview();
+      } catch (error) {
+        console.warn("Failed to capture design preview, using product image.", error);
+      }
+      const fallbackImage = previewImage || activeProductImage;
+      const designPayload = buildDesignPayload(fallbackImage, {
+        designBySide,
+      });
+      const designMetadata = {
+        studio: {
+          data: designPayload.data,
+          version: 1,
+        },
+      };
+      const baseProductId = activeProduct?._id || activeProduct?.id;
+      const baseProduct = {
+        type: activeProduct?.type || activeProduct?.name || "Product",
+        color: activeColorKey || productColor,
+        size: productSize,
+      };
+      const hasAuthToken =
+        typeof window !== "undefined" && Boolean(localStorage.getItem("auth_token"));
+      let designId = null;
+      if (hasAuthToken && isValidObjectId(baseProductId)) {
+        try {
+          const created = await designsApi.createDesign({
+            name: designPayload.name,
+            baseProductId,
+            baseProduct,
+            thumbnail: fallbackImage,
+            elements: [],
+            views: [],
+            designMetadata,
+          });
+          designId = created?._id || created?.id || null;
+        } catch (error) {
+          console.warn("Failed to create design, adding to cart without design id.", error);
+        }
+      }
+      if (hasAuthToken && isValidObjectId(baseProductId) && !designId) {
+        toast({
+          title: "Unable to add to cart",
+          description: "Failed to save your design. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const id = designPayload.id;
       await addItem({
         id,
         name: `${activeProduct.name} (Custom)`,
@@ -694,8 +768,14 @@ export default function DesignStudioPage() {
         quantity: productQuantity,
         size: productSize,
         color: productColor,
-        image: previewImage || activeProductImage,
+        image: fallbackImage,
         isCustom: true,
+        notes: orderNotes,
+        design: designId || undefined,
+        baseProductId: isValidObjectId(baseProductId) ? baseProductId : undefined,
+        baseProduct,
+        designMetadata,
+        designKey: id,
       });
       toast({
         title: "Added to cart",
@@ -731,6 +811,7 @@ export default function DesignStudioPage() {
       textAlign,
       textColor,
       textFontFamily,
+      orderNotes,
       uploadedImage,
       imagePosition,
       imageSize,
@@ -887,6 +968,7 @@ export default function DesignStudioPage() {
     setTextAlign(currentSideData.textAlign || "center");
     setTextColor(currentSideData.textColor || "#000000");
     setTextFontFamily(currentSideData.textFontFamily || "Tajawal");
+    setOrderNotes(data.orderNotes || "");
     setUploadedImage(currentSideData.uploadedImage || null);
     setImagePosition(currentSideData.imagePosition || { x: 50, y: 50 });
     setImageSize(currentSideData.imageSize || 120);
@@ -994,8 +1076,20 @@ export default function DesignStudioPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 px-4 text-xs font-semibold"
+                className={cn(
+                  "h-9 px-4 text-xs font-semibold transition-colors",
+                  isCopyActive
+                    ? "bg-rose-600 text-white border-rose-600 shadow-md"
+                    : "text-muted-foreground border-border hover:text-foreground hover:bg-rose-50 hover:border-rose-300"
+                )}
                 onClick={() => {
+                  setIsCopyActive(true);
+                  if (copyFlashRef.current) {
+                    clearTimeout(copyFlashRef.current);
+                  }
+                  copyFlashRef.current = setTimeout(() => {
+                    setIsCopyActive(false);
+                  }, 700);
                   setDesignBySide((prev) => {
                     const frontState = prev.front || createEmptySideState();
                     return {
@@ -1293,6 +1387,16 @@ export default function DesignStudioPage() {
                       className="min-h-[96px] w-full resize-none bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/30 mt-3"
                       style={{ fontFamily: textFontFamily }}
                     />
+                    <div className="mt-4 text-left">
+                      <p className="text-xs font-semibold text-foreground tracking-wide">Order Notes</p>
+                      <Textarea
+                        value={orderNotes}
+                        onChange={(event) => setOrderNotes(event.target.value)}
+                        placeholder="Add any details for the team..."
+                        dir="auto"
+                        className="min-h-[96px] w-full resize-none bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-primary/30 mt-2"
+                      />
+                    </div>
                   </div>
 
                 </div>

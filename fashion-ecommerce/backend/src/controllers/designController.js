@@ -158,8 +158,9 @@ const getDesign = async (req, res) => {
                 message: 'Design not found',
             });
         }
-        if (design.user._id.toString() !== req.user?._id?.toString() &&
-            req.user?.role !== 'admin') {
+        const isOwner = design.user._id.toString() === req.user?._id?.toString();
+        const isStaff = req.user?.role === 'admin' || req.user?.role === 'employee';
+        if (!isOwner && !isStaff) {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to access this design',

@@ -55,15 +55,15 @@ export default function ContactPage() {
         {
             icon: <Phone className="h-6 w-6"/>,
             title: language === "ar" ? "الهاتف" : "Phone",
-            content: "+1 (555) 123-4567",
-            link: "tel:+15551234567",
+            content: "0592639933",
+            link: "tel:0592639933",
         },
         {
             icon: <MapPin className="h-6 w-6"/>,
             title: language === "ar" ? "العنوان" : "Address",
             content: language === "ar"
-                ? "123 شارع الموضة، الرياض، المملكة العربية السعودية"
-                : "123 Fashion Street, Riyadh, Saudi Arabia",
+                ? "Nablus - Rafidia"
+                : "Nablus - Rafidia",
             link: "#",
         },
     ];

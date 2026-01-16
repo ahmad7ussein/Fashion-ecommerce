@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo } from "@/components/logo";
 import { useAuth } from "@/lib/auth";
@@ -17,6 +18,7 @@ import { ordersApi } from "@/lib/api/orders";
 import { userPreferencesApi } from "@/lib/api/userPreferences";
 import { adminApi } from "@/lib/api/admin";
 import { productsAdminApi } from "@/lib/api/productsAdmin";
+import { studioProductsApi } from "@/lib/api/studioProducts";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/language";
@@ -70,13 +72,91 @@ const COLOR_OPTIONS = [
     { id: "cyan", value: "#06b6d4", label: { en: "Cyan", ar: "سماوي" } },
 ];
 const normalizeColorKey = (value) => value.trim().toLowerCase();
+const parseColorList = (value) => value.split(",").map((color) => color.trim()).filter(Boolean);
 export default function EmployeeDashboard() {
     const [activeTab, setActiveTab] = useState("overview");
     const [orders, setOrders] = useState([]);
     const [users, setUsers] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [studioProducts, setStudioProducts] = useState([]);
+    const [studioLoading, setStudioLoading] = useState(false);
+    const [showStudioModal, setShowStudioModal] = useState(false);
+    const [editingStudio, setEditingStudio] = useState(null);
+    const [studioForm, setStudioForm] = useState({
+        name: "",
+        type: "",
+        description: "",
+        baseMockupUrl: "",
+        viewMockups: { front: "", back: "" },
+        colorMockups: {},
+        colorViews: {},
+        price: "",
+        colors: "",
+        sizes: "",
+        active: true,
+        aiEnhanceEnabled: false,
+        designAreas: {
+            front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+            back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+        },
+        safeArea: { x: 60, y: 80, width: 280, height: 300 },
+    });
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [designPreviewItem, setDesignPreviewItem] = useState(null);
+    const [designPreviewSide, setDesignPreviewSide] = useState("front");
+    const [studioPreviewProducts, setStudioPreviewProducts] = useState({});
+
+    const defaultPreviewAreas = {
+        front: { top: "30%", left: "30%", width: "40%", height: "22%" },
+        back: { top: "30%", left: "30%", width: "40%", height: "22%" },
+    };
+    const resolvePreviewArea = (studioProduct, side) => {
+        const fallback = defaultPreviewAreas[side] || defaultPreviewAreas.front;
+        const raw = studioProduct?.designAreas?.[side];
+        if (!raw || typeof raw !== "object")
+            return fallback;
+        const top = Number(raw.y);
+        const left = Number(raw.x);
+        const width = Number(raw.width);
+        const height = Number(raw.height);
+        if ([top, left, width, height].some((val) => Number.isNaN(val)))
+            return fallback;
+        return {
+            top: `${top * 100}%`,
+            left: `${left * 100}%`,
+            width: `${width * 100}%`,
+            height: `${height * 100}%`,
+        };
+    };
+    const resolvePreviewBaseImage = (item, studioProduct, side) => {
+        const viewMockups = studioProduct?.viewMockups || {};
+        if (side === "back") {
+            return viewMockups.back || studioProduct?.baseMockupUrl || item?.image || "";
+        }
+        return viewMockups.front || studioProduct?.baseMockupUrl || item?.image || "";
+    };
+    const openDesignPreview = (item) => {
+        setDesignPreviewItem(item);
+        setDesignPreviewSide("front");
+    };
+
+    useEffect(() => {
+        const baseProductId = designPreviewItem?.baseProductId;
+        if (!baseProductId || studioPreviewProducts[baseProductId])
+            return;
+        let isMounted = true;
+        studioProductsApi.getById(baseProductId)
+            .then((product) => {
+            if (!isMounted || !product)
+                return;
+            setStudioPreviewProducts((prev) => ({ ...prev, [baseProductId]: product }));
+        })
+            .catch(() => { });
+        return () => {
+            isMounted = false;
+        };
+    }, [designPreviewItem, studioPreviewProducts]);
     const [showOrderDetails, setShowOrderDetails] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [showProductModal, setShowProductModal] = useState(false);
@@ -117,6 +197,8 @@ export default function EmployeeDashboard() {
     const { toast } = useToast();
     const router = useRouter();
     const productColorSet = new Set(productForm.colors.map(normalizeColorKey));
+    const studioColorList = parseColorList(studioForm.colors);
+    const studioColorSet = new Set(studioColorList.map(normalizeColorKey));
     const normalizeGender = (value) => value?.toLowerCase().trim() || "";
     const loadNotifications = useCallback(async () => {
         if (!user)
@@ -223,6 +305,11 @@ export default function EmployeeDashboard() {
             loadProducts();
         }
     }, [activeTab]);
+    useEffect(() => {
+        if (activeTab === "studioProducts") {
+            loadStudioProducts();
+        }
+    }, [activeTab]);
     const loadUserPreferences = async () => {
         try {
             const preferences = await userPreferencesApi.getPreferences();
@@ -318,6 +405,46 @@ export default function EmployeeDashboard() {
             setLoading(false);
         }
     };
+    const resetStudioForm = () => {
+        setStudioForm({
+            name: "",
+            type: "",
+            description: "",
+            baseMockupUrl: "",
+            viewMockups: { front: "", back: "" },
+            colorMockups: {},
+            colorViews: {},
+            price: "",
+            colors: "",
+            sizes: "",
+            active: true,
+            aiEnhanceEnabled: false,
+            designAreas: {
+                front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+                back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+            },
+            safeArea: { x: 60, y: 80, width: 280, height: 300 },
+        });
+        setEditingStudio(null);
+    };
+    const loadStudioProducts = useCallback(async () => {
+        try {
+            setStudioLoading(true);
+            const data = await studioProductsApi.getAll();
+            setStudioProducts(data || []);
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: error?.message || "Failed to load studio products",
+                variant: "destructive",
+            });
+            setStudioProducts([]);
+        }
+        finally {
+            setStudioLoading(false);
+        }
+    }, [toast]);
     const fileToBase64 = (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -422,6 +549,234 @@ export default function EmployeeDashboard() {
         const newFiles = additionalImageFiles.filter((_, i) => i !== index);
         setProductForm({ ...productForm, images: newImages });
         setAdditionalImageFiles(newFiles);
+    };
+    const handleStudioViewMockupUpload = async (viewKey, e) => {
+        const file = e.target.files?.[0];
+        if (!file)
+            return;
+        if (!file.type.startsWith("image/")) {
+            toast({
+                title: "Error",
+                description: "File must be an image",
+                variant: "destructive",
+            });
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast({
+                title: "Error",
+                description: "Image size must be less than 5MB",
+                variant: "destructive",
+            });
+            return;
+        }
+        try {
+            const base64 = await fileToBase64(file);
+            setStudioForm((prev) => ({
+                ...prev,
+                baseMockupUrl: viewKey === "front" ? base64 : prev.baseMockupUrl,
+                viewMockups: {
+                    ...(prev.viewMockups || {}),
+                    [viewKey]: base64,
+                },
+            }));
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to load mockup image",
+                variant: "destructive",
+            });
+        }
+    };
+    const handleStudioColorMockupUpload = async (colorKey, viewKey, e) => {
+        const file = e.target.files?.[0];
+        if (!file)
+            return;
+        if (!file.type.startsWith("image/")) {
+            toast({
+                title: "Error",
+                description: "File must be an image",
+                variant: "destructive",
+            });
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast({
+                title: "Error",
+                description: "Image size must be less than 5MB",
+                variant: "destructive",
+            });
+            return;
+        }
+        try {
+            const base64 = await fileToBase64(file);
+            setStudioForm((prev) => ({
+                ...prev,
+                colorViews: {
+                    ...(prev.colorViews || {}),
+                    [colorKey]: {
+                        ...(prev.colorViews?.[colorKey] || {}),
+                        [viewKey]: base64,
+                    },
+                },
+            }));
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to load mockup image",
+                variant: "destructive",
+            });
+        }
+    };
+    const handleEditStudioProduct = (product) => {
+        const legacyColorViews = {};
+        if (!product.colorViews && product.colorMockups) {
+            Object.entries(product.colorMockups || {}).forEach(([colorKey, url]) => {
+                if (!colorKey || !url)
+                    return;
+                legacyColorViews[colorKey] = { front: url };
+            });
+        }
+        setEditingStudio(product);
+        setStudioForm({
+            name: product.name,
+            type: product.type,
+            description: product.description || "",
+            baseMockupUrl: product.baseMockupUrl || "",
+            viewMockups: {
+                front: product.viewMockups?.front || product.baseMockupUrl || "",
+                back: product.viewMockups?.back || "",
+            },
+            colorMockups: product.colorMockups || {},
+            colorViews: product.colorViews || legacyColorViews,
+            price: product.price.toString(),
+            colors: (product.colors || []).join(", "),
+            sizes: (product.sizes || []).join(", "),
+            active: product.active,
+            aiEnhanceEnabled: product.aiEnhanceEnabled || false,
+            designAreas: product.designAreas || {
+                front: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+                back: { x: 0.18, y: 0.2, width: 0.64, height: 0.55 },
+            },
+            safeArea: product.safeArea || { x: 60, y: 80, width: 280, height: 300 },
+        });
+        setShowStudioModal(true);
+    };
+    const handleDeleteStudioProduct = async (id) => {
+        if (!confirm("Delete this studio product?"))
+            return;
+        try {
+            await studioProductsApi.remove(id);
+            toast({ title: "Deleted", description: "Studio product removed" });
+            loadStudioProducts();
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: error?.message || "Failed to delete studio product",
+                variant: "destructive",
+            });
+        }
+    };
+    const handleSaveStudioProduct = async () => {
+        try {
+            const colorList = studioForm.colors.split(",").map((c) => c.trim()).filter(Boolean);
+            const normalizedViewMockups = {};
+            ["front", "back"].forEach((viewKey) => {
+                const url = studioForm.viewMockups?.[viewKey];
+                if (url) {
+                    normalizedViewMockups[viewKey] = url;
+                }
+            });
+            const normalizedColorViews = {};
+            Object.entries(studioForm.colorViews || {}).forEach(([colorKey, views]) => {
+                const normalizedKey = colorKey.trim().toLowerCase();
+                if (!normalizedKey || !views)
+                    return;
+                if (colorList.length > 0 && !colorList.some((c) => c.trim().toLowerCase() === normalizedKey)) {
+                    return;
+                }
+                const viewPayload = {};
+                ["front", "back"].forEach((viewKey) => {
+                    const url = views?.[viewKey];
+                    if (url) {
+                        viewPayload[viewKey] = url;
+                    }
+                });
+                if (Object.keys(viewPayload).length > 0) {
+                    normalizedColorViews[normalizedKey] = viewPayload;
+                }
+            });
+            const normalizedColorMockups = {};
+            Object.entries(studioForm.colorMockups || {}).forEach(([colorKey, url]) => {
+                const normalizedKey = colorKey.trim().toLowerCase();
+                if (!normalizedKey || !url)
+                    return;
+                if (colorList.length > 0 && !colorList.some((c) => c.trim().toLowerCase() === normalizedKey)) {
+                    return;
+                }
+                normalizedColorMockups[normalizedKey] = url;
+            });
+            Object.entries(normalizedColorViews).forEach(([colorKey, views]) => {
+                if (views?.front && !normalizedColorMockups[colorKey]) {
+                    normalizedColorMockups[colorKey] = views.front;
+                }
+            });
+            const payload = {
+                name: studioForm.name.trim(),
+                type: studioForm.type.trim(),
+                description: studioForm.description.trim(),
+                baseMockupUrl: (studioForm.baseMockupUrl || studioForm.viewMockups?.front || "").trim(),
+                price: Number(studioForm.price) || 0,
+                colors: colorList,
+                sizes: studioForm.sizes.split(",").map((s) => s.trim()).filter(Boolean),
+                active: studioForm.active,
+                aiEnhanceEnabled: studioForm.aiEnhanceEnabled,
+                viewMockups: normalizedViewMockups,
+                colorViews: normalizedColorViews,
+                colorMockups: normalizedColorMockups,
+                designAreas: {
+                    front: {
+                        x: Number(studioForm.designAreas?.front?.x) || 0,
+                        y: Number(studioForm.designAreas?.front?.y) || 0,
+                        width: Number(studioForm.designAreas?.front?.width) || 0,
+                        height: Number(studioForm.designAreas?.front?.height) || 0,
+                    },
+                    back: {
+                        x: Number(studioForm.designAreas?.back?.x) || 0,
+                        y: Number(studioForm.designAreas?.back?.y) || 0,
+                        width: Number(studioForm.designAreas?.back?.width) || 0,
+                        height: Number(studioForm.designAreas?.back?.height) || 0,
+                    },
+                },
+                safeArea: {
+                    x: Number(studioForm.safeArea.x) || 0,
+                    y: Number(studioForm.safeArea.y) || 0,
+                    width: Number(studioForm.safeArea.width) || 0,
+                    height: Number(studioForm.safeArea.height) || 0,
+                },
+            };
+            if (editingStudio?._id) {
+                await studioProductsApi.update(editingStudio._id, payload);
+                toast({ title: "Updated", description: "Studio product updated" });
+            }
+            else {
+                await studioProductsApi.create(payload);
+                toast({ title: "Created", description: "Studio product added" });
+            }
+            setShowStudioModal(false);
+            resetStudioForm();
+            loadStudioProducts();
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: error?.message || "Failed to save studio product",
+                variant: "destructive",
+            });
+        }
     };
     const handleDeleteUser = async (id) => {
         try {
@@ -532,6 +887,12 @@ export default function EmployeeDashboard() {
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>);
     }
+    const previewProduct = designPreviewItem?.baseProductId
+        ? studioPreviewProducts[designPreviewItem.baseProductId]
+        : null;
+    const previewSideData = designPreviewItem?.designMetadata?.studio?.data?.designBySide?.[designPreviewSide] || {};
+    const previewArea = resolvePreviewArea(previewProduct, designPreviewSide);
+    const previewBaseImage = resolvePreviewBaseImage(designPreviewItem, previewProduct, designPreviewSide);
     return (<div className="min-h-screen bg-muted/30">
       
       <div className="fixed left-0 top-0 h-full w-64 bg-background border-r border-border overflow-y-auto z-50">
@@ -572,6 +933,11 @@ export default function EmployeeDashboard() {
           <button onClick={() => setActiveTab("products")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "products" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
             <Package className="h-5 w-5"/>
             <span className="font-medium">{t("products", language)}</span>
+          </button>
+
+          <button onClick={() => setActiveTab("studioProducts")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "studioProducts" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
+            <PackageCheck className="h-5 w-5"/>
+            <span className="font-medium">{language === "ar" ? "منتجات الاستديو" : "Studio Products"}</span>
           </button>
 
           <button onClick={() => setActiveTab("customers")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "customers" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
@@ -759,6 +1125,195 @@ export default function EmployeeDashboard() {
               </Card>
             </div>
           </div>)}
+
+        {activeTab === "studioProducts" && (<div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Studio Products</h1>
+                <p className="text-muted-foreground">Manage studio products for the studio experience.</p>
+              </div>
+              <Button onClick={() => {
+                    resetStudioForm();
+                    setShowStudioModal(true);
+                }} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200">
+                <Plus className="h-4 w-4 mr-2"/>
+                Add Studio Product
+              </Button>
+            </div>
+
+            <Card className="border-2 shadow-lg">
+              <CardContent className="p-6">
+                {studioLoading ? (<div className="flex items-center justify-center py-10 text-muted-foreground">Loading...</div>) : studioProducts.length === 0 ? (<p className="text-center text-muted-foreground py-8">No studio products yet</p>) : (<Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {studioProducts.map((p) => {
+            const colorViews = p.colorViews || {};
+            const colorMockups = p.colorMockups || {};
+            const firstColorView = Object.values(colorViews)[0];
+            const firstColorMockup = Object.values(colorMockups)[0];
+            const thumbnailUrl = p.viewMockups?.front || p.baseMockupUrl || firstColorView?.front || firstColorMockup || "/placeholder-logo.png";
+            return (<TableRow key={p._id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-lg border border-border bg-muted/40 overflow-hidden flex items-center justify-center">
+                                <img
+                                  src={thumbnailUrl}
+                                  alt={p.name}
+                                  className="h-full w-full object-cover"
+                                  loading="lazy"
+                                />
+                              </div>
+                              <span>{p.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{p.type}</TableCell>
+                          <TableCell>${p.price.toFixed(2)}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditStudioProduct(p)}><Edit className="h-4 w-4"/></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteStudioProduct(p._id)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                          </TableCell>
+                        </TableRow>);
+        })}
+                    </TableBody>
+                  </Table>)}
+              </CardContent>
+            </Card>
+
+            <Dialog open={showStudioModal} onOpenChange={setShowStudioModal}>
+              <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingStudio ? 'Edit Studio Product' : 'Add Studio Product'}</DialogTitle>
+                  <DialogDescription>Define designable product details, pricing, and safe area.</DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <Label>Name</Label>
+                    <Input value={studioForm.name} onChange={(e) => setStudioForm({ ...studioForm, name: e.target.value })} placeholder="Hoodie Pro"/>
+                    <datalist id="studio-name-list">
+                      <option value="Hoodie Pro"/>
+                      <option value="Classic Tee"/>
+                      <option value="Essential Blouse"/>
+                      <option value="Crew Sweatshirt"/>
+                      <option value="Street Hoodie"/>
+                    </datalist>
+                    <Label>Type</Label>
+                    <Input value={studioForm.type} onChange={(e) => setStudioForm({ ...studioForm, type: e.target.value })} placeholder="hoodie" list="studio-type-list"/>
+                    <datalist id="studio-type-list">
+                      <option value="t-shirt"/>
+                      <option value="hoodie"/>
+                      <option value="blouse"/>
+                      <option value="sweatshirt"/>
+                      <option value="crewneck"/>
+                    </datalist>
+                    <Label>Description</Label>
+                    <Textarea value={studioForm.description} onChange={(e) => setStudioForm({ ...studioForm, description: e.target.value })} placeholder="Premium hoodie..."/>
+                    <Label>View Mockups (Front / Back)</Label>
+                    <div className="space-y-3">
+                      {["front", "back"].map((viewKey) => {
+            const previewUrl = studioForm.viewMockups?.[viewKey] || (viewKey === "front" ? studioForm.baseMockupUrl : "");
+            return (<div key={viewKey} className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary transition-colors">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-medium capitalize">{viewKey}</span>
+                              <div className="flex items-center gap-2">
+                                <input id={`studio-view-${viewKey}`} type="file" accept="image/*" onChange={(e) => handleStudioViewMockupUpload(viewKey, e)} className="hidden"/>
+                                <Label htmlFor={`studio-view-${viewKey}`} className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs hover:bg-muted">
+                                  <Upload className="h-4 w-4"/>
+                                  Upload
+                                </Label>
+                              </div>
+                            </div>
+                            {previewUrl && (<div className="mt-3 relative w-full max-w-xs">
+                                <div className="relative aspect-[4/5] rounded-lg overflow-hidden border-2 border-primary">
+                                  <img src={previewUrl} alt={`${viewKey} mockup`} className="w-full h-full object-cover"/>
+                                </div>
+                                <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => setStudioForm((prev) => ({
+                        ...prev,
+                        baseMockupUrl: viewKey === "front" ? "" : prev.baseMockupUrl,
+                        viewMockups: { ...(prev.viewMockups || {}), [viewKey]: "" },
+                    }))}>
+                                  <X className="h-4 w-4"/>
+                                </Button>
+                              </div>)}
+                          </div>);
+        })}
+                    </div>
+                    <Label>Price</Label>
+                    <Input type="number" value={studioForm.price} onChange={(e) => setStudioForm({ ...studioForm, price: e.target.value })}/>
+                  </div>
+                  <div className="space-y-3">
+                    <Label>Colors (comma separated)</Label>
+                    <Input value={studioForm.colors} onChange={(e) => setStudioForm({ ...studioForm, colors: e.target.value })} placeholder="white, black, navy" list="studio-colors-list"/>
+                    <datalist id="studio-colors-list">
+                      <option value="white"/>
+                      <option value="black"/>
+                      <option value="navy"/>
+                      <option value="gray"/>
+                      <option value="blue"/>
+                      <option value="charcoal"/>
+                      <option value="green"/>
+                      <option value="peach"/>
+                      <option value="pink"/>
+                      <option value="burgundy"/>
+                      <option value="olive"/>
+                      <option value="cream"/>
+                      <option value="lavender"/>
+                      <option value="beige"/>
+                      <option value="brown"/>
+                      <option value="red"/>
+                      <option value="yellow"/>
+                      <option value="orange"/>
+                      <option value="purple"/>
+                      <option value="teal"/>
+                      <option value="cyan"/>
+                    </datalist>
+                    <div className="flex flex-wrap gap-3">
+                      {COLOR_OPTIONS.map((option) => {
+                    const isSelected = studioColorSet.has(option.id);
+                    const label = language === "ar" ? option.label.ar : option.label.en;
+                    return (<button key={option.id} type="button" onClick={() => {
+                            const nextColors = isSelected
+                                ? studioColorList.filter((color) => normalizeColorKey(color) !== option.id)
+                                : [...studioColorList, option.id];
+                            setStudioForm({ ...studioForm, colors: nextColors.join(", ") });
+                        }} className="flex flex-col items-center gap-1 text-xs" title={label} aria-label={label}>
+                            <span className={`h-8 w-8 rounded-full border transition-all ${option.needsBorder ? "border-border" : "border-transparent"} ${isSelected
+                            ? "ring-2 ring-black ring-offset-2 ring-offset-background"
+                            : "hover:scale-105"}`} style={{ backgroundColor: option.value }}/>
+                            <span className={isSelected ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                              {label}
+                            </span>
+                          </button>);
+                })}
+                    </div>
+                    <Label>Sizes (comma separated)</Label>
+                    <Input value={studioForm.sizes} onChange={(e) => setStudioForm({ ...studioForm, sizes: e.target.value })} placeholder="S, M, L" list="studio-sizes-list"/>
+                    <datalist id="studio-sizes-list">
+                      <option value="XS, S, M, L, XL"/>
+                      <option value="S, M, L"/>
+                      <option value="M, L, XL"/>
+                      <option value="One Size"/>
+                    </datalist>
+                    <div className="flex items-center gap-3">
+                      <Checkbox id="studio-active" checked={studioForm.active} onCheckedChange={(v) => setStudioForm({ ...studioForm, active: Boolean(v) })}/>
+                      <Label htmlFor="studio-active">Active</Label>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter className="mt-4">
+                  <Button variant="outline" onClick={() => { setShowStudioModal(false); resetStudioForm(); }}>Cancel</Button>
+                  <Button onClick={handleSaveStudioProduct}>{editingStudio ? 'Update' : 'Create'}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>)}
+
 
         
         {activeTab === "orders" && (<div className="space-y-6">
@@ -1755,6 +2310,34 @@ export default function EmployeeDashboard() {
                 }}/>
                 </div>)}
 
+
+              {selectedOrder.items && selectedOrder.items.length > 0 && (<div>
+                    <Label className="text-sm text-muted-foreground mb-2 block">
+                      {language === "ar" ? "العناصر" : "Items"}
+                    </Label>
+                    <div className="space-y-2">
+                      {selectedOrder.items.map((item, index) => (<div key={`${item._id || item.name}-${index}`} className="flex items-center gap-4 p-3 border rounded">
+                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded"/>
+                          <div className="flex-1">
+                            <p className="font-medium">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {language === "ar" ? "الكمية" : "Quantity"}: {item.quantity} • {language === "ar" ? "الحجم" : "Size"}: {item.size} • {language === "ar" ? "اللون" : "Color"}: {item.color}
+                            </p>
+                            {item.notes && (<p className="text-xs text-muted-foreground mt-1">
+                                <span className="font-medium">{language === "ar" ? "ملاحظات" : "Notes"}:</span> {item.notes}
+                              </p>)}
+                            {item.isCustom && item.design && (<div className="mt-2">
+                                <Button type="button" variant="link" className="h-auto p-0 text-xs text-rose-600" onClick={() => openDesignPreview(item)}>
+                                  {language === "ar" ? "عرض التصميم" : "View design"}
+                                </Button>
+                              </div>)}
+                          </div>
+                          <p className="text-sm font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                        </div>))}
+                    </div>
+                  </div>)}
+
+
               <div className="flex gap-3">
                 <Button className="flex-1" onClick={() => setShowOrderDetails(false)}>
                     {t("save", language)}
@@ -1766,6 +2349,64 @@ export default function EmployeeDashboard() {
             </CardContent>
           </Card>
         </div>)}
+
+      <Dialog open={Boolean(designPreviewItem)} onOpenChange={(open) => {
+            if (!open) {
+                setDesignPreviewItem(null);
+            }
+        }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{language === "ar" ? "معاينة التصميم" : "Design preview"}</DialogTitle>
+            <DialogDescription>
+              {designPreviewItem?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {designPreviewItem && (<div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant={designPreviewSide === "front" ? "default" : "outline"} onClick={() => setDesignPreviewSide("front")}>
+                  {language === "ar" ? "أمام" : "Front"}
+                </Button>
+                <Button size="sm" variant={designPreviewSide === "back" ? "default" : "outline"} onClick={() => setDesignPreviewSide("back")}>
+                  {language === "ar" ? "خلف" : "Back"}
+                </Button>
+              </div>
+              <div className="relative overflow-hidden rounded-2xl border border-rose-200 bg-white shadow-sm">
+                <div className="relative aspect-[4/5]">
+                  {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                      {language === "ar" ? "لا توجد معاينة" : "No preview available"}
+                    </div>)}
+                  <div className="absolute" style={previewArea}>
+                    {previewSideData?.uploadedImage && (<div className="absolute inset-0">
+                        <div className="absolute" style={{
+                    left: `${previewSideData?.imagePosition?.x ?? 50}%`,
+                    top: `${previewSideData?.imagePosition?.y ?? 50}%`,
+                    transform: "translate(-50%, -50%)",
+                    width: `${previewSideData?.imageSize || 120}px`,
+                    height: `${previewSideData?.imageSize || 120}px`,
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                }}>
+                          <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
+                        </div>
+                      </div>)}
+                    {previewSideData?.textValue && (<div className="absolute inset-0 flex items-center justify-center p-2">
+                        <span className="w-full font-bold leading-tight break-words" style={{
+                    color: previewSideData?.textColor || "#000000",
+                    fontSize: `${previewSideData?.textFontSize || 16}px`,
+                    textAlign: previewSideData?.textAlign || "center",
+                    fontFamily: previewSideData?.textFontFamily || "Tajawal",
+                    textShadow: "0 1px 2px rgba(0,0,0,0.25)",
+                }}>
+                          {previewSideData.textValue}
+                        </span>
+                      </div>)}
+                  </div>
+                </div>
+              </div>
+            </div>)}
+        </DialogContent>
+      </Dialog>
       </div>
       <StaffChatWidget mode="employee" />
     </div>);

@@ -3,22 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadHomeSliderImage = exports.updateCustomDesignSettings = exports.getCustomDesignSettings = exports.updateHomeSliderSettings = exports.getHomeSliderSettings = exports.logVirtualExperienceConversion = exports.logVirtualExperienceUsage = exports.updateVirtualExperienceSettings = exports.getVirtualExperienceSettings = void 0;
+exports.uploadHomeSliderImage = exports.updateHomeSliderSettings = exports.getHomeSliderSettings = exports.logVirtualExperienceConversion = exports.logVirtualExperienceUsage = exports.updateVirtualExperienceSettings = exports.getVirtualExperienceSettings = void 0;
 const VirtualExperienceSetting_1 = __importDefault(require("../models/VirtualExperienceSetting"));
-const CustomDesignSetting_1 = __importDefault(require("../models/CustomDesignSetting"));
 const HomeSliderSetting_1 = __importDefault(require("../models/HomeSliderSetting"));
 const cloudinary_1 = require("../config/cloudinary");
 const getVirtualSettings = async () => {
     let settings = await VirtualExperienceSetting_1.default.findOne();
     if (!settings) {
         settings = await VirtualExperienceSetting_1.default.create({});
-    }
-    return settings;
-};
-const getCustomSettings = async () => {
-    let settings = await CustomDesignSetting_1.default.findOne();
-    if (!settings) {
-        settings = await CustomDesignSetting_1.default.create({});
     }
     return settings;
 };
@@ -77,35 +69,6 @@ const logVirtualExperienceConversion = async (_req, res) => {
     }
 };
 exports.logVirtualExperienceConversion = logVirtualExperienceConversion;
-const getCustomDesignSettings = async (_req, res) => {
-    try {
-        const settings = await getCustomSettings();
-        res.status(200).json({ success: true, data: settings });
-    }
-    catch (error) {
-        res.status(500).json({ success: false, message: error.message || 'Server error' });
-    }
-};
-exports.getCustomDesignSettings = getCustomDesignSettings;
-const updateCustomDesignSettings = async (req, res) => {
-    try {
-        const settings = await getCustomSettings();
-        settings.enabled = req.body.enabled ?? settings.enabled;
-        settings.allowedFonts = req.body.allowedFonts ?? settings.allowedFonts;
-        settings.printAreas = req.body.printAreas ?? settings.printAreas;
-        settings.allowText = req.body.allowText ?? settings.allowText;
-        settings.allowImages = req.body.allowImages ?? settings.allowImages;
-        settings.maxTextLength = req.body.maxTextLength ?? settings.maxTextLength;
-        settings.additionalPrices = req.body.additionalPrices ?? settings.additionalPrices;
-        settings.requireApproval = req.body.requireApproval ?? settings.requireApproval;
-        await settings.save();
-        res.status(200).json({ success: true, data: settings });
-    }
-    catch (error) {
-        res.status(500).json({ success: false, message: error.message || 'Server error' });
-    }
-};
-exports.updateCustomDesignSettings = updateCustomDesignSettings;
 const getHomeSliderSettings = async (_req, res) => {
     try {
         const settings = await getHomeSliderSettingsInternal();

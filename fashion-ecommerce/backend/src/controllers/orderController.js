@@ -90,6 +90,9 @@ const createOrder = async (req, res) => {
                 if (designId && !mongoose_1.default.Types.ObjectId.isValid(designId)) {
                     throw Object.assign(new Error('Invalid design id'), { statusCode: 400 });
                 }
+                const itemNotes = typeof item.notes === 'string' && item.notes.trim()
+                    ? item.notes.trim().slice(0, 1000)
+                    : undefined;
                 if (designId) {
                     const design = await Design.findById(designId).session(session);
                     if (!design) {
@@ -116,9 +119,10 @@ const createOrder = async (req, res) => {
                         color: item.color || design.baseProduct.color,
                         image: item.image || design.thumbnail || design.designImageURL || studioProduct.baseMockupUrl,
                         isCustom: true,
-                        designMetadata: design.designMetadata,
-                        designImageURL: design.designImageURL,
+                        designMetadata: design.designMetadata || item.designMetadata,
+                        designImageURL: design.designImageURL || item.image,
                         baseProductId: studioProduct._id,
+                        notes: itemNotes,
                     });
                 }
                 else if (productId) {
@@ -140,6 +144,9 @@ const createOrder = async (req, res) => {
                         color: item.color,
                         image: item.image || product.image,
                         isCustom: item.isCustom || false,
+                        designMetadata: item.isCustom ? item.designMetadata : undefined,
+                        designImageURL: item.isCustom ? item.image : undefined,
+                        notes: itemNotes,
                     });
                 }
             }
@@ -364,6 +371,10 @@ const updateOrderStatus = async (req, res) => {
                 updatedBy: req.user?._id,
                 updatedAt: new Date(),
             });
+        }
+        // إضافة هذا الشرط لتحديث حالة الدفع عند الشحن
+        if (status === 'shipped') {
+            order.paymentInfo.status = 'completed';
         }
         await order.save();
         if (req.user?._id && (req.user.role === 'admin' || req.user.role === 'employee')) {

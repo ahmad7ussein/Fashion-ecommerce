@@ -131,13 +131,19 @@ export default function ProductDetailPageClient() {
         }
         setIsLoadingFavorite(true);
         try {
-            const result = await favoritesApi.toggleFavorite(productId);
-            setIsFavorite(result.isFavorite);
+            const nextIsFavorite = !isFavorite;
+            if (isFavorite) {
+                await favoritesApi.removeFavorite(productId);
+            }
+            else {
+                await favoritesApi.addFavorite(productId);
+            }
+            setIsFavorite(nextIsFavorite);
             toast({
-                title: result.isFavorite
+                title: nextIsFavorite
                     ? (language === "ar" ? "تمت الإضافة" : "Added to favorites")
                     : (language === "ar" ? "تم الحذف" : "Removed from favorites"),
-                description: result.isFavorite
+                description: nextIsFavorite
                     ? (language === "ar" ? `${product.name} تمت إضافته للمفضلة` : `${product.name} added to favorites`)
                     : (language === "ar" ? `${product.name} تم حذفه من المفضلة` : `${product.name} removed from favorites`),
                 duration: 2000,
@@ -444,8 +450,21 @@ export default function ProductDetailPageClient() {
                 <ShoppingBag className="mr-2 h-4 w-4 sm:h-5 sm:w-5"/>
                 {language === "ar" ? "أضف للسلة" : "Add to Cart"}
               </Button>
-              <Button size="lg" variant="outline" className={`border-gray-300 bg-white hover:bg-rose-50 rounded-full h-11 sm:h-12 md:h-14 w-full sm:w-11 sm:w-12 md:w-14 transition-all ${isFavorite ? "border-rose-500 bg-rose-50" : "hover:border-rose-300"}`} onClick={handleToggleFavorite} disabled={isLoadingFavorite || actionsDisabled}>
-                {isLoadingFavorite ? (<Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin"/>) : (<Heart fill={isFavorite ? "currentColor" : "none"} className={`h-4 w-4 sm:h-5 sm:w-5 transition-all duration-200 ${isFavorite ? "text-rose-500" : "text-gray-700"}`}/>)}
+              <Button
+                size="lg"
+                variant="outline"
+                className={`border-gray-300 bg-white hover:bg-rose-50 rounded-full h-11 sm:h-12 md:h-14 w-full sm:w-auto px-4 sm:px-5 transition-all flex items-center justify-center gap-2 text-sm sm:text-base font-semibold ${isFavorite ? "border-rose-500 bg-rose-50 text-rose-600" : "hover:border-rose-300 text-gray-700"}`}
+                onClick={handleToggleFavorite}
+                disabled={isLoadingFavorite || actionsDisabled}
+              >
+                {isLoadingFavorite ? (
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin"/>
+                ) : (
+                  <Heart fill={isFavorite ? "currentColor" : "none"} className="h-4 w-4 sm:h-5 sm:w-5"/>
+                )}
+                {isFavorite
+                  ? (language === "ar" ? "مفضلة" : "Favorited")
+                  : (language === "ar" ? "مفضل" : "Favorite")}
               </Button>
             </div>
 
