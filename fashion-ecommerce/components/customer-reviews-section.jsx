@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Star, Quote, Heart } from "lucide-react";
 import { reviewsApi } from "@/lib/api/reviews";
 import { useLanguage } from "@/lib/language";
+import { AppLoader } from "@/components/ui/app-loader";
 export function CustomerReviewsSection() {
     const { language } = useLanguage();
     const [reviews, setReviews] = useState([]);
@@ -27,8 +28,8 @@ export function CustomerReviewsSection() {
     if (isLoading) {
         return (<section className="py-24 bg-gradient-to-b from-white to-rose-50/30">
         <div className="container mx-auto px-6 md:px-12 lg:px-24">
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-rose-500 border-t-transparent"/>
+          <div className="py-12">
+            <AppLoader label={isArabic ? "Loading reviews..." : "Loading reviews..."} />
           </div>
         </div>
       </section>);

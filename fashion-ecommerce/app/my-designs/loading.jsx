@@ -1,3 +1,9 @@
+import { AppLoader } from "@/components/ui/app-loader";
+
 export default function Loading() {
-    return null;
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <AppLoader label="Loading designs..." size="lg" />
+    </div>
+  );
 }

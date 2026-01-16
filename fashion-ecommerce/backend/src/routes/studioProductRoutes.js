@@ -8,7 +8,7 @@ const auth_1 = require("../middleware/auth");
 const studioProductController_1 = require("../controllers/studioProductController");
 const router = express_1.default.Router();
 router.get('/active', studioProductController_1.getActiveStudioProducts);
-router.use(auth_1.protect, (0, auth_1.authorize)('admin'));
+router.use(auth_1.protect, (0, auth_1.authorize)('admin', 'employee'));
 router.get('/', studioProductController_1.getAllStudioProducts);
 router.get('/:id', studioProductController_1.getStudioProduct);
 router.post('/', studioProductController_1.createStudioProduct);

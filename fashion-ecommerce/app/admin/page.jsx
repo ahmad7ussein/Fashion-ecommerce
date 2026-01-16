@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AppLoader } from "@/components/ui/app-loader";
 import { productsAdminApi } from "@/lib/api/productsAdmin";
 import { studioProductsApi } from "@/lib/api/studioProducts";
 import { useAuth } from "@/lib/auth";
@@ -1290,12 +1291,12 @@ function AdminDashboardContent() {
     ] : [];
     if (authLoading || loading) {
         return (<div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <AppLoader label="Loading dashboard..." size="lg"/>
       </div>);
     }
     if (!user || user.role !== "admin") {
         return (<div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <AppLoader label="Loading..." />
       </div>);
     }
     const previewProduct = designPreviewItem?.baseProductId
@@ -1315,10 +1316,7 @@ function AdminDashboardContent() {
           </div>
           <div className="p-4 lg:p-8 animate-in fade-in duration-500">
         {loading ? (<div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading dashboard...</p>
-            </div>
+            <AppLoader label="Loading dashboard..." size="lg"/>
           </div>) : (<>
         
             {activeTab === "overview" && stats && (<div className="space-y-8">
@@ -2265,7 +2263,9 @@ function AdminDashboardContent() {
 
             <Card className="border-2 shadow-lg">
               <CardContent className="p-6">
-                {studioLoading ? (<div className="flex items-center justify-center py-10 text-muted-foreground">Loading...</div>) : studioProducts.length === 0 ? (<p className="text-center text-muted-foreground py-8">No studio products yet</p>) : (<Table>
+                {studioLoading ? (<div className="py-10">
+                      <AppLoader label="Loading studio products..." />
+                    </div>) : studioProducts.length === 0 ? (<p className="text-center text-muted-foreground py-8">No studio products yet</p>) : (<Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
@@ -2738,8 +2738,8 @@ function AdminDashboardContent() {
               </div>
             </div>
 
-            {reviewsLoading ? (<div className="flex items-center justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"/>
+            {reviewsLoading ? (<div className="py-12">
+                <AppLoader label={language === "ar" ? "Loading reviews..." : "Loading reviews..."} />
               </div>) : reviews.length === 0 ? (<Card>
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">
@@ -2842,9 +2842,8 @@ function AdminDashboardContent() {
             
             <Card>
               <CardContent className="p-6">
-                {messagesLoading ? (<div className="text-center py-8">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4"/>
-                    <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
+                {messagesLoading ? (<div className="py-8">
+                    <AppLoader label={language === "ar" ? "Loading messages..." : "Loading messages..."} />
                   </div>) : contactMessages.length > 0 ? (<div className="space-y-4">
                     {contactMessages.map((message) => (<Card key={message._id} className={`cursor-pointer transition-all hover:shadow-md ${message.status === "new" ? "border-2 border-primary" : ""}`} onClick={() => {
                             setSelectedMessage(message);
@@ -3066,9 +3065,8 @@ function AdminDashboardContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {orderTrackingLoading ? (<div className="text-center py-8">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4"/>
-                    <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
+                {orderTrackingLoading ? (<div className="py-8">
+                    <AppLoader label={language === "ar" ? "Loading tracking..." : "Loading tracking..."} />
                   </div>) : orders.length > 0 ? (<div className="overflow-x-auto">
                     <Table>
                       <TableHeader>

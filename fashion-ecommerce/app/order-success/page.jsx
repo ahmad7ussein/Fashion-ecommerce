@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { AppLoader } from "@/components/ui/app-loader";
 import { CheckCircle2, Home, LogOut, Star, Package } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/language";
@@ -117,7 +118,7 @@ function OrderSuccessContent() {
 }
 export default function OrderSuccessPage() {
     return (<Suspense fallback={<div className="min-h-screen bg-white pt-24 flex items-center justify-center">
-        <div className="text-gray-600 text-xl">Loading...</div>
+        <AppLoader label="Loading..." size="lg"/>
       </div>}>
       <OrderSuccessContent />
     </Suspense>);
