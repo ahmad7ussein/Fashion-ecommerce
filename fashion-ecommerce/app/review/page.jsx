@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Star, X, Send } from "lucide-react";
+import { AppLoader } from "@/components/ui/app-loader";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/language";
 import { useToast } from "@/hooks/use-toast";
@@ -143,7 +144,7 @@ function ReviewFormContent() {
 }
 export default function ReviewPage() {
     return (<Suspense fallback={<div className="min-h-screen bg-white pt-24 flex items-center justify-center">
-        <div className="text-gray-600 text-xl">Loading...</div>
+        <AppLoader label="Loading..." size="lg"/>
       </div>}>
       <ReviewFormContent />
     </Suspense>);

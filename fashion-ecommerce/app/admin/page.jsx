@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AppLoader } from "@/components/ui/app-loader";
 import { productsAdminApi } from "@/lib/api/productsAdmin";
 import { studioProductsApi } from "@/lib/api/studioProducts";
 import { useAuth } from "@/lib/auth";
@@ -363,17 +364,17 @@ function AdminDashboardContent() {
         console.log("🔍 Admin page - Auth loaded. User:", user?.email);
         console.log("🔍 Admin page - User role:", user?.role);
         if (user && user.role !== "admin") {
-            console.log("⚠️ User is not admin, redirecting to home. Role:", user.role);
+            console.log("User is not admin, redirecting to home. Role:", user.role);
             window.location.href = "/";
             return;
         }
         if (!user && !authLoading) {
-            console.log("⚠️ No user found, redirecting to login");
+            console.log("No user found, redirecting to login");
             window.location.href = "/login";
             return;
         }
         if (user && user.role === "admin") {
-            console.log("✅ Admin user confirmed, showing dashboard");
+            console.log("Admin user confirmed, showing dashboard");
         }
     }, [user, authLoading, router]);
     useEffect(() => {
@@ -434,10 +435,10 @@ function AdminDashboardContent() {
     const loadStaff = async () => {
         try {
             setLoading(true);
-            console.log("🔄 Loading staff from database...");
+            console.log("Loading staff from database...");
             const staffData = await adminApi.getAllUsers({ role: 'all', limit: 100 });
             const staff = (staffData.data || []).filter((u) => u.role === 'admin' || u.role === 'employee');
-            console.log("✅ Staff loaded:", {
+            console.log("Staff loaded:", {
                 total: staff.length,
                 admins: staff.filter((u) => u.role === 'admin').length,
                 employees: staff.filter((u) => u.role === 'employee').length,
@@ -445,7 +446,7 @@ function AdminDashboardContent() {
             setUsers(staff);
         }
         catch (error) {
-            console.error("❌ Error loading staff:", error);
+            console.error("Error loading staff:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load staff",
@@ -628,17 +629,17 @@ function AdminDashboardContent() {
     const loadProducts = useCallback(async () => {
         try {
             setProductsLoading(true);
-            console.log("🔄 Loading products...");
+            console.log("Loading products...");
             const response = await productsAdminApi.getAllProducts({
                 limit: 10,
                 page: 1
             });
             const productsList = Array.isArray(response.data) ? response.data : [];
-            console.log("✅ Products loaded:", productsList.length);
+            console.log("Products loaded:", productsList.length);
             setProducts(productsList);
             setProductsLoading(false);
             if (productsList.length > 0 && response.total && response.total > 10) {
-                console.log(`📦 Will load remaining ${response.total - 10} products in background...`);
+                console.log(`Will load remaining ${response.total - 10} products in background...`);
                 const chunks = Math.ceil((response.total - 10) / 10);
                 for (let i = 0; i < Math.min(chunks, 5); i++) {
                     const page = i + 2;
@@ -664,17 +665,17 @@ function AdminDashboardContent() {
                                     });
                                     return Array.from(productMap.values());
                                 });
-                                console.log(`✅ Loaded chunk ${page}: ${chunkProducts.length} products`);
+                                console.log(`Loaded chunk ${page}: ${chunkProducts.length} products`);
                             }
                         }).catch((err) => {
-                            console.warn(`⚠️ Failed to load chunk ${page}:`, err);
+                            console.warn(`Failed to load chunk ${page}:`, err);
                         });
                     }, (i + 1) * 1000);
                 }
             }
         }
         catch (error) {
-            console.error("❌ Error loading products:", error);
+            console.error("Error loading products:", error);
             const isDatabaseTimeout = error.message?.includes("Database connection timeout") ||
                 error.message?.includes("timeout") ||
                 error.status === 503 ||
@@ -701,7 +702,7 @@ function AdminDashboardContent() {
                         });
                     }
                     catch (retryError) {
-                        console.error("❌ Retry also failed:", retryError);
+                        console.error("Retry also failed:", retryError);
                         toast({
                             title: language === "ar" ? "فشل التحميل" : "Load Failed",
                             description: language === "ar"
@@ -979,12 +980,12 @@ function AdminDashboardContent() {
     const loadDashboardData = async () => {
         try {
             if (!user || user.role !== 'admin') {
-                console.warn("⚠️ Cannot load dashboard data: User is not admin");
+                console.warn("Cannot load dashboard data: User is not admin");
                 return;
             }
             const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
             if (!token) {
-                console.warn("⚠️ Cannot load dashboard data: No token found");
+                console.warn("Cannot load dashboard data: No token found");
                 toast({
                     title: language === "ar" ? "خطأ في المصادقة" : "Authentication Error",
                     description: language === "ar" ? "يرجى تسجيل الدخول مرة أخرى" : "Please log in again",
@@ -995,13 +996,13 @@ function AdminDashboardContent() {
                 return;
             }
             setLoading(true);
-            console.log("🔄 Loading dashboard data...");
+            console.log("Loading dashboard data...");
             const [statsData, ordersData, usersData] = await Promise.all([
                 adminApi.getDashboardStats(),
                 ordersApi.getAllOrders({ limit: 50 }),
                 adminApi.getAllUsers({ role: 'all', limit: 100 }),
             ]);
-            console.log("✅ Dashboard data loaded:", {
+            console.log("Dashboard data loaded:", {
                 stats: statsData,
                 ordersCount: Array.isArray(ordersData) ? ordersData.length : 0,
                 usersCount: usersData.data?.length || 0,
@@ -1012,7 +1013,7 @@ function AdminDashboardContent() {
             setUsers(usersData.data || []);
         }
         catch (error) {
-            console.error("❌ Error loading dashboard data:", error);
+            console.error("Error loading dashboard data:", error);
             if (error.status === 401 || error.message?.includes("Not authorized") || error.message?.includes("Unauthorized")) {
                 toast({
                     title: language === "ar" ? "انتهت صلاحية الجلسة" : "Session Expired",
@@ -1044,7 +1045,7 @@ function AdminDashboardContent() {
             setOrders(Array.isArray(ordersData) ? ordersData : []);
         }
         catch (error) {
-            console.error("❌ Error loading orders:", error);
+            console.error("Error loading orders:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load orders",
@@ -1177,11 +1178,11 @@ function AdminDashboardContent() {
     const loadCustomers = async () => {
         try {
             setLoading(true);
-            console.log("🔄 Loading customers from database...");
-            console.log("📡 API Call: getAllUsers({ role: 'customer', limit: 100 })");
+            console.log("Loading customers from database...");
+            console.log("API Call: getAllUsers({ role: 'customer', limit: 100 })");
             const customersData = await adminApi.getAllUsers({ role: 'customer', limit: 100 });
-            console.log("📦 Full response from getAllUsers:", JSON.stringify(customersData, null, 2));
-            console.log("✅ Customers loaded:", {
+            console.log("Full response from getAllUsers:", JSON.stringify(customersData, null, 2));
+            console.log("Customers loaded:", {
                 total: customersData.total,
                 page: customersData.page,
                 pages: customersData.pages,
@@ -1189,7 +1190,7 @@ function AdminDashboardContent() {
                 customers: customersData.data,
             });
             if (!customersData.data || customersData.data.length === 0) {
-                console.warn("⚠️ No customers found in response!");
+                console.warn("No customers found in response!");
                 toast({
                     title: language === "ar" ? "تحذير" : "Warning",
                     description: language === "ar" ? "لم يتم العثور على عملاء في قاعدة البيانات" : "No customers found in database",
@@ -1199,8 +1200,8 @@ function AdminDashboardContent() {
             setUsers(customersData.data || []);
         }
         catch (error) {
-            console.error("❌ Error loading customers:", error);
-            console.error("❌ Error details:", {
+            console.error("Error loading customers:", error);
+            console.error("Error details:", {
                 message: error.message,
                 stack: error.stack,
                 name: error.name,
@@ -1218,16 +1219,16 @@ function AdminDashboardContent() {
     const loadReviews = async () => {
         setReviewsLoading(true);
         try {
-            console.log("🔄 Loading reviews...", { status: reviewStatusFilter });
+            console.log("Loading reviews...", { status: reviewStatusFilter });
             const response = await reviewsApi.getAllReviews({
                 status: reviewStatusFilter === "all" ? undefined : reviewStatusFilter,
                 limit: 50
             });
-            console.log("✅ Reviews loaded:", response.data.length);
+            console.log("Reviews loaded:", response.data.length);
             setReviews(response.data);
         }
         catch (error) {
-            console.error("❌ Error loading reviews:", error);
+            console.error("Error loading reviews:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load reviews",
@@ -1290,12 +1291,12 @@ function AdminDashboardContent() {
     ] : [];
     if (authLoading || loading) {
         return (<div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <AppLoader label="Loading dashboard..." size="lg"/>
       </div>);
     }
     if (!user || user.role !== "admin") {
         return (<div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <AppLoader label="Loading..." />
       </div>);
     }
     const previewProduct = designPreviewItem?.baseProductId
@@ -1315,10 +1316,7 @@ function AdminDashboardContent() {
           </div>
           <div className="p-4 lg:p-8 animate-in fade-in duration-500">
         {loading ? (<div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading dashboard...</p>
-            </div>
+            <AppLoader label="Loading dashboard..." size="lg"/>
           </div>) : (<>
         
             {activeTab === "overview" && stats && (<div className="space-y-8">
@@ -2265,7 +2263,9 @@ function AdminDashboardContent() {
 
             <Card className="border-2 shadow-lg">
               <CardContent className="p-6">
-                {studioLoading ? (<div className="flex items-center justify-center py-10 text-muted-foreground">Loading...</div>) : studioProducts.length === 0 ? (<p className="text-center text-muted-foreground py-8">No studio products yet</p>) : (<Table>
+                {studioLoading ? (<div className="py-10">
+                      <AppLoader label="Loading studio products..." />
+                    </div>) : studioProducts.length === 0 ? (<p className="text-center text-muted-foreground py-8">No studio products yet</p>) : (<Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
@@ -2738,8 +2738,8 @@ function AdminDashboardContent() {
               </div>
             </div>
 
-            {reviewsLoading ? (<div className="flex items-center justify-center py-12">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"/>
+            {reviewsLoading ? (<div className="py-12">
+                <AppLoader label={language === "ar" ? "Loading reviews..." : "Loading reviews..."} />
               </div>) : reviews.length === 0 ? (<Card>
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground">
@@ -2842,9 +2842,8 @@ function AdminDashboardContent() {
             
             <Card>
               <CardContent className="p-6">
-                {messagesLoading ? (<div className="text-center py-8">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4"/>
-                    <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
+                {messagesLoading ? (<div className="py-8">
+                    <AppLoader label={language === "ar" ? "Loading messages..." : "Loading messages..."} />
                   </div>) : contactMessages.length > 0 ? (<div className="space-y-4">
                     {contactMessages.map((message) => (<Card key={message._id} className={`cursor-pointer transition-all hover:shadow-md ${message.status === "new" ? "border-2 border-primary" : ""}`} onClick={() => {
                             setSelectedMessage(message);
@@ -3066,9 +3065,8 @@ function AdminDashboardContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {orderTrackingLoading ? (<div className="text-center py-8">
-                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4"/>
-                    <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
+                {orderTrackingLoading ? (<div className="py-8">
+                    <AppLoader label={language === "ar" ? "Loading tracking..." : "Loading tracking..."} />
                   </div>) : orders.length > 0 ? (<div className="overflow-x-auto">
                     <Table>
                       <TableHeader>

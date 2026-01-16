@@ -27,6 +27,7 @@ import { Trash2, Plus, Upload, X, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
+import { AppLoader } from "@/components/ui/app-loader";
 import { StaffChatPanel } from "@/components/staff-chat-panel";
 import { StaffChatWidget } from "@/components/staff-chat-widget";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
@@ -841,6 +842,11 @@ export default function EmployeeDashboard() {
             });
         }
     };
+    const handleUpdateOrderStatus = () => {
+        if (!selectedOrder)
+            return;
+        updateOrderStatus(selectedOrder._id);
+    };
     const viewOrderDetails = (order) => {
         setSelectedOrder(order);
         setShowOrderDetails(true);
@@ -876,10 +882,7 @@ export default function EmployeeDashboard() {
     ];
     if (authLoading || loading) {
         return (<div className="min-h-screen bg-muted/30 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <AppLoader label="Loading dashboard..." size="lg"/>
       </div>);
     }
     if (!user || user.role !== "employee") {
@@ -1033,10 +1036,7 @@ export default function EmployeeDashboard() {
           </Button>
         </div>
         {loading ? (<div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">{language === "ar" ? "جاري التحميل..." : "Loading..."}</p>
-            </div>
+            <AppLoader label={language === "ar" ? "Loading..." : "Loading..."} size="lg"/>
           </div>) : (<>
         
         {activeTab === "overview" && (<div className="space-y-8">
@@ -1143,7 +1143,9 @@ export default function EmployeeDashboard() {
 
             <Card className="border-2 shadow-lg">
               <CardContent className="p-6">
-                {studioLoading ? (<div className="flex items-center justify-center py-10 text-muted-foreground">Loading...</div>) : studioProducts.length === 0 ? (<p className="text-center text-muted-foreground py-8">No studio products yet</p>) : (<Table>
+                {studioLoading ? (<div className="py-10">
+                      <AppLoader label="Loading studio products..." />
+                    </div>) : studioProducts.length === 0 ? (<p className="text-center text-muted-foreground py-8">No studio products yet</p>) : (<Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
@@ -2349,6 +2351,67 @@ export default function EmployeeDashboard() {
             </CardContent>
           </Card>
         </div>)}
+
+      <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{language === "ar" ? "Update Order Status & Tracking" : "Update Order Status & Tracking"}</DialogTitle>
+            <DialogDescription>
+              {selectedOrder && `${language === "ar" ? "Order" : "Order"}: ${selectedOrder.orderNumber}`}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (<div className="space-y-4">
+              <div>
+                <Label>{language === "ar" ? "Order Status" : "Order Status"}</Label>
+                <Select value={editOrderStatus} onValueChange={(value) => setEditOrderStatus(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">{language === "ar" ? "Pending" : "Pending"}</SelectItem>
+                    <SelectItem value="processing">{language === "ar" ? "Processing" : "Processing"}</SelectItem>
+                    <SelectItem value="shipped">{language === "ar" ? "Shipped" : "Shipped"}</SelectItem>
+                    <SelectItem value="delivered">{language === "ar" ? "Delivered" : "Delivered"}</SelectItem>
+                    <SelectItem value="cancelled">{language === "ar" ? "Cancelled" : "Cancelled"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>{language === "ar" ? "Tracking Number" : "Tracking Number"}</Label>
+                <Input value={editTrackingNumber} onChange={(e) => setEditTrackingNumber(e.target.value)} placeholder={language === "ar" ? "Enter tracking number" : "Enter tracking number"} />
+              </div>
+
+              <div>
+                <Label>{language === "ar" ? "Carrier" : "Carrier"}</Label>
+                <Input value={editCarrier} onChange={(e) => setEditCarrier(e.target.value)} placeholder={language === "ar" ? "e.g., DHL, FedEx, UPS" : "e.g., DHL, FedEx, UPS"} />
+              </div>
+
+              <div>
+                <Label>{language === "ar" ? "Estimated Delivery Date" : "Estimated Delivery Date"}</Label>
+                <Input type="date" value={editEstimatedDelivery} onChange={(e) => setEditEstimatedDelivery(e.target.value)} />
+              </div>
+
+              <div>
+                <Label>{language === "ar" ? "Current Location" : "Current Location"}</Label>
+                <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder={language === "ar" ? "Nablus - Rafidia" : "e.g., Nablus - Rafidia"} />
+              </div>
+
+              <div>
+                <Label>{language === "ar" ? "Note" : "Note"}</Label>
+                <Textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder={language === "ar" ? "Add a note about the order status..." : "Add a note about the order status..."} className="min-h-[100px]" />
+              </div>
+            </div>)}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditOrder(false)}>
+              {language === "ar" ? "Cancel" : "Cancel"}
+            </Button>
+            <Button onClick={handleUpdateOrderStatus}>
+              {language === "ar" ? "Save" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(designPreviewItem)} onOpenChange={(open) => {
             if (!open) {
