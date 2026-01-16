@@ -364,17 +364,17 @@ function AdminDashboardContent() {
         console.log("🔍 Admin page - Auth loaded. User:", user?.email);
         console.log("🔍 Admin page - User role:", user?.role);
         if (user && user.role !== "admin") {
-            console.log("⚠️ User is not admin, redirecting to home. Role:", user.role);
+            console.log("User is not admin, redirecting to home. Role:", user.role);
             window.location.href = "/";
             return;
         }
         if (!user && !authLoading) {
-            console.log("⚠️ No user found, redirecting to login");
+            console.log("No user found, redirecting to login");
             window.location.href = "/login";
             return;
         }
         if (user && user.role === "admin") {
-            console.log("✅ Admin user confirmed, showing dashboard");
+            console.log("Admin user confirmed, showing dashboard");
         }
     }, [user, authLoading, router]);
     useEffect(() => {
@@ -435,10 +435,10 @@ function AdminDashboardContent() {
     const loadStaff = async () => {
         try {
             setLoading(true);
-            console.log("🔄 Loading staff from database...");
+            console.log("Loading staff from database...");
             const staffData = await adminApi.getAllUsers({ role: 'all', limit: 100 });
             const staff = (staffData.data || []).filter((u) => u.role === 'admin' || u.role === 'employee');
-            console.log("✅ Staff loaded:", {
+            console.log("Staff loaded:", {
                 total: staff.length,
                 admins: staff.filter((u) => u.role === 'admin').length,
                 employees: staff.filter((u) => u.role === 'employee').length,
@@ -446,7 +446,7 @@ function AdminDashboardContent() {
             setUsers(staff);
         }
         catch (error) {
-            console.error("❌ Error loading staff:", error);
+            console.error("Error loading staff:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load staff",
@@ -629,17 +629,17 @@ function AdminDashboardContent() {
     const loadProducts = useCallback(async () => {
         try {
             setProductsLoading(true);
-            console.log("🔄 Loading products...");
+            console.log("Loading products...");
             const response = await productsAdminApi.getAllProducts({
                 limit: 10,
                 page: 1
             });
             const productsList = Array.isArray(response.data) ? response.data : [];
-            console.log("✅ Products loaded:", productsList.length);
+            console.log("Products loaded:", productsList.length);
             setProducts(productsList);
             setProductsLoading(false);
             if (productsList.length > 0 && response.total && response.total > 10) {
-                console.log(`📦 Will load remaining ${response.total - 10} products in background...`);
+                console.log(`Will load remaining ${response.total - 10} products in background...`);
                 const chunks = Math.ceil((response.total - 10) / 10);
                 for (let i = 0; i < Math.min(chunks, 5); i++) {
                     const page = i + 2;
@@ -665,17 +665,17 @@ function AdminDashboardContent() {
                                     });
                                     return Array.from(productMap.values());
                                 });
-                                console.log(`✅ Loaded chunk ${page}: ${chunkProducts.length} products`);
+                                console.log(`Loaded chunk ${page}: ${chunkProducts.length} products`);
                             }
                         }).catch((err) => {
-                            console.warn(`⚠️ Failed to load chunk ${page}:`, err);
+                            console.warn(`Failed to load chunk ${page}:`, err);
                         });
                     }, (i + 1) * 1000);
                 }
             }
         }
         catch (error) {
-            console.error("❌ Error loading products:", error);
+            console.error("Error loading products:", error);
             const isDatabaseTimeout = error.message?.includes("Database connection timeout") ||
                 error.message?.includes("timeout") ||
                 error.status === 503 ||
@@ -702,7 +702,7 @@ function AdminDashboardContent() {
                         });
                     }
                     catch (retryError) {
-                        console.error("❌ Retry also failed:", retryError);
+                        console.error("Retry also failed:", retryError);
                         toast({
                             title: language === "ar" ? "فشل التحميل" : "Load Failed",
                             description: language === "ar"
@@ -980,12 +980,12 @@ function AdminDashboardContent() {
     const loadDashboardData = async () => {
         try {
             if (!user || user.role !== 'admin') {
-                console.warn("⚠️ Cannot load dashboard data: User is not admin");
+                console.warn("Cannot load dashboard data: User is not admin");
                 return;
             }
             const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
             if (!token) {
-                console.warn("⚠️ Cannot load dashboard data: No token found");
+                console.warn("Cannot load dashboard data: No token found");
                 toast({
                     title: language === "ar" ? "خطأ في المصادقة" : "Authentication Error",
                     description: language === "ar" ? "يرجى تسجيل الدخول مرة أخرى" : "Please log in again",
@@ -996,13 +996,13 @@ function AdminDashboardContent() {
                 return;
             }
             setLoading(true);
-            console.log("🔄 Loading dashboard data...");
+            console.log("Loading dashboard data...");
             const [statsData, ordersData, usersData] = await Promise.all([
                 adminApi.getDashboardStats(),
                 ordersApi.getAllOrders({ limit: 50 }),
                 adminApi.getAllUsers({ role: 'all', limit: 100 }),
             ]);
-            console.log("✅ Dashboard data loaded:", {
+            console.log("Dashboard data loaded:", {
                 stats: statsData,
                 ordersCount: Array.isArray(ordersData) ? ordersData.length : 0,
                 usersCount: usersData.data?.length || 0,
@@ -1013,7 +1013,7 @@ function AdminDashboardContent() {
             setUsers(usersData.data || []);
         }
         catch (error) {
-            console.error("❌ Error loading dashboard data:", error);
+            console.error("Error loading dashboard data:", error);
             if (error.status === 401 || error.message?.includes("Not authorized") || error.message?.includes("Unauthorized")) {
                 toast({
                     title: language === "ar" ? "انتهت صلاحية الجلسة" : "Session Expired",
@@ -1045,7 +1045,7 @@ function AdminDashboardContent() {
             setOrders(Array.isArray(ordersData) ? ordersData : []);
         }
         catch (error) {
-            console.error("❌ Error loading orders:", error);
+            console.error("Error loading orders:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load orders",
@@ -1178,11 +1178,11 @@ function AdminDashboardContent() {
     const loadCustomers = async () => {
         try {
             setLoading(true);
-            console.log("🔄 Loading customers from database...");
-            console.log("📡 API Call: getAllUsers({ role: 'customer', limit: 100 })");
+            console.log("Loading customers from database...");
+            console.log("API Call: getAllUsers({ role: 'customer', limit: 100 })");
             const customersData = await adminApi.getAllUsers({ role: 'customer', limit: 100 });
-            console.log("📦 Full response from getAllUsers:", JSON.stringify(customersData, null, 2));
-            console.log("✅ Customers loaded:", {
+            console.log("Full response from getAllUsers:", JSON.stringify(customersData, null, 2));
+            console.log("Customers loaded:", {
                 total: customersData.total,
                 page: customersData.page,
                 pages: customersData.pages,
@@ -1190,7 +1190,7 @@ function AdminDashboardContent() {
                 customers: customersData.data,
             });
             if (!customersData.data || customersData.data.length === 0) {
-                console.warn("⚠️ No customers found in response!");
+                console.warn("No customers found in response!");
                 toast({
                     title: language === "ar" ? "تحذير" : "Warning",
                     description: language === "ar" ? "لم يتم العثور على عملاء في قاعدة البيانات" : "No customers found in database",
@@ -1200,8 +1200,8 @@ function AdminDashboardContent() {
             setUsers(customersData.data || []);
         }
         catch (error) {
-            console.error("❌ Error loading customers:", error);
-            console.error("❌ Error details:", {
+            console.error("Error loading customers:", error);
+            console.error("Error details:", {
                 message: error.message,
                 stack: error.stack,
                 name: error.name,
@@ -1219,16 +1219,16 @@ function AdminDashboardContent() {
     const loadReviews = async () => {
         setReviewsLoading(true);
         try {
-            console.log("🔄 Loading reviews...", { status: reviewStatusFilter });
+            console.log("Loading reviews...", { status: reviewStatusFilter });
             const response = await reviewsApi.getAllReviews({
                 status: reviewStatusFilter === "all" ? undefined : reviewStatusFilter,
                 limit: 50
             });
-            console.log("✅ Reviews loaded:", response.data.length);
+            console.log("Reviews loaded:", response.data.length);
             setReviews(response.data);
         }
         catch (error) {
-            console.error("❌ Error loading reviews:", error);
+            console.error("Error loading reviews:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load reviews",
