@@ -91,11 +91,7 @@ export function AdminTopbar() {
     }, [notificationsOpen, loadNotifications]);
     return (<div className="flex h-16 items-center gap-4 px-4 lg:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-4">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-foreground shadow-sm">
-            Admin FashionHub
-          </span>
-        </div>
+        <span className="sr-only">{adminEmail}</span>
         <nav className="flex items-center gap-2 overflow-x-auto" aria-label="Admin sections">
           {topbarTabs.map((tab) => {
             const isActive = isAdminRoot && currentTab === tab.key;
@@ -176,12 +172,9 @@ export function AdminTopbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button variant="destructive" size="sm" className="h-8 px-3" onClick={logout}>
+        <Button variant="default" size="sm" className="h-8 px-3 bg-blue-500 text-white hover:bg-blue-600" onClick={logout}>
           <LogOut className="h-4 w-4"/>
           <span className="text-sm font-semibold">{t("logout", language)}</span>
-          <span className="inline-flex items-center rounded-full border border-white/40 bg-white/90 px-2 py-0.5 text-xs font-semibold text-destructive max-w-[160px] truncate sm:max-w-[220px]" title={adminEmail}>
-            {adminEmail}
-          </span>
         </Button>
       </div>
     </div>);

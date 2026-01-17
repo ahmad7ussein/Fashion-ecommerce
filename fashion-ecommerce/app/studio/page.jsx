@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
+import { useAuth } from "@/lib/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import html2canvas from "html2canvas";
 import { studioProductsApi } from "@/lib/api/studioProducts";
@@ -51,6 +52,26 @@ const products = [
 
 const LOCAL_DESIGNS_KEY = "fashionhub_simple_studio_designs";
 const LOCAL_FAVORITES_KEY = "fashionhub_simple_studio_favorites";
+const getLocalDesignsKey = (user) => {
+  const userKey = user?._id || user?.id || user?.email || "guest";
+  return `${LOCAL_DESIGNS_KEY}:${userKey}`;
+};
+const getLocalFavoritesKey = (user) => {
+  const userKey = user?._id || user?.id || user?.email || "guest";
+  return `${LOCAL_FAVORITES_KEY}:${userKey}`;
+};
+const mergeUniqueDesigns = (primary, incoming) => {
+  const seen = new Set(primary.map((design) => String(design.id)));
+  const merged = [...primary];
+  incoming.forEach((design) => {
+    const key = String(design.id);
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(design);
+    }
+  });
+  return merged;
+};
 
 const defaultDesignAreas = {
   front: { top: "30%", left: "30%", width: "40%", height: "22%" },
@@ -242,10 +263,13 @@ const resolveProductImage = (product, viewKey, colorKey) => {
 export default function DesignStudioPage() {
   const { toast } = useToast();
   const { addItem } = useCart();
+  const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const previewRef = useRef(null);
   const skipSideSyncRef = useRef(false);
+  const localDesignsKey = useMemo(() => getLocalDesignsKey(user), [user]);
+  const localFavoritesKey = useMemo(() => getLocalFavoritesKey(user), [user]);
 
   const [selectedProduct, setSelectedProduct] = useState(products[0].id);
   const [productColor, setProductColor] = useState("#ffffff");
@@ -393,7 +417,49 @@ export default function DesignStudioPage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+      const oldRaw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+      if (!oldRaw) return;
+      const oldParsed = JSON.parse(oldRaw);
+      if (!Array.isArray(oldParsed) || oldParsed.length === 0) {
+        localStorage.removeItem(LOCAL_DESIGNS_KEY);
+        return;
+      }
+      const newRaw = localStorage.getItem(localDesignsKey);
+      const newParsed = newRaw ? JSON.parse(newRaw) : [];
+      const next = Array.isArray(newParsed)
+        ? mergeUniqueDesigns(newParsed, oldParsed)
+        : oldParsed;
+      localStorage.setItem(localDesignsKey, JSON.stringify(next));
+      localStorage.removeItem(LOCAL_DESIGNS_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, [localDesignsKey]);
+
+  useEffect(() => {
+    try {
+      const oldRaw = localStorage.getItem(LOCAL_FAVORITES_KEY);
+      if (!oldRaw) return;
+      const oldParsed = JSON.parse(oldRaw);
+      if (!Array.isArray(oldParsed) || oldParsed.length === 0) {
+        localStorage.removeItem(LOCAL_FAVORITES_KEY);
+        return;
+      }
+      const newRaw = localStorage.getItem(localFavoritesKey);
+      const newParsed = newRaw ? JSON.parse(newRaw) : [];
+      const merged = Array.isArray(newParsed)
+        ? Array.from(new Set([...newParsed, ...oldParsed].map((id) => String(id))))
+        : oldParsed.map((id) => String(id));
+      localStorage.setItem(localFavoritesKey, JSON.stringify(merged));
+      localStorage.removeItem(LOCAL_FAVORITES_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, [localFavoritesKey]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(localDesignsKey);
       if (!raw) {
         setSavedDesigns([]);
         return;
@@ -409,7 +475,7 @@ export default function DesignStudioPage() {
     } catch {
       setSavedDesigns([]);
     }
-  }, []);
+  }, [localDesignsKey]);
 
   useEffect(() => () => {
     if (copyFlashRef.current) {
@@ -419,7 +485,7 @@ export default function DesignStudioPage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(LOCAL_FAVORITES_KEY);
+      const raw = localStorage.getItem(localFavoritesKey);
       if (!raw) {
         setFavoriteDesignIds([]);
         return;
@@ -431,7 +497,7 @@ export default function DesignStudioPage() {
     } catch {
       setFavoriteDesignIds([]);
     }
-  }, []);
+  }, [localFavoritesKey]);
 
   useEffect(() => {
     const designId = searchParams?.get("design");
@@ -472,7 +538,7 @@ export default function DesignStudioPage() {
     if (!localDesignId || localDesignId === loadingLocalDesignId) return;
     setLoadingLocalDesignId(localDesignId);
     try {
-      const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+      const raw = localStorage.getItem(localDesignsKey);
       const parsed = raw ? JSON.parse(raw) : [];
       const match = Array.isArray(parsed)
         ? parsed.find((design) => String(design.id) === String(localDesignId))
@@ -493,7 +559,7 @@ export default function DesignStudioPage() {
         variant: "destructive",
       });
     }
-  }, [searchParams, toast, loadingLocalDesignId]);
+  }, [searchParams, toast, loadingLocalDesignId, localDesignsKey]);
 
   useEffect(() => {
     let isMounted = true;
@@ -615,7 +681,7 @@ export default function DesignStudioPage() {
   const persistSavedDesigns = (next) => {
     setSavedDesigns(next);
     try {
-      localStorage.setItem(LOCAL_DESIGNS_KEY, JSON.stringify(next));
+      localStorage.setItem(localDesignsKey, JSON.stringify(next));
     } catch {
       /* ignore */
     }
@@ -624,7 +690,7 @@ export default function DesignStudioPage() {
   const persistFavorites = (next) => {
     setFavoriteDesignIds(next);
     try {
-      localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(next));
+      localStorage.setItem(localFavoritesKey, JSON.stringify(next));
     } catch {
       /* ignore */
     }

@@ -18,10 +18,47 @@ import { designsApi } from "@/lib/api/designs";
 import Image from "next/image";
 import logger from "@/lib/logger";
 const LOCAL_DESIGNS_KEY = "fashionhub_simple_studio_designs";
-
-const parseLocalDesigns = () => {
+const getLocalDesignsKey = (user) => {
+    const userKey = user?._id || user?.id || user?.email || "guest";
+    return `${LOCAL_DESIGNS_KEY}:${userKey}`;
+};
+const mergeUniqueDesigns = (primary, incoming) => {
+    const seen = new Set(primary.map((design) => String(design.id)));
+    const merged = [...primary];
+    incoming.forEach((design) => {
+        const key = String(design.id);
+        if (!seen.has(key)) {
+            seen.add(key);
+            merged.push(design);
+        }
+    });
+    return merged;
+};
+const migrateLocalDesigns = (key) => {
     try {
-        const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+        const oldRaw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+        if (!oldRaw)
+            return;
+        const oldParsed = JSON.parse(oldRaw);
+        if (!Array.isArray(oldParsed) || oldParsed.length === 0) {
+            localStorage.removeItem(LOCAL_DESIGNS_KEY);
+            return;
+        }
+        const newRaw = localStorage.getItem(key);
+        const newParsed = newRaw ? JSON.parse(newRaw) : [];
+        const next = Array.isArray(newParsed)
+            ? mergeUniqueDesigns(newParsed, oldParsed)
+            : oldParsed;
+        localStorage.setItem(key, JSON.stringify(next));
+        localStorage.removeItem(LOCAL_DESIGNS_KEY);
+    }
+    catch {
+    }
+};
+
+const parseLocalDesigns = (key) => {
+    try {
+        const raw = localStorage.getItem(key);
         const parsed = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(parsed)) {
             return [];
@@ -45,15 +82,15 @@ const parseLocalDesigns = () => {
     }
 };
 
-const removeLocalDesign = (designId) => {
+const removeLocalDesign = (key, designId) => {
     try {
-        const raw = localStorage.getItem(LOCAL_DESIGNS_KEY);
+        const raw = localStorage.getItem(key);
         const parsed = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(parsed)) {
             return [];
         }
         const next = parsed.filter((design) => String(design.id) !== String(designId));
-        localStorage.setItem(LOCAL_DESIGNS_KEY, JSON.stringify(next));
+        localStorage.setItem(key, JSON.stringify(next));
         return next;
     }
     catch {
@@ -123,7 +160,9 @@ export default function ProfilePage() {
                 logger.error("Failed to load designs:", error);
             })
                 .finally(() => {
-                setLocalDesigns(parseLocalDesigns());
+                const key = getLocalDesignsKey(user);
+                migrateLocalDesigns(key);
+                setLocalDesigns(parseLocalDesigns(key));
                 setLoadingDesigns(false);
             });
         }
@@ -415,8 +454,9 @@ export default function ProfilePage() {
                     if (confirm("Are you sure you want to delete this design?")) {
                         try {
                             if (design.isLocal) {
-                                removeLocalDesign(design._id);
-                                setLocalDesigns(parseLocalDesigns());
+                                const key = getLocalDesignsKey(user);
+                                removeLocalDesign(key, design._id);
+                                setLocalDesigns(parseLocalDesigns(key));
                             }
                             else {
                                 await designsApi.deleteDesign(design._id);

@@ -1540,7 +1540,7 @@ function AdminDashboardContent() {
                       {language === "ar" ? "إدارة وتتبع جميع طلبات العملاء" : "Manage and track all customer orders"}
                     </p>
               </div>
-                  <Button onClick={exportOrders}>
+                  <Button onClick={exportOrders} className="bg-blue-500 text-white hover:bg-blue-600">
                     <Download className="h-4 w-4 mr-2"/>
                     {language === "ar" ? "تصدير" : "Export"}
                   </Button>
@@ -3230,7 +3230,7 @@ function AdminDashboardContent() {
                       {language === "ar" ? "إنشاء وتحميل تقارير الأعمال" : "Generate and download business reports"}
                     </p>
               </div>
-              <Button onClick={async () => {
+                <Button onClick={async () => {
                     try {
                         setLoading(true);
                         const [salesReport, productsData, customersData] = await Promise.all([
@@ -3267,9 +3267,9 @@ function AdminDashboardContent() {
                     finally {
                         setLoading(false);
                     }
-                }}>
-                <Download className="h-4 w-4 mr-2"/>
-                    {language === "ar" ? "تصدير الكل" : "Export All"}
+                }} className="bg-blue-500 text-white hover:bg-blue-600">
+                  <Download className="h-4 w-4 mr-2"/>
+                  {language === "ar" ? "تصدير الكل" : "Export All"}
               </Button>
             </div>
 
