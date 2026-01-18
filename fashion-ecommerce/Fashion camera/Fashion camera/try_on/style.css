@@ -1,0 +1,345 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Tajawal", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #f7f7f7;
+  color: #111827;
+  min-height: 100vh;
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 20px 32px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  background: #f7f7f7;
+  padding: 4px 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-img {
+  height: 55px;
+  width: auto;
+  object-fit: contain;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: stretch;
+}
+
+.hero-text h1 {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.hero-text p {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.7;
+  margin-bottom: 18px;
+}
+
+.btn-primary {
+  border: none;
+  outline: none;
+  padding: 12px 26px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.25);
+  position: relative;
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(37, 99, 235, 0.25),
+    rgba(6, 182, 212, 0.25)
+  );
+  filter: blur(10px);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.35);
+  opacity: 0.95;
+}
+
+.btn-primary:hover::after {
+  opacity: 1;
+}
+
+.btn-primary:active {
+  transform: translateY(0px);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+.status-text {
+  font-size: 12px;
+  margin-top: 10px;
+  color: #6b7280;
+}
+
+.store {
+  margin-top: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.06);
+  grid-column: 1 / -1;
+}
+
+.store-header h3 {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.store-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.garments-store {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.garment-card {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: right;
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease,
+    border-color 0.18s ease;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+  min-height: 92px;
+}
+
+.garment-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.1);
+}
+
+.garment-card::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+
+.garment-card.active {
+  border-color: rgba(37, 99, 235, 0.9);
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.15);
+}
+
+.garment-card.active::after {
+  background: linear-gradient(90deg, #2563eb, #06b6d4);
+}
+
+.garment-card img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+  flex: 0 0 auto;
+}
+
+.garment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: right;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.garment-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.garment-desc {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.hero-camera {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.camera-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.camera-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  position: relative;
+}
+
+.camera-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+
+.camera-dot.red {
+  background: #f97373;
+}
+
+.camera-dot.yellow {
+  background: #facc15;
+}
+
+.camera-dot.green {
+  background: #4ade80;
+}
+
+.camera-title {
+  font-size: 12px;
+  color: #6b7280;
+  position: absolute;
+  left: 12px;
+}
+
+.camera-body {
+  padding: 12px 12px 14px;
+}
+
+.camera-container {
+  position: relative;
+  background: #f3f4f6;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  max-height: 520px;
+}
+
+.camera-container video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+  background: #000;
+}
+
+.camera-container canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.footer {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header {
+    justify-content: center;
+  }
+
+  .hero-text h1 {
+    font-size: 26px;
+  }
+
+  .garments-store {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 12px;
+  }
+
+  .camera-container {
+    max-height: 360px;
+  }
+
+  .camera-container video {
+    max-height: 360px;
+  }
+
+  .garments-store {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .logo-img {
+    height: 48px;
+  }
+}

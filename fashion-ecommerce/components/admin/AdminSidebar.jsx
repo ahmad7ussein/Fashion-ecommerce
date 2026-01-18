@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { useLanguage } from "@/lib/language";
 import { t } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 const navigationSections = [
     {
         id: "products",
@@ -68,11 +69,13 @@ const getActiveSectionId = (sections, pathname, isAdminRoot, currentTab) => {
 export function AdminSidebar({ activeTab, pendingReviewsCount }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { user } = useAuth();
     const { language } = useLanguage();
     const tabParam = searchParams.get("tab") || "overview";
     const currentTab = activeTab || tabParam;
     const isAdminRoot = pathname === "/admin";
     const [openSectionId, setOpenSectionId] = useState(() => getActiveSectionId(navigationSections, pathname, isAdminRoot, currentTab));
+    const adminEmail = user?.email || "admin@fashionhub.com";
     useEffect(() => {
         const activeSectionId = getActiveSectionId(navigationSections, pathname, isAdminRoot, currentTab);
         if (activeSectionId) {
@@ -104,10 +107,13 @@ export function AdminSidebar({ activeTab, pendingReviewsCount }) {
         </div>
       </div>
       <div className="px-4 lg:px-6 py-3">
-        <div className="flex items-center">
-          <Badge variant="destructive" className="text-xs font-semibold uppercase">
+        <div className="flex flex-col gap-1">
+          <Badge className="w-fit bg-blue-500 text-white hover:bg-blue-600 border-blue-600 text-xs font-semibold uppercase">
             Admin
           </Badge>
+          <span className="text-xs font-medium text-muted-foreground truncate" title={adminEmail}>
+            {adminEmail}
+          </span>
         </div>
       </div>
       <nav className="px-3 lg:px-4 space-y-4 pt-4 pb-4 flex-1 overflow-y-auto">

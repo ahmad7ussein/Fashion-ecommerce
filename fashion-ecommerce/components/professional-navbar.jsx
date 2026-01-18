@@ -310,59 +310,53 @@ export function ProfessionalNavbar() {
 
               
               <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.45 }} className="hidden md:block">
-                {user ? (<div className="relative group">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-accent transition-colors">
-                      <User className="h-4 w-4"/>
-                    </Button>
-                    
-                    
-                    <div className={`absolute ${language === "ar" ? "left-0" : "right-0"} mt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50`}>
-                      <div className="bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
-                        <div className="p-4 border-b border-border">
-                          <p className="text-sm font-semibold text-foreground">{user.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
-                        </div>
-                        <div className="p-2">
-                          <Link href="/profile">
-                            <button className={`w-full flex items-center ${language === "ar" ? "flex-row-reverse" : ""} gap-3 px-3 py-2 text-sm text-foreground hover:text-primary hover:bg-accent rounded-md transition-all`}>
-                              <User className="h-4 w-4"/>
-                              {language === "ar" ? "الملف الشخصي" : "Profile"}
-                            </button>
+                {user ? (<DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-accent transition-colors" aria-label="Account menu">
+                        <User className="h-4 w-4"/>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align={language === "ar" ? "start" : "end"} className="w-56 bg-popover border border-border shadow-lg">
+                      <DropdownMenuLabel className="px-3 py-2">
+                        <p className="text-sm font-semibold text-foreground">{user.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className={`cursor-pointer ${language === "ar" ? "flex-row-reverse" : ""} flex items-center gap-3`}>
+                          <User className="h-4 w-4"/>
+                          {language === "ar" ? "الملف الشخصي" : "Profile"}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/my-designs" className={`cursor-pointer ${language === "ar" ? "flex-row-reverse" : ""} flex items-center gap-3`}>
+                          {language === "ar" ? "تصاميمي" : "My Designs"}
+                        </Link>
+                      </DropdownMenuItem>
+                      {user.role === "admin" && (<DropdownMenuItem asChild>
+                          <Link href="/admin" className={`cursor-pointer ${language === "ar" ? "flex-row-reverse" : ""} flex items-center gap-3`}>
+                            <Settings className="h-4 w-4"/>
+                            {language === "ar" ? "لوحة الادمن" : "Admin Panel"}
                           </Link>
-                          <Link href="/my-designs">
-                            <button className={`w-full flex items-center ${language === "ar" ? "flex-row-reverse" : ""} gap-3 px-3 py-2 text-sm text-foreground hover:text-primary hover:bg-accent rounded-md transition-all`}>
-                              {language === "ar" ? "تصاميمي" : "My Designs"}
-                            </button>
+                        </DropdownMenuItem>)}
+                      {user.role === "employee" && (<DropdownMenuItem asChild>
+                          <Link href="/employee" className={`cursor-pointer ${language === "ar" ? "flex-row-reverse" : ""} flex items-center gap-3`}>
+                            <Package className="h-4 w-4"/>
+                            {language === "ar" ? "لوحة الموظف" : "Employee Panel"}
                           </Link>
-                          {user.role === "admin" && (<Link href="/admin">
-                              <button className={`w-full flex items-center ${language === "ar" ? "flex-row-reverse" : ""} gap-3 px-3 py-2 text-sm text-foreground hover:text-primary hover:bg-accent rounded-md transition-all`}>
-                                <Settings className="h-4 w-4"/>
-                                {language === "ar" ? "لوحة الإدارة" : "Admin Panel"}
-                              </button>
-                            </Link>)}
-                          {user.role === "employee" && (<Link href="/employee">
-                              <button className={`w-full flex items-center ${language === "ar" ? "flex-row-reverse" : ""} gap-3 px-3 py-2 text-sm text-foreground hover:text-primary hover:bg-accent rounded-md transition-all`}>
-                                <Package className="h-4 w-4"/>
-                                {language === "ar" ? "لوحة الموظف" : "Employee Panel"}
-                              </button>
-                            </Link>)}
-                        </div>
-                        <div className="p-2 border-t border-border">
-                          <button onClick={() => logout()} className={`w-full flex items-center ${language === "ar" ? "flex-row-reverse" : ""} gap-3 px-3 py-2 text-sm text-destructive hover:text-destructive hover:bg-destructive/10 rounded-md transition-all`}>
-                            <LogOut className="h-4 w-4"/>
-                            {language === "ar" ? "تسجيل الخروج" : "Logout"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>) : (<Link href="/login">
+                        </DropdownMenuItem>)}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive focus:text-destructive">
+                        <LogOut className={`h-4 w-4 ${language === "ar" ? "ml-2" : "mr-2"}`}/>
+                        {language === "ar" ? "تسجيل الخروج" : "Logout"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>) : (<Link href="/login">
                     <Button className="h-9 px-4 rounded-lg font-medium transition-all hover:scale-105">
                       {language === "ar" ? "تسجيل الدخول" : "Sign In"}
                     </Button>
                   </Link>)}
               </motion.div>
-
-              
               <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.5 }} className="lg:hidden">
                 <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="h-9 w-9 rounded-lg hover:bg-accent transition-colors">
                   {mobileMenuOpen ? <X className="h-5 w-5"/> : <Menu className="h-5 w-5"/>}

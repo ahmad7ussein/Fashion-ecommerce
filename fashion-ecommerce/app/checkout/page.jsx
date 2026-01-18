@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CreditCard, Truck, Lock } from "lucide-react";
+import { Truck, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
@@ -15,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { useRegion } from "@/lib/region";
 import { ordersApi } from "@/lib/api/orders";
 import { designsApi } from "@/lib/api/designs";
+import { paymentsApi } from "@/lib/api/payments";
 import logger from "@/lib/logger";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -29,11 +29,6 @@ const CheckoutSchema = z.object({
     state: z.string().min(2),
     zip: z.string().min(3),
     country: z.string().min(2),
-    sameAsShipping: z.boolean().default(true),
-    cardName: z.string().min(2),
-    cardNumber: z.string().min(12),
-    expiry: z.string().min(4),
-    cvv: z.string().min(3),
 });
 export default function CheckoutPage() {
     const { toast } = useToast();
@@ -54,7 +49,6 @@ export default function CheckoutPage() {
     const form = useForm({
         resolver: zodResolver(CheckoutSchema),
         defaultValues: {
-            sameAsShipping: true,
             country: "US",
         },
     });
@@ -159,8 +153,12 @@ export default function CheckoutPage() {
             };
             const order = await ordersApi.createOrder(orderData);
             logger.log("Order created successfully:", order);
+            const checkoutSession = await paymentsApi.createCheckoutSession(order._id);
+            if (!checkoutSession?.url) {
+                throw new Error("Failed to start Stripe checkout session");
+            }
             clear();
-            router.push(`/order-success?order=${order.orderNumber || order._id}`);
+            window.location.href = checkoutSession.url;
         }
         catch (error) {
             logger.error("Order creation error:", error);
@@ -245,43 +243,6 @@ export default function CheckoutPage() {
                 </Card>
 
                 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5"/>
-                      Payment Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Checkbox id="sameAsShipping" checked={form.watch("sameAsShipping")} onCheckedChange={(c) => form.setValue("sameAsShipping", Boolean(c))}/>
-                      <Label htmlFor="sameAsShipping" className="cursor-pointer">
-                        Billing address same as shipping
-                      </Label>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="cardName">Cardholder Name</Label>
-                      <Input id="cardName" {...form.register("cardName")}/>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="cardNumber">Card Number</Label>
-                      <Input id="cardNumber" placeholder="1234 5678 9012 3456" {...form.register("cardNumber")}/>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="expiry">Expiry Date</Label>
-                        <Input id="expiry" placeholder="MM/YY" {...form.register("expiry")}/>
-                      </div>
-                      <div>
-                        <Label htmlFor="cvv">CVV</Label>
-                        <Input id="cvv" placeholder="123" {...form.register("cvv")}/>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
 
               

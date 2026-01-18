@@ -38,14 +38,20 @@ const nextConfig = {
       return [];
     }
     const scriptSrc =
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com https://apis.google.com";
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://cdn.jsdelivr.net";
+    const styleSrc =
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com";
+    const fontSrc =
+      "font-src 'self' data: https://fonts.gstatic.com";
+    const imgSrc =
+      "img-src 'self' data: blob:";
     return [
       {
         source: '/(.*)',
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `${scriptSrc}; object-src 'none';`,
+            value: `${scriptSrc}; ${styleSrc}; ${fontSrc}; ${imgSrc}; object-src 'none';`,
           },
         ],
       },

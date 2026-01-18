@@ -49,7 +49,10 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
     const [outputScale, setOutputScale] = useState(1);
     const [cropPixels, setCropPixels] = useState(null);
     const [removeBg, setRemoveBg] = useState(false);
+    const [removeBgApplied, setRemoveBgApplied] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [originalImageSrc, setOriginalImageSrc] = useState(null);
+    const [processedImageSrc, setProcessedImageSrc] = useState(null);
     const handleClick = () => {
         inputRef.current?.click();
     };
@@ -60,14 +63,19 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
         }
         const url = URL.createObjectURL(file);
         setImageSrc(url);
+        setOriginalImageSrc(url);
+        setProcessedImageSrc(null);
         setEditorOpen(true);
     };
     const onCropComplete = useCallback((_croppedArea, croppedAreaPixels) => {
         setCropPixels(croppedAreaPixels);
     }, []);
     const handleClose = () => {
-        if (imageSrc) {
+        if (imageSrc?.startsWith("blob:")) {
             URL.revokeObjectURL(imageSrc);
+        }
+        if (processedImageSrc?.startsWith("blob:") && processedImageSrc !== imageSrc) {
+            URL.revokeObjectURL(processedImageSrc);
         }
         setEditorOpen(false);
         setImageSrc(null);
@@ -76,7 +84,52 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
         setOutputScale(1);
         setCropPixels(null);
         setRemoveBg(false);
+        setRemoveBgApplied(false);
         setIsProcessing(false);
+        setOriginalImageSrc(null);
+        setProcessedImageSrc(null);
+    };
+    const handleToggleRemoveBg = async (value) => {
+        const nextValue = Boolean(value);
+        setRemoveBg(nextValue);
+        if (!nextValue) {
+            if (originalImageSrc) {
+                setImageSrc(originalImageSrc);
+            }
+            setRemoveBgApplied(false);
+            if (processedImageSrc?.startsWith("blob:")) {
+                URL.revokeObjectURL(processedImageSrc);
+            }
+            setProcessedImageSrc(null);
+            return;
+        }
+        if (!imageSrc || removeBgApplied) {
+            return;
+        }
+        setIsProcessing(true);
+        try {
+            const response = await fetch(imageSrc);
+            const sourceBlob = await response.blob();
+            const module = await import("@imgly/background-removal");
+            const removeBackground = module.removeBackground || module.default || module;
+            if (typeof removeBackground !== "function") {
+                throw new Error("Background removal module is unavailable");
+            }
+            const removedBlob = await removeBackground(sourceBlob);
+            const removedUrl = URL.createObjectURL(removedBlob);
+            if (processedImageSrc?.startsWith("blob:")) {
+                URL.revokeObjectURL(processedImageSrc);
+            }
+            setProcessedImageSrc(removedUrl);
+            setImageSrc(removedUrl);
+            setRemoveBgApplied(true);
+        }
+        catch {
+            setRemoveBg(false);
+        }
+        finally {
+            setIsProcessing(false);
+        }
     };
     const handleConfirm = async () => {
         if (!imageSrc || !cropPixels) {
@@ -86,7 +139,7 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
         setIsProcessing(true);
         try {
             let blob = await getCroppedImage(imageSrc, cropPixels, outputScale, zoom);
-            if (removeBg && blob) {
+            if (removeBg && !removeBgApplied && blob) {
                 const module = await import("@imgly/background-removal");
                 const removeBackground = module.removeBackground || module.default || module;
                 if (typeof removeBackground !== "function") {
@@ -159,10 +212,10 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
                 <Slider value={[outputScale]} onValueChange={([value]) => setOutputScale(value)} min={0.5} max={3} step={0.1}/>
               </div>
               <div className="flex items-center gap-2">
-                <Checkbox id="remove-bg" checked={removeBg} onCheckedChange={(value) => setRemoveBg(Boolean(value))}/>
+                <Checkbox id="remove-bg" checked={removeBg} onCheckedChange={handleToggleRemoveBg} disabled={isProcessing}/>
                 <label htmlFor="remove-bg" className="text-sm text-muted-foreground flex items-center gap-2">
                   <Wand2 className="h-4 w-4"/>
-                  Remove background
+                  {isProcessing ? "Removing background..." : "Remove background"}
                 </label>
               </div>
               <Button type="button" variant="outline" onClick={handleClose} className="w-full" disabled={isProcessing}>
