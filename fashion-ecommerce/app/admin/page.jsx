@@ -80,7 +80,10 @@ const exportToExcel = (data, reportType, language) => {
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    if (link.parentNode) {
+        link.parentNode.removeChild(link);
+    }
+    URL.revokeObjectURL(url);
 };
 function AdminDashboardContent() {
     const [activeTab, setActiveTab] = useState("overview");
@@ -1169,7 +1172,10 @@ function AdminDashboardContent() {
         link.style.visibility = "hidden";
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        if (link.parentNode) {
+            link.parentNode.removeChild(link);
+        }
+        URL.revokeObjectURL(url);
         toast({
             title: "Success",
             description: language === "ar" ? "تم تصدير الطلبات بنجاح" : "Orders exported successfully",
@@ -3620,47 +3626,6 @@ function AdminDashboardContent() {
                   </div>
                 </div>
               </div>)}
-          </DialogContent>
-        </Dialog>
-
-        
-        <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
-          <DialogContent className="max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{language === "ar" ? "تعديل الطلب" : "Edit Order"}</DialogTitle>
-              <DialogDescription>
-                {selectedOrder?.orderNumber}
-              </DialogDescription>
-            </DialogHeader>
-            {selectedOrder && (<div className="space-y-4">
-                <div>
-                  <Label>{language === "ar" ? "حالة الطلب" : "Order Status"}</Label>
-                  <Select value={editOrderStatus} onValueChange={(value) => setEditOrderStatus(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">{language === "ar" ? "قيد الانتظار" : "Pending"}</SelectItem>
-                      <SelectItem value="processing">{language === "ar" ? "قيد المعالجة" : "Processing"}</SelectItem>
-                      <SelectItem value="shipped">{language === "ar" ? "تم الشحن" : "Shipped"}</SelectItem>
-                      <SelectItem value="delivered">{language === "ar" ? "تم التسليم" : "Delivered"}</SelectItem>
-                      <SelectItem value="cancelled">{language === "ar" ? "ملغى" : "Cancelled"}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{language === "ar" ? "رقم التتبع" : "Tracking Number"}</Label>
-                  <Input value={editTrackingNumber} onChange={(e) => setEditTrackingNumber(e.target.value)} placeholder={language === "ar" ? "أدخل رقم التتبع" : "Enter tracking number"}/>
-                </div>
-              </div>)}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditOrder(false)}>
-                {language === "ar" ? "إلغاء" : "Cancel"}
-              </Button>
-              <Button onClick={handleUpdateOrderStatus}>
-                {language === "ar" ? "حفظ" : "Save"}
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
 

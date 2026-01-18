@@ -141,7 +141,8 @@ const createCheckoutSession = async (req, res) => {
             });
         }
         const lineItems = buildLineItems(order);
-        const successUrl = `${env_1.default.frontendUrl || "http://localhost:3000"}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
+        // Redirect to the verification page after Stripe returns.
+        const successUrl = `${env_1.default.frontendUrl || "http://localhost:3000"}/payment-redirect?session_id={CHECKOUT_SESSION_ID}`;
         const cancelUrl = `${env_1.default.frontendUrl || "http://localhost:3000"}/payment-cancel`;
         const session = await stripe.checkout.sessions.create({
             mode: "payment",

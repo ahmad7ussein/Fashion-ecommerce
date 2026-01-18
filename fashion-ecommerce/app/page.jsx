@@ -532,7 +532,7 @@ export default function HomePage() {
                   ? "تجربة سريعة وبسيطة قبل الشراء — جرّب الميزة الآن."
                   : "A quick, simple preview before you buy. Try the feature now."}
                 </p>
-                <Link href="/virtual-try-on">
+                <Link href="/try-on">
                   <Button className="bg-rose-600 text-white hover:bg-rose-700 rounded-full px-6">
                     {language === "ar" ? "جرّبها الآن" : "Try It Now"}
                   </Button>

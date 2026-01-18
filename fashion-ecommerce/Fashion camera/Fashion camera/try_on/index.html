@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FashionHub - تجربة الملابس عبر الكاميرا</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic@0.5/holistic.js" crossorigin="anonymous"></script>
+</head>
+
+<body dir="rtl">
+  <div class="page">
+
+    <header class="header">
+      <div class="logo">
+        <img src="logo.png" alt="FashionHub Logo" class="logo-img">
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="hero">
+
+        <div class="hero-text">
+          <h1>جرّب ملابسك افتراضياً قبل الشراء</h1>
+          <p>
+            قِف أمام الكاميرا، اختر قطعة الملابس، وشاهد كيف تبدو عليك مباشرة.
+          </p>
+
+          <button id="startCameraBtn" class="btn-primary">
+            تشغيل الكاميرا
+          </button>
+
+          <p id="statusText" class="status-text">
+            اختر قطعة من المتجر ثم شغّل الكاميرا لبدء التجربة.
+          </p>
+        </div>
+
+        <div class="hero-camera">
+          <div class="camera-card">
+            <div class="camera-header">
+              <span class="camera-dot red"></span>
+              <span class="camera-dot yellow"></span>
+              <span class="camera-dot green"></span>
+              <span class="camera-title">معاينة الكاميرا</span>
+            </div>
+
+            <div class="camera-body">
+              <div class="camera-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="overlay"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="store">
+          <div class="store-header">
+            <h3>اختر القطعة</h3>
+            <p class="store-sub">اضغط على القطعة لتجربتها مباشرة.</p>
+          </div>
+
+          <div class="garments-store" id="garmentsStore">
+
+            <button class="garment-card" type="button" data-garment="ss1">
+              <img src="shirt1.png" alt="بلوزة نص كم 1">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة نص كم</div>
+                <div class="garment-desc">قطعة صيفية </div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="ss2">
+              <img src="shirt2.png" alt="بلوزة نص كم 2">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة نص كم</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="shirt_collar2">
+              <img src="shirt_collar2.png" alt="بلوزة نص كم قبة 2">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة نص كم قبة</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="ss3">
+              <img src="shirt3.png" alt="بلوزة نص كم 3">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة نص كم</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="ss4">
+              <img src="shirt4.png" alt="بلوزة نص كم 4">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة نص كم</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="shirt_collar">
+              <img src="shirt_collar.png" alt="بلوزة نص كم قبة">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة نص كم قبة</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="hoodie">
+              <img src="hoodie.png" alt="بلوزة شتوية">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة شتوية</div>
+                <div class="garment-desc">قطعة شتوية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="shirt">
+              <img src="qamies.png" alt="قميص 1">
+              <div class="garment-meta">
+                <div class="garment-name">قميص</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="shirt2">
+              <img src="qamies2.png" alt="قميص 2">
+              <div class="garment-meta">
+                <div class="garment-name">قميص</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="shirt3">
+              <img src="qamies3.png" alt="قميص 3">
+              <div class="garment-meta">
+                <div class="garment-name">قميص</div>
+                <div class="garment-desc">قطعة صيفية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="qamies_kom">
+              <img src="qamies_kom.png" alt="قميص كوم">
+              <div class="garment-meta">
+                <div class="garment-name">قميص كوم</div>
+                <div class="garment-desc">قطعة شتوية</div>
+              </div>
+            </button>
+
+            <button class="garment-card" type="button" data-garment="plain_short">
+              <img src="plain_short.png" alt="بلوزة سادة">
+              <div class="garment-meta">
+                <div class="garment-name">بلوزة سادة</div>
+                <div class="garment-desc">قطعة شتوية</div>
+              </div>
+            </button>
+
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>FashionHub</p>
+    </footer>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
