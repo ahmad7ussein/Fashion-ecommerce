@@ -441,3 +441,26 @@
     max-height: 210px;
   }
 }
+
+.try-on-iframe-shell {
+  padding-top: 80px;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.try-on-iframe {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 80px);
+  border: 0;
+}
+
+@media (min-width: 768px) {
+  .try-on-iframe-shell {
+    padding-top: 112px;
+  }
+
+  .try-on-iframe {
+    height: calc(100vh - 112px);
+  }
+}
