@@ -37,6 +37,7 @@ const featureControlRoutes_1 = __importDefault(require("./routes/featureControlR
 const roleAssignmentRoutes_1 = __importDefault(require("./routes/roleAssignmentRoutes"));
 const staffChatRoutes_1 = __importDefault(require("./routes/staffChatRoutes"));
 const paymentRoutes_1 = __importDefault(require("./routes/paymentRoutes"));
+const diagnosticRoutes_1 = __importDefault(require("./routes/diagnosticRoutes"));
 const staffChatSocket_1 = __importDefault(require("./socket/staffChatSocket"));
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
@@ -71,7 +72,7 @@ const corsOptions = {
             return callback(null, true);
         }
         if (env_1.default.nodeEnv === 'development') {
-            console.warn('?s??,?  CORS: Blocked origin:', origin);
+            console.warn('Warning: CORS blocked origin:', origin);
         }
         callback(new Error('Not allowed by CORS'));
     },
@@ -125,6 +126,14 @@ app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.json({ limit: '25mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '25mb' }));
 app.use((0, compression_1.default)());
+app.use((req, res, next) => {
+    const json = res.json.bind(res);
+    res.json = (data) => {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return json(data);
+    };
+    next();
+});
 if (env_1.default.nodeEnv === 'development') {
     app.use((0, morgan_1.default)(':method :url :status :response-time ms'));
 }
@@ -185,6 +194,7 @@ app.use('/api/feature-controls', featureControlRoutes_1.default);
 app.use('/api/role-assignments', roleAssignmentRoutes_1.default);
 app.use('/api/staff-chat', staffChatRoutes_1.default);
 app.use('/api/payments', paymentRoutes_1.default);
+app.use('/api/diagnostics', diagnosticRoutes_1.default);
 app.use((req, res) => {
     if (process.env.NODE_ENV === 'development') {
         console.warn('⚠️  Route not found:', {

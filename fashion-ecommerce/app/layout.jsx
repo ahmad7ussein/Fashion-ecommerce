@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cairo, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "@/lib/cart";
@@ -10,8 +10,13 @@ import { ConditionalHeader } from "@/components/conditional-header";
 import ErrorBoundaryWrapper from "@/components/error-boundary-wrapper";
 import { WelcomeScreen } from "@/components/welcome-screen";
 import "./globals.css";
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const _geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const _geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
+const _cairo = Cairo({
+    subsets: ["arabic"],
+    variable: "--font-arabic",
+    fallback: ["Segoe UI", "Tahoma", "Arial"],
+});
 export const metadata = {
     title: "FashionHub",
     description: "Discover the latest fashion trends. Shop premium clothing for men, women, and kids. Quality fashion at your fingertips.",
@@ -31,7 +36,7 @@ export const metadata = {
 };
 export default function RootLayout({ children, }) {
     return (<html lang="en" dir="ltr" suppressHydrationWarning>
-      <body className={`font-sans antialiased student-ui`} dir="ltr" suppressHydrationWarning>
+      <body className={`${_geist.variable} ${_geistMono.variable} ${_cairo.variable} font-sans antialiased student-ui`} suppressHydrationWarning>
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <ErrorBoundaryWrapper>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="theme">

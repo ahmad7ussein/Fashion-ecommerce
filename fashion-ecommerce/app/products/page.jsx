@@ -148,7 +148,7 @@ function ProductsPageContent() {
                     setIsLoading(false);
                     setLoadError(error?.message || "Failed to load products");
                     toast({
-                        title: language === "ar" ? "U?O'U, OU,O¦O-U.USU," : "Load Failed",
+                        title: language === "ar" ? "فشل التحميل" : "Load Failed",
                         description: error?.message || "Failed to load products from the server",
                         variant: "destructive",
                     });
@@ -357,7 +357,7 @@ function ProductsPageContent() {
         
         {!isLoading && loadError && (<div className="mb-6 rounded-2xl border-2 border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span>{language === "ar" ? `U?O'U, OU,O¦O-U.USU,: ${loadError}` : `Failed to load products: ${loadError}`}</span>
+              <span>{language === "ar" ? `فشل تحميل المنتجات: ${loadError}` : `Failed to load products: ${loadError}`}</span>
               <Button variant="outline" size="sm" className="border-rose-300 text-rose-700 hover:bg-rose-100" onClick={() => setReloadKey((prev) => prev + 1)}>
                 Retry
               </Button>

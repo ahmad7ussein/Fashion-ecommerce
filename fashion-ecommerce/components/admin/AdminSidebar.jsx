@@ -24,9 +24,9 @@ const navigationSections = [
         title: { en: "Products & Orders", ar: "Products & Orders" },
         items: [
             { type: "tab", key: "products", icon: Package, labelKey: "products" },
-            { type: "tab", key: "studioProducts", icon: PaletteIcon, label: { en: "Studio Products", ar: "U.U+O¦OªOO¦ OU,OO3O¦U^O_USU^" } },
+            { type: "tab", key: "studioProducts", icon: PaletteIcon, label: { en: "Studio Products", ar: "منتجات الاستديو" } },
             { type: "tab", key: "orders", icon: ShoppingCart, labelKey: "orders" },
-            { type: "tab", key: "tracking", icon: Truck, label: { en: "Order Tracking", ar: "O¦O¦O\"1 OU,OúU,O\"O¦" } },
+            { type: "tab", key: "tracking", icon: Truck, label: { en: "Order Tracking", ar: "تتبع الطلبات" } },
             { type: "tab", key: "customers", icon: Users, labelKey: "customers" },
             { type: "tab", key: "reviews", icon: Star, label: { en: "Reviews", ar: "OU,O›OñOO­" } },
         ],
@@ -49,7 +49,7 @@ const navigationSections = [
         id: "features",
         title: { en: "Features", ar: "Features" },
         items: [
-            { type: "module", href: "/admin/virtual-experience", icon: Camera, label: { en: "Virtual Experience", ar: "OU,O¦OªOñO\"Oc OU,OU?O¦OñOOUSOc" } },
+            { type: "module", href: "/admin/virtual-experience", icon: Camera, label: { en: "Virtual Experience", ar: "التجربة الافتراضية" } },
             { type: "module", href: "/admin/home-slider", icon: SlidersHorizontal, label: { en: "Home Slider", ar: "Home Slider" } },
         ],
     },

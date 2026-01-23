@@ -880,7 +880,7 @@ export default function EmployeeDashboard() {
             });
             toast({
                 title: "Success",
-                description: language === "ar" ? "?? ????? ???? ????? ?????" : "Order status and tracking updated successfully",
+                description: language === "ar" ? "تم تحديث حالة الطلب والتتبع بنجاح" : "Order status and tracking updated successfully",
             });
             setShowEditOrder(false);
             setSelectedOrder(null);
@@ -980,7 +980,7 @@ export default function EmployeeDashboard() {
 
           <button onClick={() => setActiveTab("progress")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "progress" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
             <Printer className="h-5 w-5"/>
-            <span className="font-medium">{language === "ar" ? 'O?O?O"1 O‎O‎O‎,‎O‎,‎O‎.' : "Progress Tracking"}</span>
+            <span className="font-medium">{language === "ar" ? "تتبع التقدم" : "Progress Tracking"}</span>
           </button>
 
           <button onClick={() => setActiveTab("products")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "products" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
@@ -990,7 +990,7 @@ export default function EmployeeDashboard() {
 
           <button onClick={() => setActiveTab("studioProducts")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "studioProducts" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
             <PackageCheck className="h-5 w-5"/>
-            <span className="font-medium">{language === "ar" ? "U.U+O?O?O‎‎O? O‎,‎O‎3O?O_USU^" : "Studio Products"}</span>
+            <span className="font-medium">{language === "ar" ? "منتجات الاستديو" : "Studio Products"}</span>
           </button>
 
           <button onClick={() => setActiveTab("customers")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "customers" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
@@ -1017,11 +1017,11 @@ export default function EmployeeDashboard() {
             window.open("/", "_blank");
         }}>
             <Eye className="h-4 w-4 mr-2"/>
-            {language === "ar" ? "O1O?O‎ U?O?O‎O?O?" : "View as Guest"}
+            {language === "ar" ? "عرض كضيف" : "View as Guest"}
           </Button>
           <Link href="/">
             <Button variant="outline" className="w-full bg-transparent">
-              {language === "ar" ? "O‎,‎O1U^O‎_Oc U,U,U.O?O?O?" : "Back to Store"}
+              {language === "ar" ? "العودة للمتجر" : "Back to Store"}
             </Button>
           </Link>
           <Button variant="outline" className="w-full bg-transparent" onClick={logout}>
@@ -1846,12 +1846,12 @@ export default function EmployeeDashboard() {
                                         <Edit className="h-4 w-4"/>
                                       </Button>
                                       <Button variant="ghost" size="icon" onClick={async () => {
-                                    if (confirm(language === "ar" ? "?? ??? ????? ?? ??? ??? ???????" : "Are you sure you want to delete this product?")) {
+                                    if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذا المنتج؟" : "Are you sure you want to delete this product?")) {
                                         try {
                                             await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "");
                                             toast({
-                                                title: language === "ar" ? "?? ?????" : "Deleted",
-                                                description: language === "ar" ? "?? ??? ?????? ?????" : "Product deleted successfully",
+                                                title: language === "ar" ? "تم الحذف" : "Deleted",
+                                                description: language === "ar" ? "تم حذف المنتج بنجاح" : "Product deleted successfully",
                                             });
                                             loadProducts();
                                         }
@@ -1871,7 +1871,7 @@ export default function EmployeeDashboard() {
                                 </TableRow>);
                         })) : (<TableRow key={`${section.key}-empty`}>
                               <TableCell colSpan={6} className="text-center text-muted-foreground py-6 text-sm">
-                                {language === "ar" ? "?? ???? ?????? ?? ??? ?????" : "No products in this section"}
+                                {language === "ar" ? "لا توجد منتجات في هذا القسم" : "No products in this section"}
                               </TableCell>
                             </TableRow>)}
                         </Fragment>))}
@@ -2414,59 +2414,59 @@ export default function EmployeeDashboard() {
       <Dialog open={showEditOrder} onOpenChange={setShowEditOrder}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{language === "ar" ? "Update Order Status & Tracking" : "Update Order Status & Tracking"}</DialogTitle>
+            <DialogTitle>{language === "ar" ? "تحديث حالة الطلب والتتبع" : "Update Order Status & Tracking"}</DialogTitle>
             <DialogDescription>
-              {selectedOrder && `${language === "ar" ? "Order" : "Order"}: ${selectedOrder.orderNumber}`}
+              {selectedOrder && `${language === "ar" ? "طلب" : "Order"}: ${selectedOrder.orderNumber}`}
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (<div className="space-y-4">
               <div>
-                <Label>{language === "ar" ? "Order Status" : "Order Status"}</Label>
+                <Label>{language === "ar" ? "حالة الطلب" : "Order Status"}</Label>
                 <Select value={editOrderStatus} onValueChange={(value) => setEditOrderStatus(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">{language === "ar" ? "Pending" : "Pending"}</SelectItem>
-                    <SelectItem value="processing">{language === "ar" ? "Processing" : "Processing"}</SelectItem>
-                    <SelectItem value="shipped">{language === "ar" ? "Shipped" : "Shipped"}</SelectItem>
-                    <SelectItem value="delivered">{language === "ar" ? "Delivered" : "Delivered"}</SelectItem>
-                    <SelectItem value="cancelled">{language === "ar" ? "Cancelled" : "Cancelled"}</SelectItem>
+                    <SelectItem value="pending">{language === "ar" ? "قيد الانتظار" : "Pending"}</SelectItem>
+                    <SelectItem value="processing">{language === "ar" ? "قيد المعالجة" : "Processing"}</SelectItem>
+                    <SelectItem value="shipped">{language === "ar" ? "تم الشحن" : "Shipped"}</SelectItem>
+                    <SelectItem value="delivered">{language === "ar" ? "تم التسليم" : "Delivered"}</SelectItem>
+                    <SelectItem value="cancelled">{language === "ar" ? "ملغي" : "Cancelled"}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label>{language === "ar" ? "Tracking Number" : "Tracking Number"}</Label>
-                <Input value={editTrackingNumber} onChange={(e) => setEditTrackingNumber(e.target.value)} placeholder={language === "ar" ? "Enter tracking number" : "Enter tracking number"} />
+                <Label>{language === "ar" ? "رقم التتبع" : "Tracking Number"}</Label>
+                <Input value={editTrackingNumber} onChange={(e) => setEditTrackingNumber(e.target.value)} placeholder={language === "ar" ? "أدخل رقم التتبع" : "Enter tracking number"} />
               </div>
 
               <div>
-                <Label>{language === "ar" ? "Carrier" : "Carrier"}</Label>
-                <Input value={editCarrier} onChange={(e) => setEditCarrier(e.target.value)} placeholder={language === "ar" ? "e.g., DHL, FedEx, UPS" : "e.g., DHL, FedEx, UPS"} />
+                <Label>{language === "ar" ? "شركة الشحن" : "Carrier"}</Label>
+                <Input value={editCarrier} onChange={(e) => setEditCarrier(e.target.value)} placeholder={language === "ar" ? "مثال: DHL, FedEx, UPS" : "e.g., DHL, FedEx, UPS"} />
               </div>
 
               <div>
-                <Label>{language === "ar" ? "Estimated Delivery Date" : "Estimated Delivery Date"}</Label>
+                <Label>{language === "ar" ? "تاريخ التسليم المتوقع" : "Estimated Delivery Date"}</Label>
                 <Input type="date" value={editEstimatedDelivery} onChange={(e) => setEditEstimatedDelivery(e.target.value)} />
               </div>
 
               <div>
-                <Label>{language === "ar" ? "Current Location" : "Current Location"}</Label>
-                <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder={language === "ar" ? "Nablus - Rafidia" : "e.g., Nablus - Rafidia"} />
+                <Label>{language === "ar" ? "الموقع الحالي" : "Current Location"}</Label>
+                <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} placeholder={language === "ar" ? "مثال: نابلس - رفيديا" : "e.g., Nablus - Rafidia"} />
               </div>
 
               <div>
-                <Label>{language === "ar" ? "Note" : "Note"}</Label>
-                <Textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder={language === "ar" ? "Add a note about the order status..." : "Add a note about the order status..."} className="min-h-[100px]" />
+                <Label>{language === "ar" ? "ملاحظة" : "Note"}</Label>
+                <Textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder={language === "ar" ? "أضف ملاحظة حول حالة الطلب..." : "Add a note about the order status..."} className="min-h-[100px]" />
               </div>
             </div>)}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditOrder(false)}>
-              {language === "ar" ? "Cancel" : "Cancel"}
+              {language === "ar" ? "إلغاء" : "Cancel"}
             </Button>
             <Button onClick={handleUpdateOrderStatus}>
-              {language === "ar" ? "Save" : "Save"}
+              {language === "ar" ? "حفظ" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
