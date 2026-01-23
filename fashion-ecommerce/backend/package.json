@@ -8,7 +8,8 @@
     "build": "node -e \"console.log('No build step for JS backend')\"",
     "start": "node src/server.js",
     "seed": "node src/scripts/seed.js",
-    "create-admin": "node src/scripts/createAdminAndEmployee.js"
+    "create-admin": "node src/scripts/createAdminAndEmployee.js",
+    "repair-arabic": "node src/scripts/repairArabicMojibake.js"
   },
   "keywords": [
     "fashion",

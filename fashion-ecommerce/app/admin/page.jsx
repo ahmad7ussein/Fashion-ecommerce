@@ -1767,12 +1767,12 @@ function AdminDashboardContent() {
                                         <Edit className="h-4 w-4"/>
                                       </Button>
                                       <Button variant="ghost" size="icon" onClick={async () => {
-                                    if (confirm(language === "ar" ? "?? ??? ????? ?? ??? ??? ???????" : "Are you sure you want to delete this product?")) {
+                                    if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذا المنتج؟" : "Are you sure you want to delete this product?")) {
                                         try {
                                             await productsAdminApi.deleteProduct(product._id || product.id?.toString() || "");
                                             toast({
-                                                title: language === "ar" ? "?? ?????" : "Deleted",
-                                                description: language === "ar" ? "?? ??? ?????? ?????" : "Product deleted successfully",
+                                                title: language === "ar" ? "تم الحذف" : "Deleted",
+                                                description: language === "ar" ? "تم حذف المنتج بنجاح" : "Product deleted successfully",
                                             });
                                             loadProducts();
                                         }
@@ -1792,7 +1792,7 @@ function AdminDashboardContent() {
                                 </TableRow>);
                         })) : (<TableRow key={`${section.key}-empty`}>
                               <TableCell colSpan={6} className="text-center text-muted-foreground py-6 text-sm">
-                                {language === "ar" ? "?? ???? ?????? ?? ??? ?????" : "No products in this section"}
+                                {language === "ar" ? "لا توجد منتجات في هذا القسم" : "No products in this section"}
                               </TableCell>
                             </TableRow>)}
                         </Fragment>))}

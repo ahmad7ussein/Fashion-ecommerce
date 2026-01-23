@@ -370,7 +370,7 @@ export function ProfessionalNavbar() {
             setSearchOpen(true);
             setMobileMenuOpen(false);
         }}>
-                  <span>{language === "ar" ? 'O"O-O® O1U+ OU,U.U+O¦OªOO¦' : "Search products"}</span>
+                  <span>{language === "ar" ? "ابحث عن المنتجات" : "Search products"}</span>
                   <Search className="h-4 w-4"/>
                 </Button>
               </div>

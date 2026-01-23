@@ -198,7 +198,7 @@ const getProducts = async (req, res) => {
                 queryError.message?.includes('timeout') ||
                 queryError.message?.includes('timed out');
             if (isTimeout) {
-                console.warn('?s??,? Query timeout - returning empty result', {
+            console.warn('Warning: Query timeout - returning empty result', {
                     queryTime: `${queryTime}ms`,
                     error: queryError.message
                 });
