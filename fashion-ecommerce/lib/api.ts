@@ -1,8 +1,14 @@
 const RAW_API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
-const ANDROID_API_URL = process.env.NEXT_PUBLIC_ANDROID_API_URL || "";
-const USE_PROXY = process.env.NEXT_PUBLIC_USE_PROXY === "true";
+  process.env.NEXT_PUBLIC_API_BASE ||
+  process.env.API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "";
+const DEFAULT_ANDROID_API_URL = "http://10.0.2.2:5000/api";
+const ANDROID_API_URL =
+  process.env.NEXT_PUBLIC_ANDROID_API_URL || DEFAULT_ANDROID_API_URL;
 const FALLBACK_DEV_WEB_API_URL = "http://localhost:5000/api";
+const WEB_API_PREFIX = "/api";
 
 const resolveIsNative = () => {
   if (typeof window === "undefined") {
@@ -41,26 +47,29 @@ const ensureHttpsApiUrl = (value: string) => {
 
 export const getApiBaseUrl = () => {
   if (resolveIsNative()) {
-    return ANDROID_API_URL || RAW_API_BASE_URL || FALLBACK_DEV_WEB_API_URL;
+    if (ANDROID_API_URL) {
+      return ANDROID_API_URL;
+    }
+    const safeApiUrl = ensureHttpsApiUrl(RAW_API_BASE_URL);
+    return safeApiUrl || FALLBACK_DEV_WEB_API_URL;
   }
 
-  if (USE_PROXY) {
-    return "/api";
-  }
-
-  const safeApiUrl = ensureHttpsApiUrl(RAW_API_BASE_URL);
-  if (safeApiUrl) {
-    return safeApiUrl;
-  }
-
-  if (isHttpsPage() || isProduction()) {
-    return "/api";
-  }
-
-  return FALLBACK_DEV_WEB_API_URL;
+  return WEB_API_PREFIX;
 };
 
 export const API_BASE_URL = () => getApiBaseUrl();
+
+export const getApiUrl = (path: string) => {
+  const base = getApiBaseUrl();
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (!base) {
+    return normalizedPath;
+  }
+  if (base.endsWith("/") && normalizedPath.startsWith("/")) {
+    return `${base.slice(0, -1)}${normalizedPath}`;
+  }
+  return `${base}${normalizedPath}`;
+};
 
 const CLOUDINARY_HTTP_PREFIX = "http://res.cloudinary.com/";
 const CLOUDINARY_HTTPS_PREFIX = "https://res.cloudinary.com/";

@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 import { Mail, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import logger from "@/lib/logger";
-import { API_BASE_URL } from "@/lib/api";
+import { getApiUrl } from "@/lib/api";
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
         logger.log("Requesting password reset for:", email);
         try {
-            const response = await fetch(`${API_BASE_URL()}/auth/forgot-password`, {
+            const response = await fetch(getApiUrl("/auth/forgot-password"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

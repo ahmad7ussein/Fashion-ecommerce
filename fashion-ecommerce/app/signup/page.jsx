@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/logo";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, getApiUrl } from "@/lib/api";
 export default function SignupPage() {
     const router = useRouter();
     const [formData, setFormData] = useState({
@@ -131,7 +131,7 @@ export default function SignupPage() {
                 title: "جاري إنشاء الحساب...",
                 description: "يرجى الانتظار",
             });
-            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
+            const backendResponse = await fetch(getApiUrl("/auth/google"), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -36,7 +36,7 @@ export function EmployeeLayout({ children, sidebar, title = "Employee Dashboard"
 
         <div className="flex min-h-screen flex-1 flex-col lg:pl-64">
           <div className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur lg:hidden">
-            <div className="flex min-h-16 flex-wrap items-center gap-3 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
+            <div className="flex min-h-16 flex-wrap items-center gap-3 px-4 pb-2 app-safe-top">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <Button
                   variant="outline"

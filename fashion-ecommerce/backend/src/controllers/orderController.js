@@ -376,7 +376,7 @@ const updateOrderStatus = async (req, res) => {
         if (status === 'shipped') {
             order.paymentInfo.status = 'completed';
         }
-        await order.save();
+        await order.save({ validateBeforeSave: false });
         if (req.user?._id && (req.user.role === 'admin' || req.user.role === 'employee')) {
             await (0, employeeActivityController_1.logEmployeeActivity)(req.user._id, 'order_updated', `Updated order ${order.orderNumber} status from ${oldStatus} to ${status}`, 'Order', order._id, { orderNumber: order.orderNumber, oldStatus, newStatus: status, trackingNumber, carrier });
         }
