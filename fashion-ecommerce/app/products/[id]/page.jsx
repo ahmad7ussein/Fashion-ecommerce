@@ -1,6 +1,9 @@
 import ProductDetailPageClient from './ProductDetailPageClient';
 import { listProducts } from '@/lib/api/products';
 export async function generateStaticParams() {
+    if (process.env.CAPACITOR_BUILD === "true") {
+        return [{ id: "sample" }];
+    }
     try {
         const products = await listProducts({});
         return products.map((product) => ({

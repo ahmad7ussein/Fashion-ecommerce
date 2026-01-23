@@ -45,7 +45,7 @@ function PaymentRedirectContent() {
   }, [router, searchParams, toast]);
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-12 flex items-center justify-center px-4">
+    <div className="min-h-[100svh] bg-white pt-24 pb-12 flex items-center justify-center px-4">
       <div className="w-full max-w-lg text-center space-y-4">
         <AppLoader label="Verifying payment..." size="lg" />
         <p className="text-sm text-muted-foreground">{message}</p>
@@ -58,7 +58,7 @@ export default function PaymentRedirectPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white pt-24 flex items-center justify-center">
+        <div className="min-h-[100svh] bg-white pt-24 flex items-center justify-center">
           <AppLoader label="Loading..." size="lg" />
         </div>
       }

@@ -132,6 +132,7 @@ html {
 
 body {
   direction: ltr !important;
+  overflow-x: hidden;
 }
 
  

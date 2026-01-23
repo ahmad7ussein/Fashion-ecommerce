@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { sanitizeExternalUrl } from "@/lib/api";
 import { authApi } from "@/lib/api/auth";
 import { ordersApi } from "@/lib/api/orders";
 import { designsApi } from "@/lib/api/designs";
@@ -66,7 +67,7 @@ const parseLocalDesigns = (key) => {
         return parsed.map((design) => ({
             _id: design.id,
             name: design.name || "My design",
-            thumbnail: design.thumbnail || "",
+            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
             createdAt: design.createdAt || new Date().toISOString(),
             updatedAt: design.createdAt || new Date().toISOString(),
             baseProduct: {
@@ -222,7 +223,7 @@ export default function ProfilePage() {
     const getDesignLink = (design) => design.isLocal
         ? `/studio?localDesign=${design._id}`
         : `/studio?design=${design._id}`;
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-24 py-6 sm:py-8 md:py-12">
         <div className="max-w-6xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 sm:mb-12 gap-4">
@@ -238,24 +239,24 @@ export default function ProfilePage() {
           </motion.div>
 
           <Tabs defaultValue="profile" className="space-y-6 sm:space-y-8">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 bg-white backdrop-blur-sm border-2 border-gray-200 p-2 rounded-xl sm:rounded-2xl h-auto gap-2">
-              <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+            <TabsList className="flex w-full flex-nowrap overflow-x-auto sm:grid sm:grid-cols-5 bg-white backdrop-blur-sm border-2 border-gray-200 p-2 rounded-xl sm:rounded-2xl h-auto gap-2">
+              <TabsTrigger value="profile" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
                 <User className="h-4 w-4 sm:h-5 sm:w-5 mr-2"/>
                 Profile
               </TabsTrigger>
-              <TabsTrigger value="orders" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+              <TabsTrigger value="orders" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
                 <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-2"/>
                 Orders
               </TabsTrigger>
-              <TabsTrigger value="designs" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+              <TabsTrigger value="designs" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
                 <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2"/>
                 Designs
               </TabsTrigger>
-              <TabsTrigger value="addresses" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+              <TabsTrigger value="addresses" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2"/>
                 Addresses
               </TabsTrigger>
-              <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+              <TabsTrigger value="settings" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
                 <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-2"/>
                 Settings
               </TabsTrigger>
@@ -289,8 +290,8 @@ export default function ProfilePage() {
                     <Input id="phone" value={userData.phone} onChange={(e) => setUserData({ ...userData, phone: e.target.value })}/>
                   </div>
 
-                  <div className="flex gap-4">
-                    <Button className="bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 rounded-full" onClick={async () => {
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button className="w-full sm:w-auto bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 rounded-full" onClick={async () => {
             try {
                 await authApi.updateProfile({
                     firstName: userData.firstName,
@@ -320,7 +321,7 @@ export default function ProfilePage() {
         }}>
                       Save Changes
                     </Button>
-                    <Button variant="outline" className="bg-white border-2 border-gray-200 hover:bg-rose-50 hover:border-rose-300 text-gray-700 hover:text-rose-600 rounded-full" onClick={() => {
+                    <Button variant="outline" className="w-full sm:w-auto bg-white border-2 border-gray-200 hover:bg-rose-50 hover:border-rose-300 text-gray-700 hover:text-rose-600 rounded-full" onClick={() => {
             setUserData({
                 firstName: user?.firstName || "",
                 lastName: user?.lastName || "",
@@ -357,7 +358,7 @@ export default function ProfilePage() {
                     <Label htmlFor="confirmNewPassword">Confirm New Password</Label>
                     <Input id="confirmNewPassword" type="password"/>
                   </div>
-                  <Button>Update Password</Button>
+                  <Button className="w-full sm:w-auto">Update Password</Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -378,9 +379,9 @@ export default function ProfilePage() {
                 </Card>) : (<div className="space-y-4">
                   {orders.map((order) => (<Card key={order._id} className="bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all rounded-xl sm:rounded-2xl">
                       <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h3 className="font-semibold text-lg text-gray-900">{order.orderNumber}</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="font-semibold text-lg text-gray-900">{order.orderNumber}</h3>
                             <p className="text-sm text-gray-600">
                               Placed on {new Date(order.createdAt).toLocaleDateString()}
                             </p>
@@ -397,7 +398,7 @@ export default function ProfilePage() {
                         <div className="space-y-3 mb-4">
                           {order.items.map((item, index) => (<div key={index} className="flex gap-4">
                               <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-rose-50 to-pink-50 flex-shrink-0 relative overflow-hidden border-2 border-gray-200">
-                                <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
+                                <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
                               </div>
                               <div className="flex-1">
                                 <p className="font-medium text-gray-900">{item.name}</p>
@@ -408,7 +409,7 @@ export default function ProfilePage() {
                             </div>))}
                         </div>
 
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-gray-200">
                           <p className="font-semibold text-gray-900">Total: ${order.total.toFixed(2)}</p>
                           <div className="flex gap-2">
                             <Button variant="outline" size="sm" asChild className="bg-white border-2 border-gray-200 hover:bg-rose-50 hover:border-rose-300 text-gray-700 hover:text-rose-600 rounded-full">
@@ -439,7 +440,7 @@ export default function ProfilePage() {
                 </Card>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {allDesigns.map((design) => (<Card key={design._id} className="overflow-hidden bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all rounded-xl sm:rounded-2xl">
                       <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                        <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
+                        <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
                       </div>
                       <CardContent className="p-4">
                         <h3 className="font-semibold mb-1 text-gray-900">{design.name}</h3>

@@ -17,6 +17,7 @@ import { listProducts } from "@/lib/api/products";
 import { featureControlsApi } from "@/lib/api/featureControls";
 import { studioProductsApi } from "@/lib/api/studioProducts";
 import { FeaturedProductsSkeleton } from "@/components/skeletons";
+import { sanitizeExternalUrl } from "@/lib/api";
 const Background3DSimple = dynamic(() => import("@/components/3d-background").then((mod) => mod.Background3DSimple), { ssr: false });
 const sliderImages = [
     {
@@ -130,7 +131,7 @@ export default function HomePage() {
                         .map((product) => ({
                         id: product._id || product.id || product.name,
                         name: product.name || "Studio Hoodie",
-                        image: product.viewMockups?.front || product.baseMockupUrl || product.image || "",
+                        image: sanitizeExternalUrl(product.viewMockups?.front || product.baseMockupUrl || product.image || ""),
                         price: product.price ?? 0,
                         category: product.type || "Studio",
                     }))
@@ -239,14 +240,14 @@ export default function HomePage() {
         }, 4000);
         return () => clearInterval(interval);
     }, [hoodieCarouselApi, hoodieProducts.length]);
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white">
       
       <ProfessionalNavbar />
 
       
-      <section className="relative overflow-hidden min-h-screen flex items-center pt-20">
+      <section className="relative overflow-hidden min-h-[100svh] flex items-center pt-20">
         
-        <div className="relative w-full h-screen" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
+        <div className="relative w-full h-[100svh]" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
           <AnimatePresence mode="sync" initial={false} custom={slideDirection}>
             <motion.div key={currentSlide} custom={slideDirection} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 flex items-center overflow-hidden" style={{ backgroundImage: activeSlide.bgGradient || "linear-gradient(135deg, #fff1f2 0%, #fdf2f8 50%, #ffe4e6 100%)" }}>
               
@@ -358,7 +359,7 @@ export default function HomePage() {
                         <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200/30 to-rose-200/30 rounded-full blur-xl"/>
                         
                         <div className="relative w-full h-full min-h-[350px] lg:min-h-[550px]">
-                          <Image src={activeSlide.image} alt={activeSlide.title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
+                          <Image src={sanitizeExternalUrl(activeSlide.image || "") || "/placeholder-logo.png"} alt={activeSlide.title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
                         </div>
                       </div>
                     </div>
@@ -438,7 +439,7 @@ export default function HomePage() {
                         <Link href={`/products/${product._id || product.id}`} className="block">
                           <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
                             <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
                                   <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
                                 </div>)}
                               <div className="absolute top-3 left-3">
@@ -495,7 +496,7 @@ export default function HomePage() {
                         <Link href={`/studio?product=${product.id}`} className="block">
                           <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
                             <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
                                   <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
                                 </div>)}
                             </div>
@@ -542,7 +543,7 @@ export default function HomePage() {
                 <div className="absolute -inset-2 rounded-3xl bg-rose-200/40 blur-2xl" aria-hidden="true"/>
                 <div className="relative overflow-hidden rounded-3xl border border-rose-200 bg-white shadow-xl">
                   <div className="relative aspect-[4/3]">
-                    <img src="https://res.cloudinary.com/fashionhub1/image/upload/v1768498925/stylecraft/virtual-try-on/j0qvmnzfwpc2ydfeb757.png" alt={language === "ar" ? "معاينة التجربة الافتراضية" : "Virtual try-on preview"} className="h-full w-full object-cover"/>
+                    <img src="/try-on.png" alt={language === "ar" ? "معاينة التجربة الافتراضية" : "Virtual try-on preview"} className="h-full w-full object-cover"/>
                   </div>
                 </div>
               </div>
@@ -579,7 +580,7 @@ export default function HomePage() {
                         <Link href={`/products/${product._id || product.id}`} className="block">
                           <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
                             <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
                                   <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
                                 </div>)}
                             </div>
@@ -625,7 +626,7 @@ export default function HomePage() {
                         <Link href={`/products/${product._id || product.id}`} className="block">
                           <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
                             <div className="aspect-square bg-gradient-to-br from-pink-50 to-rose-50 relative">
-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
                                   <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
                                 </div>)}
                             </div>
@@ -671,7 +672,7 @@ export default function HomePage() {
                         <Link href={`/products/${product._id || product.id}`} className="block">
                           <motion.div whileHover={{ y: -8, scale: 1.02 }} className="bg-white rounded-2xl overflow-hidden border border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all">
                             <div className="aspect-square bg-gradient-to-br from-amber-50 to-orange-50 relative">
-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
                                   <div className="text-4xl font-bold text-gray-300">{product.name.charAt(0)}</div>
                                 </div>)}
                             </div>
@@ -750,7 +751,7 @@ export default function HomePage() {
               {featuredProducts.map((product, index) => (<Link key={product._id || product.id || index} href={`/products/${product._id || product.id}`}>
                   <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: index * 0.1 }} whileHover={{ y: -8, transition: { duration: 0.3 } }} className="group rounded-2xl overflow-hidden bg-white/90 backdrop-blur-sm border border-gray-200 hover:bg-white hover:border-rose-300 hover:shadow-xl transition-all duration-300">
                     <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative overflow-hidden">
-                      {product.image ? (<Image src={product.image} alt={product.name || "Product"} fill className="object-cover group-hover:scale-110 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>) : (<div className="w-full h-full flex items-center justify-center">
+                      {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover group-hover:scale-110 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>) : (<div className="w-full h-full flex items-center justify-center">
                           <div className="text-6xl font-bold text-gray-200">{(product.name || "P").charAt(0)}</div>
                         </div>)}
                       <div className="absolute top-3 left-3">

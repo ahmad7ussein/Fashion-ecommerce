@@ -1,7 +1,8 @@
 "use client";
 import { getProductImagePath } from "../utils/productImages";
+import { sanitizeExternalUrl } from "@/lib/api";
 export function ProductPreview({ productType, productColor, currentSide, onSideChange: _onSideChange, designElements, zoom = 100, safeArea, mockupUrl, }) {
-    const currentImage = mockupUrl || getProductImagePath(productType, currentSide);
+    const currentImage = sanitizeExternalUrl(mockupUrl || getProductImagePath(productType, currentSide)) || "/placeholder-logo.png";
     const currentSideElements = designElements.filter((el) => (el.side || "front") === currentSide);
     const isWhite = productColor.toLowerCase() === "#ffffff";
     return (<div className="flex flex-col h-full bg-muted/30">
@@ -19,7 +20,7 @@ export function ProductPreview({ productType, productColor, currentSide, onSideC
             filter: !isWhite ? "brightness(0.9)" : undefined,
         }} onError={(e) => {
             ;
-            e.target.src = mockupUrl || "/placeholder-logo.png";
+            e.target.src = currentImage || "/placeholder-logo.png";
         }}/>
 
             

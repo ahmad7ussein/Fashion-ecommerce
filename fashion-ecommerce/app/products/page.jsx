@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { favoritesApi } from "@/lib/api/favorites";
 import { useCart } from "@/lib/cart";
 import { useRouter } from "next/navigation";
+import { sanitizeExternalUrl } from "@/lib/api";
 function ProductsPageContent() {
     const { formatPrice } = useRegion();
     const { language } = useLanguage();
@@ -29,6 +30,8 @@ function ProductsPageContent() {
     const searchParams = useSearchParams();
     const PAGE_SIZE = 24;
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
+    const [reloadKey, setReloadKey] = useState(0);
     const [products, setProducts] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -87,6 +90,7 @@ function ProductsPageContent() {
         let isMounted = true;
         const load = async () => {
             setIsLoading(true);
+            setLoadError("");
             try {
                 const searchParam = searchParams.get("search");
                 const genderParam = searchParams.get("gender");
@@ -142,6 +146,12 @@ function ProductsPageContent() {
                     setTotalCount(0);
                     setTotalPages(1);
                     setIsLoading(false);
+                    setLoadError(error?.message || "Failed to load products");
+                    toast({
+                        title: language === "ar" ? "U?O'U, OU,O¦O-U.USU," : "Load Failed",
+                        description: error?.message || "Failed to load products from the server",
+                        variant: "destructive",
+                    });
                 }
             }
         };
@@ -149,7 +159,7 @@ function ProductsPageContent() {
         return () => {
             isMounted = false;
         };
-    }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy, currentPage]);
+    }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy, currentPage, reloadKey, toast, language]);
     useEffect(() => {
         if (!isAuthenticated || !user || products.length === 0) {
             setFavoriteIds(new Set());
@@ -342,9 +352,18 @@ function ProductsPageContent() {
             showEndEllipsis: end < totalPages,
         };
     })();
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-8 sm:py-12">
         
+        {!isLoading && loadError && (<div className="mb-6 rounded-2xl border-2 border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>{language === "ar" ? `U?O'U, OU,O¦O-U.USU,: ${loadError}` : `Failed to load products: ${loadError}`}</span>
+              <Button variant="outline" size="sm" className="border-rose-300 text-rose-700 hover:bg-rose-100" onClick={() => setReloadKey((prev) => prev + 1)}>
+                Retry
+              </Button>
+            </div>
+          </div>)}
+
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="mb-8 sm:mb-12">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 tracking-tight text-gray-900">
             {language === "ar" ? (<>
@@ -527,7 +546,7 @@ function ProductsPageContent() {
                 <Link href={`/products/${productId}`}>
                   <Card className="group overflow-hidden bg-white backdrop-blur-sm border-2 border-gray-200 hover:bg-white hover:border-rose-300 hover:shadow-xl transition-all duration-300 rounded-xl sm:rounded-2xl cursor-pointer h-full flex flex-col">
                     <div className="aspect-square overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                      <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onError={(e) => {
+                      <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onError={(e) => {
                         const target = e.target;
                         if (target.src !== "/placeholder-logo.png") {
                             target.src = "/placeholder-logo.png";

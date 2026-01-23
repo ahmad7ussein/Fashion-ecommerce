@@ -1,0 +1,503 @@
+diff --git a/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx b/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx
+index 224e3b3..ed3c96e 100644
+--- a/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx
++++ b/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx
+@@ -10,0 +11,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -196,1 +197,1 @@
+-                  <Image src={slide.image} alt={`Slide ${index + 1}`} fill className="object-cover" />
++                  <Image src={sanitizeExternalUrl(slide.image || "") || "/placeholder-logo.png"} alt={`Slide ${index + 1}`} fill className="object-cover" />
+@@ -278,1 +279,1 @@
+-                <Image src={slides[editingSlideIndex].image} alt={`Slide ${editingSlideIndex + 1}`} fill className="object-cover" />
++                <Image src={sanitizeExternalUrl(slides[editingSlideIndex].image || "") || "/placeholder-logo.png"} alt={`Slide ${editingSlideIndex + 1}`} fill className="object-cover" />
+diff --git a/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx b/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx
+index d91b178..2b22f02 100644
+--- a/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx
++++ b/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx
+@@ -5,0 +6,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -124,1 +125,1 @@
+-            const imageUrl = product.image || product.images?.[0] || "/placeholder-logo.png";
++            const imageUrl = sanitizeExternalUrl(product.image || product.images?.[0] || "") || "/placeholder-logo.png";
+diff --git a/fashion-ecommerce/app/admin/page.jsx b/fashion-ecommerce/app/admin/page.jsx
+index c8f94be..47e7e38 100644
+--- a/fashion-ecommerce/app/admin/page.jsx
++++ b/fashion-ecommerce/app/admin/page.jsx
+@@ -27,0 +28 @@ import { useLanguage } from "@/lib/language";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -59,0 +60,11 @@ const parseColorList = (value) => value.split(",").map((color) => color.trim()).
++const resolveImageUrl = (value) => {
++    if (!value)
++        return "";
++    if (typeof value === "string")
++        return sanitizeExternalUrl(value);
++    if (value && typeof value === "object") {
++        const candidate = value.url || value.secure_url || value.path;
++        return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
++    }
++    return "";
++};
+@@ -1705,1 +1709,1 @@
+-                                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" loading="lazy" quality={75} onError={(e) => {
++                                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" loading="lazy" quality={75} onError={(e) => {
+@@ -1897,1 +1901,1 @@
+-                            <img src={productForm.image} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
++                            <img src={sanitizeExternalUrl(productForm.image || "")} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
+@@ -1941,1 +1945,1 @@
+-                                  <img src={productForm.images[index]} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
++                                  <img src={sanitizeExternalUrl(productForm.images[index] || "")} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
+@@ -2290,0 +2293,4 @@
++            const thumbnailUrl = resolveImageUrl(p.viewMockups?.front)
++                || resolveImageUrl(p.baseMockupUrl)
++                || resolveImageUrl(firstColorView?.front)
++                || resolveImageUrl(firstColorMockup)
+@@ -3497,1 +3511,1 @@
+-                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded"/>
++                        <img src={sanitizeExternalUrl(item.image || "")} alt={item.name} className="w-16 h-16 object-cover rounded"/>
+@@ -3597,1 +3611,1 @@
+-                    {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
++                    {previewBaseImage ? (<img src={sanitizeExternalUrl(previewBaseImage || "")} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+@@ -3611,1 +3625,1 @@
+-                            <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
++                            <img src={sanitizeExternalUrl(previewSideData.uploadedImage || "")} alt="Design asset" className="h-full w-full object-contain"/>
+diff --git a/fashion-ecommerce/app/cart/page.jsx b/fashion-ecommerce/app/cart/page.jsx
+index fc6e309..81204b3 100644
+--- a/fashion-ecommerce/app/cart/page.jsx
++++ b/fashion-ecommerce/app/cart/page.jsx
+@@ -11,0 +12,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -43,1 +44,1 @@
+-                          <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 128px"/>
++                          <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 128px"/>
+diff --git a/fashion-ecommerce/app/checkout/page.jsx b/fashion-ecommerce/app/checkout/page.jsx
+index 979d58a..12c3651 100644
+--- a/fashion-ecommerce/app/checkout/page.jsx
++++ b/fashion-ecommerce/app/checkout/page.jsx
+@@ -17,0 +18,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -258,1 +259,1 @@
+-                            <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
++                            <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
+diff --git a/fashion-ecommerce/app/collection/page.jsx b/fashion-ecommerce/app/collection/page.jsx
+index 396f8ad..c31ab8c 100644
+--- a/fashion-ecommerce/app/collection/page.jsx
++++ b/fashion-ecommerce/app/collection/page.jsx
+@@ -17,0 +18,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -238,1 +239,1 @@
+-                <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
++                <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+diff --git a/fashion-ecommerce/app/collections/page.jsx b/fashion-ecommerce/app/collections/page.jsx
+index 23ef527..0844d7f 100644
+--- a/fashion-ecommerce/app/collections/page.jsx
++++ b/fashion-ecommerce/app/collections/page.jsx
+@@ -17,0 +18,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -358,1 +359,1 @@
+-                            <Image src={heroSlides[currentSlide].image || "/placeholder-logo.png"} alt={heroSlides[currentSlide].name} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
++                            <Image src={sanitizeExternalUrl(heroSlides[currentSlide].image || "") || "/placeholder-logo.png"} alt={heroSlides[currentSlide].name} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
+@@ -441,1 +442,1 @@
+-                            <Image src={product.image || "/placeholder-logo.png"} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
++                            <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+diff --git a/fashion-ecommerce/app/employee/page.jsx b/fashion-ecommerce/app/employee/page.jsx
+index 8331fe5..acec07b 100644
+--- a/fashion-ecommerce/app/employee/page.jsx
++++ b/fashion-ecommerce/app/employee/page.jsx
+@@ -24,0 +25 @@ import { useLanguage } from "@/lib/language";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -76,0 +79,11 @@ const parseColorList = (value) => value.split(",").map((color) => color.trim()).
++const resolveImageUrl = (value) => {
++    if (!value)
++        return "";
++    if (typeof value === "string")
++        return sanitizeExternalUrl(value);
++    if (value && typeof value === "object") {
++        const candidate = value.url || value.secure_url || value.path;
++        return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
++    }
++    return "";
++};
+@@ -1164,0 +1173,4 @@
++            const thumbnailUrl = resolveImageUrl(p.viewMockups?.front)
++                || resolveImageUrl(p.baseMockupUrl)
++                || resolveImageUrl(firstColorView?.front)
++                || resolveImageUrl(firstColorMockup)
+@@ -1734,1 +1754,1 @@
+-                                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" onError={(e) => {
++                                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" onError={(e) => {
+@@ -1898,1 +1918,1 @@
+-                            <img src={productForm.image} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
++                            <img src={sanitizeExternalUrl(productForm.image || "")} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
+@@ -1942,1 +1962,1 @@
+-                                  <img src={productForm.images[index]} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
++                                  <img src={sanitizeExternalUrl(productForm.images[index] || "")} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
+@@ -2322,1 +2342,1 @@
+-                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded"/>
++                          <img src={sanitizeExternalUrl(item.image || "")} alt={item.name} className="w-12 h-12 object-cover rounded"/>
+@@ -2439,1 +2459,1 @@
+-                  {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
++                  {previewBaseImage ? (<img src={sanitizeExternalUrl(previewBaseImage || "")} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+@@ -2453,1 +2473,1 @@
+-                          <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
++                          <img src={sanitizeExternalUrl(previewSideData.uploadedImage || "")} alt="Design asset" className="h-full w-full object-contain"/>
+diff --git a/fashion-ecommerce/app/forgot-password/page.jsx b/fashion-ecommerce/app/forgot-password/page.jsx
+index 584cbc6..cd8e035 100644
+--- a/fashion-ecommerce/app/forgot-password/page.jsx
++++ b/fashion-ecommerce/app/forgot-password/page.jsx
+@@ -11,0 +12,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -38,2 +39,1 @@
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+-            const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
++            const response = await fetch(`${API_BASE_URL()}/auth/forgot-password`, {
+diff --git a/fashion-ecommerce/app/login/page.jsx b/fashion-ecommerce/app/login/page.jsx
+index 5eb9c72..ab996fd 100644
+--- a/fashion-ecommerce/app/login/page.jsx
++++ b/fashion-ecommerce/app/login/page.jsx
+@@ -14,0 +15,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -152,2 +153,1 @@
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+-            const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
++            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
+@@ -323,1 +349,1 @@
+-                errorDetails = "The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on http://localhost:5000\n• Check if the server is started correctly\n• Verify your internet connection";
++                errorDetails = `The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on ${API_BASE_URL().replace("/api", "")}\n• Check if the server is started correctly\n• Verify your internet connection`;
+@@ -444,1 +470,1 @@
+-              <li>Make sure the backend server is running on http://localhost:5000</li>
++              <li>Make sure the backend server is running on {API_BASE_URL().replace("/api", "")}</li>
+diff --git a/fashion-ecommerce/app/my-designs/page.jsx b/fashion-ecommerce/app/my-designs/page.jsx
+index c4f69fa..bb3d01e 100644
+--- a/fashion-ecommerce/app/my-designs/page.jsx
++++ b/fashion-ecommerce/app/my-designs/page.jsx
+@@ -13,0 +14,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -68,1 +69,1 @@
+-            thumbnail: design.thumbnail || "",
++            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
+@@ -209,1 +210,1 @@
+-                image: design.thumbnail || design.designImageURL || "",
++                image: sanitizeExternalUrl(design.thumbnail || design.designImageURL || ""),
+@@ -342,1 +343,1 @@
+-                  <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
++                  <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+@@ -383,1 +384,1 @@
+-                      <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
++                      <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
+diff --git a/fashion-ecommerce/app/new-arrival/page.jsx b/fashion-ecommerce/app/new-arrival/page.jsx
+index c9911d2..4cbe89c 100644
+--- a/fashion-ecommerce/app/new-arrival/page.jsx
++++ b/fashion-ecommerce/app/new-arrival/page.jsx
+@@ -17,0 +18,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -244,1 +245,1 @@
+-                          <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
++                          <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+diff --git a/fashion-ecommerce/app/page.jsx b/fashion-ecommerce/app/page.jsx
+index e52f7a4..7ddad00 100644
+--- a/fashion-ecommerce/app/page.jsx
++++ b/fashion-ecommerce/app/page.jsx
+@@ -19,0 +20,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -133,1 +134,1 @@
+-                        image: product.viewMockups?.front || product.baseMockupUrl || product.image || "",
++                        image: sanitizeExternalUrl(product.viewMockups?.front || product.baseMockupUrl || product.image || ""),
+@@ -361,1 +362,1 @@
+-                          <Image src={activeSlide.image} alt={activeSlide.title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
++                          <Image src={sanitizeExternalUrl(activeSlide.image || "") || "/placeholder-logo.png"} alt={activeSlide.title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
+@@ -441,1 +442,1 @@
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -498,1 +499,1 @@
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -582,1 +583,1 @@
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -628,1 +629,1 @@
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -674,1 +675,1 @@
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -753,1 +754,1 @@
+-                      {product.image ? (<Image src={product.image} alt={product.name || "Product"} fill className="object-cover group-hover:scale-110 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>) : (<div className="w-full h-full flex items-center justify-center">
++                      {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover group-hover:scale-110 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>) : (<div className="w-full h-full flex items-center justify-center">
+diff --git a/fashion-ecommerce/app/profile/page.jsx b/fashion-ecommerce/app/profile/page.jsx
+index 1fecf18..f8c5bda 100644
+--- a/fashion-ecommerce/app/profile/page.jsx
++++ b/fashion-ecommerce/app/profile/page.jsx
+@@ -14,0 +15,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -69,1 +70,1 @@
+-            thumbnail: design.thumbnail || "",
++            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
+@@ -400,1 +401,1 @@
+-                                <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
++                                <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
+@@ -442,1 +443,1 @@
+-                        <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
++                        <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
+diff --git a/fashion-ecommerce/app/reset-password/page.jsx b/fashion-ecommerce/app/reset-password/page.jsx
+index a9edc25..050b6f9 100644
+--- a/fashion-ecommerce/app/reset-password/page.jsx
++++ b/fashion-ecommerce/app/reset-password/page.jsx
+@@ -12,0 +13,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -62,2 +63,1 @@
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+-            const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
++            const response = await fetch(`${API_BASE_URL()}/auth/reset-password`, {
+diff --git a/fashion-ecommerce/app/sale/page.jsx b/fashion-ecommerce/app/sale/page.jsx
+index c18751d..334efbd 100644
+--- a/fashion-ecommerce/app/sale/page.jsx
++++ b/fashion-ecommerce/app/sale/page.jsx
+@@ -13,0 +14,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -70,1 +71,1 @@
+-                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
++                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+diff --git a/fashion-ecommerce/app/signup/page.jsx b/fashion-ecommerce/app/signup/page.jsx
+index c858122..5672dc2 100644
+--- a/fashion-ecommerce/app/signup/page.jsx
++++ b/fashion-ecommerce/app/signup/page.jsx
+@@ -14,0 +15,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -96,1 +97,1 @@
+-                errorMessage = "Cannot connect to the server. Please make sure the backend server is running on http://localhost:5000";
++                errorMessage = `Cannot connect to the server. Please make sure the backend server is running on ${API_BASE_URL().replace("/api", "")}`;
+@@ -117,0 +134,1 @@
++            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
+@@ -181,1 +264,0 @@
+-                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+@@ -186,1 +264,0 @@
+-                    const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
+diff --git a/fashion-ecommerce/app/studio/components/ProductPreview.jsx b/fashion-ecommerce/app/studio/components/ProductPreview.jsx
+index c0e6260..dc356d6 100644
+--- a/fashion-ecommerce/app/studio/components/ProductPreview.jsx
++++ b/fashion-ecommerce/app/studio/components/ProductPreview.jsx
+@@ -2,0 +3,1 @@
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -4,1 +5,1 @@
+-    const currentImage = mockupUrl || getProductImagePath(productType, currentSide);
++    const currentImage = sanitizeExternalUrl(mockupUrl || getProductImagePath(productType, currentSide)) || "/placeholder-logo.png";
+diff --git a/fashion-ecommerce/app/studio/page.jsx b/fashion-ecommerce/app/studio/page.jsx
+index 09e4696..88d44fb 100644
+--- a/fashion-ecommerce/app/studio/page.jsx
++++ b/fashion-ecommerce/app/studio/page.jsx
+@@ -34,0 +35 @@ import { useAuth } from "@/lib/auth";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -126,0 +128,10 @@ const normalizeColorKey = (value) => String(value || "").trim().toLowerCase();
++const resolveImageUrl = (value) => {
++  if (!value) return "";
++  if (typeof value === "string") return sanitizeExternalUrl(value);
++  if (value && typeof value === "object") {
++    const candidate = value.url || value.secure_url || value.path;
++    return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
++  }
++  return "";
++};
++
+@@ -252,0 +262,1 @@
++  const colorViewImage = resolveImageUrl(
+@@ -254,0 +266,1 @@
++  const productViewImage = resolveImageUrl(
+@@ -259,0 +272,5 @@
++      resolveImageUrl(colorView?.front) ||
++      resolveImageUrl(product.viewMockups?.front) ||
++      resolveImageUrl(colorMockup) ||
++      resolveImageUrl(product.baseMockupUrl) ||
++      resolveImageUrl(product.image) ||
+@@ -259,0 +280,3 @@
++  if (colorView?.front) return resolveImageUrl(colorView.front);
++  if (colorMockup) return resolveImageUrl(colorMockup);
++  if (product.viewMockups?.front) return resolveImageUrl(product.viewMockups.front);
+@@ -261,0 +284,1 @@
++  return resolveImageUrl(product.baseMockupUrl) || resolveImageUrl(product.image);
+@@ -1107,1 +1131,1 @@
+-                          src={productPreviewImage || activeProduct?.image || "/placeholder-logo.png"}
++                          src={sanitizeExternalUrl(productPreviewImage || activeProduct?.image || "") || "/placeholder-logo.png"}
+@@ -1566,1 +1600,1 @@
+-                                src={design.thumbnail}
++                                src={sanitizeExternalUrl(design.thumbnail)}
+diff --git a/fashion-ecommerce/components/staff-chat-panel.jsx b/fashion-ecommerce/components/staff-chat-panel.jsx
+index 5cbf22d..df9c282 100644
+--- a/fashion-ecommerce/components/staff-chat-panel.jsx
++++ b/fashion-ecommerce/components/staff-chat-panel.jsx
+@@ -13,0 +14,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -15,2 +16,1 @@
+-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+-const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
++const SOCKET_URL = API_BASE_URL().replace(/\/api\/?$/, "");
+diff --git a/fashion-ecommerce/lib/api/auth.js b/fashion-ecommerce/lib/api/auth.js
+index b085d22..ae448bf 100644
+--- a/fashion-ecommerce/lib/api/auth.js
++++ b/fashion-ecommerce/lib/api/auth.js
+@@ -5,1 +5,1 @@
+-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++        const { API_BASE_URL } = await import("@/lib/api");
+@@ -8,2 +8,2 @@
+-            logger.log("🔍 Attempting login to:", `${API_BASE_URL}/auth/login`);
+-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
++            logger.log("🔍 Attempting login to:", `${API_BASE_URL()}/auth/login`);
++            const response = await fetch(`${API_BASE_URL()}/auth/login`, {
+@@ -105,1 +105,1 @@
+-                logger.error("API URL:", API_BASE_URL);
++                logger.error("API URL:", API_BASE_URL());
+@@ -107,1 +107,1 @@
+-                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+@@ -127,1 +127,1 @@
+-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++        const { API_BASE_URL } = await import("@/lib/api");
+@@ -129,2 +129,2 @@
+-            logger.log("🔍 Attempting Google auth to:", `${API_BASE_URL}/auth/google`);
+-            const response = await fetch(`${API_BASE_URL}/auth/google`, {
++            logger.log("🔍 Attempting Google auth to:", `${API_BASE_URL()}/auth/google`);
++            const response = await fetch(`${API_BASE_URL()}/auth/google`, {
+@@ -156,1 +156,1 @@
+-                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+diff --git a/fashion-ecommerce/lib/api/client.js b/fashion-ecommerce/lib/api/client.js
+index 2d77201..12c7ae0 100644
+--- a/fashion-ecommerce/lib/api/client.js
++++ b/fashion-ecommerce/lib/api/client.js
+@@ -2,1 +2,1 @@
+-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++import { API_BASE_URL } from "@/lib/api";
+@@ -22,1 +22,1 @@
+-    const url = `${API_BASE_URL}${endpoint}`;
++    const url = `${API_BASE_URL()}${endpoint}`;
+@@ -163,1 +172,1 @@
+-                        throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++                        throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+@@ -205,1 +214,1 @@
+-            throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++            throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+diff --git a/fashion-ecommerce/next.config.mjs b/fashion-ecommerce/next.config.mjs
+index 543287c..f7dd4ff 100644
+--- a/fashion-ecommerce/next.config.mjs
++++ b/fashion-ecommerce/next.config.mjs
+@@ -31,0 +32,13 @@ const nextConfig = {
++  async rewrites() {
++    const target = process.env.API_PROXY_TARGET;
++    if (!target) {
++      return [];
++    }
++    const normalizedTarget = target.replace(/\/$/, "");
++    return [
++      {
++        source: "/api/:path*",
++        destination: `${normalizedTarget}/api/:path*`,
++      },
++    ];
++  },
+diff --git a/fashion-ecommerce/.env.example b/fashion-ecommerce/.env.example
+new file mode 100644
+index 0000000..70a79de
+--- /dev/null
++++ b/fashion-ecommerce/.env.example
+@@ -0,0 +1,13 @@
++# Public API config
++NEXT_PUBLIC_API_BASE_URL=/api
++NEXT_PUBLIC_ANDROID_API_URL=http://10.0.2.2:5000/api
++NEXT_PUBLIC_USE_PROXY=true
++
++# Proxy target for local dev (Next.js rewrite)
++API_PROXY_TARGET=http://localhost:5000
++
++# OAuth
++NEXT_PUBLIC_GOOGLE_CLIENT_ID=
++
++# Backend
++FRONTEND_URL=http://localhost:3000
+diff --git a/fashion-ecommerce/lib/api.ts b/fashion-ecommerce/lib/api.ts
+new file mode 100644
+index 0000000..39bc28b
+--- /dev/null
++++ b/fashion-ecommerce/lib/api.ts
+@@ -0,0 +1,83 @@
++const RAW_API_BASE_URL =
++  process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
++const ANDROID_API_URL = process.env.NEXT_PUBLIC_ANDROID_API_URL || "";
++const USE_PROXY = process.env.NEXT_PUBLIC_USE_PROXY === "true";
++const FALLBACK_DEV_WEB_API_URL = "http://localhost:5000/api";
++
++const resolveIsNative = () => {
++  if (typeof window === "undefined") {
++    return false;
++  }
++  const protocol = window.location?.protocol;
++  if (protocol === "capacitor:" || protocol === "ionic:") {
++    return true;
++  }
++  return Boolean(window?.Capacitor?.isNativePlatform?.());
++};
++
++const isHttpsPage = () =>
++  typeof window !== "undefined" && window.location?.protocol === "https:";
++
++const isProduction = () => process.env.NODE_ENV === "production";
++
++const isHttpUrl = (value: string) => value.startsWith("http://");
++
++const ensureHttpsApiUrl = (value: string) => {
++  if (!value) {
++    return value;
++  }
++  if (isHttpUrl(value)) {
++    if (isHttpsPage() || isProduction()) {
++      console.error("[API] Insecure API URL blocked on HTTPS page:", value);
++      return "";
++    }
++    console.warn("[API] Insecure API URL in development:", value);
++  }
++  return value;
++};
++
++export const getApiBaseUrl = () => {
++  if (resolveIsNative()) {
++    return ANDROID_API_URL || RAW_API_BASE_URL || FALLBACK_DEV_WEB_API_URL;
++  }
++
++  if (USE_PROXY) {
++    return "/api";
++  }
++
++  const safeApiUrl = ensureHttpsApiUrl(RAW_API_BASE_URL);
++  if (safeApiUrl) {
++    return safeApiUrl;
++  }
++
++  if (isHttpsPage() || isProduction()) {
++    return "/api";
++  }
++
++  return FALLBACK_DEV_WEB_API_URL;
++};
++
++export const API_BASE_URL = () => getApiBaseUrl();
++
++const CLOUDINARY_HTTP_PREFIX = "http://res.cloudinary.com/";
++const CLOUDINARY_HTTPS_PREFIX = "https://res.cloudinary.com/";
++
++export const sanitizeExternalUrl = (value: string) => {
++  if (!value) {
++    return "";
++  }
++  if (value.startsWith(CLOUDINARY_HTTP_PREFIX)) {
++    if (!isProduction()) {
++      console.warn("[Assets] Upgrading Cloudinary URL to HTTPS:", value);
++    }
++    return CLOUDINARY_HTTPS_PREFIX + value.slice(CLOUDINARY_HTTP_PREFIX.length);
++  }
++  if (value.startsWith("http://")) {
++    if (isHttpsPage() || isProduction()) {
++      console.error("[Assets] Insecure asset URL blocked:", value);
++      return "";
++    }
++    console.warn("[Assets] Insecure asset URL in development:", value);
++  }
++  return value;
++};

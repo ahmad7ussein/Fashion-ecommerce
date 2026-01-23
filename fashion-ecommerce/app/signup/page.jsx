@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/logo";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { API_BASE_URL } from "@/lib/api";
 export default function SignupPage() {
     const router = useRouter();
     const [formData, setFormData] = useState({
@@ -93,7 +94,7 @@ export default function SignupPage() {
                 errorMessage = error;
             }
             if (errorMessage.includes("Cannot connect to the server") || errorMessage.includes("Failed to fetch")) {
-                errorMessage = "Cannot connect to the server. Please make sure the backend server is running on http://localhost:5000";
+                errorMessage = `Cannot connect to the server. Please make sure the backend server is running on ${API_BASE_URL().replace("/api", "")}`;
             }
             toast({
                 title: "Registration failed",
@@ -115,12 +116,96 @@ export default function SignupPage() {
             setErrors({ ...errors, [e.target.id]: "" });
         }
     };
+    const exchangeGoogleToken = async (idToken) => {
+        if (!idToken) {
+            toast({
+                title: "Google login failed",
+                description: "No credential returned by Google.",
+                variant: "destructive",
+            });
+            return;
+        }
+        setIsGoogleLoading(true);
+        try {
+            toast({
+                title: "جاري إنشاء الحساب...",
+                description: "يرجى الانتظار",
+            });
+            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    idToken,
+                }),
+            });
+            const data = await backendResponse.json();
+            if (!backendResponse.ok || !data.success) {
+                throw new Error(data.message || 'Google login failed');
+            }
+            if (data.data.token) {
+                localStorage.setItem('auth_token', data.data.token);
+            }
+            toast({
+                title: "تم إنشاء الحساب بنجاح! ✨",
+                description: `مرحباً ${data.data.user.firstName}!`,
+            });
+            const role = String(data.data.user.role || "").toLowerCase().trim();
+            const redirectUrl = role === "admin"
+                ? "/admin"
+                : role === "employee"
+                    ? "/employee"
+                    : "/profile";
+            router.replace(redirectUrl);
+        }
+        catch (error) {
+            console.error("❌ Google login error:", error);
+            toast({
+                title: "فشل التسجيل",
+                description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
+                variant: "destructive",
+            });
+        }
+        finally {
+            setIsGoogleLoading(false);
+        }
+    };
+    const handleNativeGoogleLogin = async (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        try {
+            const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+            const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+            if (clientId) {
+                await GoogleAuth.initialize({ clientId });
+            }
+            const result = await GoogleAuth.signIn();
+            const idToken = result?.authentication?.idToken || result?.idToken;
+            await exchangeGoogleToken(idToken);
+        }
+        catch (error) {
+            console.error("❌ Google native login error:", error);
+            toast({
+                title: "فشل التسجيل",
+                description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
+                variant: "destructive",
+            });
+        }
+    };
     const handleGoogleLogin = async (e) => {
         if (e) {
             e.preventDefault();
             e.stopPropagation();
         }
         if (isGoogleLoading) {
+            return;
+        }
+        if (typeof window !== "undefined" && window?.Capacitor?.isNativePlatform?.()) {
+            await handleNativeGoogleLogin(e);
             return;
         }
         const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -176,51 +261,7 @@ export default function SignupPage() {
                 }
             }
             const handleGoogleCallback = async (response) => {
-                try {
-                    setIsGoogleLoading(false);
-                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-                    toast({
-                        title: "جاري إنشاء الحساب...",
-                        description: "يرجى الانتظار",
-                    });
-                    const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'include',
-                        body: JSON.stringify({
-                            idToken: response.credential,
-                        }),
-                    });
-                    const data = await backendResponse.json();
-                    if (!backendResponse.ok || !data.success) {
-                        throw new Error(data.message || 'Google login failed');
-                    }
-                    if (data.data.token) {
-                        localStorage.setItem('auth_token', data.data.token);
-                    }
-                    toast({
-                        title: "تم إنشاء الحساب بنجاح! ✨",
-                        description: `مرحباً ${data.data.user.firstName}!`,
-                    });
-                    const role = String(data.data.user.role || "").toLowerCase().trim();
-                    const redirectUrl = role === "admin"
-                        ? "/admin"
-                        : role === "employee"
-                            ? "/employee"
-                            : "/profile";
-                    router.replace(redirectUrl);
-                }
-                catch (error) {
-                    setIsGoogleLoading(false);
-                    console.error("❌ Google login error:", error);
-                    toast({
-                        title: "فشل التسجيل",
-                        description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
-                        variant: "destructive",
-                    });
-                }
+                await exchangeGoogleToken(response?.credential);
             };
             if (!window.google.accounts?.id?._clientId) {
                 window.google.accounts.id.initialize({
@@ -258,7 +299,7 @@ export default function SignupPage() {
             setIsGoogleLoading(false);
         }
     };
-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
+    return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-md">
         
         <div className="text-center mb-8 space-y-5">
@@ -282,7 +323,7 @@ export default function SignupPage() {
           <CardContent className="space-y-6">
             <form onSubmit={handleSubmit} className="space-y-4">
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
                   <div className="relative">

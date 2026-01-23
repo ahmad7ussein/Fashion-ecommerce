@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, X, User, Palette, Package, LogOut, Settings, Search, ChevronDown, ChevronRight, Snowflake, Languages, MapPin, Info, ArrowRight, Moon, Sun, Tag, Star, Phone } from "lucide-react";
+import { ShoppingBag, Menu, X, User, Palette, Package, LogOut, Settings, Search, ChevronDown, ChevronRight, Snowflake, Languages, MapPin, Info, ArrowRight, Tag, Star, Phone } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
@@ -106,15 +106,15 @@ export function ProfessionalNavbar() {
         },
     ];
     return (<>
-      <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
+      <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 pt-[calc(env(safe-area-inset-top)+0.5rem)] ${scrolled
             ? "bg-background/98 backdrop-blur-xl border-b border-border shadow-lg"
             : "bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm"}`}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 md:h-20 items-center justify-between gap-4">
+          <div className="flex min-h-14 sm:min-h-16 md:min-h-20 flex-wrap items-center justify-between gap-2 sm:gap-3 py-2">
             
-            <Link href="/" className="flex items-center space-x-3 group flex-shrink-0 ml-4 md:ml-8">
+            <Link href="/" className="flex items-center space-x-3 group flex-shrink-0 ml-2 sm:ml-4 md:ml-8">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} transition={{ duration: 0.2 }}>
-                <Logo className="h-18 md:h-24 mix-blend-multiply dark:mix-blend-normal"/>
+                <Logo className="h-10 sm:h-12 md:h-14 lg:h-16 dark:invert dark:brightness-110 dark:drop-shadow-[0_2px_8px_rgba(255,255,255,0.25)]"/>
               </motion.div>
             </Link>
 
@@ -179,7 +179,7 @@ export function ProfessionalNavbar() {
             </nav>
 
             
-            <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 flex-shrink-0">
               
               <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.3 }} className="hidden md:block">
                 <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} className="h-9 w-9 rounded-lg hover:bg-accent transition-colors" title={language === "ar" ? "بحث" : "Search"}>
@@ -200,6 +200,13 @@ export function ProfessionalNavbar() {
                       </motion.div>)}
                   </Button>
                 </Link>
+              </motion.div>
+
+              
+              <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.4 }}>
+                <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="h-9 w-9 rounded-lg hover:bg-accent transition-colors text-base" aria-label="Toggle theme">
+                  <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
+                </Button>
               </motion.div>
 
               
@@ -232,21 +239,7 @@ export function ProfessionalNavbar() {
                     </DropdownMenuItem>
                     
                     <DropdownMenuSeparator />
-                    
-                    
-                    <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
-                      {language === "ar" ? "المظهر" : "Theme"}
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setTheme("light")} className={`cursor-pointer px-2 py-1.5 ${theme === "light" ? "bg-accent text-accent-foreground" : ""}`}>
-                      <Sun className={`h-4 w-4 ${language === "ar" ? "ml-2" : "mr-2"}`}/>
-                      {language === "ar" ? "الوضع الفاتح" : "Light Mode"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTheme("dark")} className={`cursor-pointer px-2 py-1.5 ${theme === "dark" ? "bg-accent text-accent-foreground" : ""}`}>
-                      <Moon className={`h-4 w-4 ${language === "ar" ? "ml-2" : "mr-2"}`}/>
-                      {language === "ar" ? "الوضع الداكن" : "Dark Mode"}
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuSeparator />
+
                     
                     
                     <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
@@ -371,7 +364,16 @@ export function ProfessionalNavbar() {
       <AnimatePresence>
         {mobileMenuOpen && (<motion.div initial={{ opacity: 0, x: language === "ar" ? "-100%" : "100%" }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: language === "ar" ? "-100%" : "100%" }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="fixed inset-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-background/95 backdrop-blur-xl"/>
-            <div className="relative h-full flex flex-col p-6 pt-24 overflow-y-auto">
+            <div className="relative h-full flex flex-col p-5 pt-20 sm:pt-24 overflow-y-auto">
+              <div className="mb-4">
+                <Button variant="outline" className="w-full justify-between" onClick={() => {
+            setSearchOpen(true);
+            setMobileMenuOpen(false);
+        }}>
+                  <span>{language === "ar" ? 'O"O-O® O1U+ OU,U.U+O¦OªOO¦' : "Search products"}</span>
+                  <Search className="h-4 w-4"/>
+                </Button>
+              </div>
               <nav className="flex flex-col gap-2">
                 {navLinks.map((link, index) => (<motion.div key={link.href} initial={{ opacity: 0, x: language === "ar" ? -50 : 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: index * 0.1 }}>
                     <Link href={link.href} onClick={() => setMobileMenuOpen(false)}>
@@ -429,27 +431,6 @@ export function ProfessionalNavbar() {
                 setMobileMenuOpen(false);
             }} className="flex-1">
                       🇸🇦 {language === "ar" ? "العربية" : "Arabic"}
-                    </Button>
-                  </div>
-                </div>
-
-                
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground mb-3 px-2">
-                    {language === "ar" ? "المظهر" : "Theme"}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button variant={theme === "light" ? "default" : "outline"} onClick={() => {
-                setTheme("light");
-            }} className={`flex-1 ${language === "ar" ? "flex-row-reverse" : ""}`}>
-                      <Sun className={`h-4 w-4 ${language === "ar" ? "ml-2" : "mr-2"}`}/>
-                      {language === "ar" ? "فاتح" : "Light"}
-                    </Button>
-                    <Button variant={theme === "dark" ? "default" : "outline"} onClick={() => {
-                setTheme("dark");
-            }} className={`flex-1 ${language === "ar" ? "flex-row-reverse" : ""}`}>
-                      <Moon className={`h-4 w-4 ${language === "ar" ? "ml-2" : "mr-2"}`}/>
-                      {language === "ar" ? "داكن" : "Dark"}
                     </Button>
                   </div>
                 </div>

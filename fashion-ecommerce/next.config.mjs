@@ -29,10 +29,29 @@ const nextConfig = {
     
     unoptimized: process.env.CAPACITOR_BUILD === 'true',
   },
+  async rewrites() {
+    if (process.env.CAPACITOR_BUILD === 'true') {
+      return [];
+    }
+    const target = process.env.API_PROXY_TARGET;
+    if (!target) {
+      return [];
+    }
+    const normalizedTarget = target.replace(/\/$/, "");
+    return [
+      {
+        source: "/api/:path*",
+        destination: `${normalizedTarget}/api/:path*`,
+      },
+    ];
+  },
   
   poweredByHeader: false,
   compress: true,
   async headers() {
+    if (process.env.CAPACITOR_BUILD === 'true') {
+      return [];
+    }
     const isDev = process.env.NODE_ENV === 'development';
     if (!isDev) {
       return [];
@@ -44,7 +63,7 @@ const nextConfig = {
     const fontSrc =
       "font-src 'self' data: https://fonts.gstatic.com";
     const imgSrc =
-      "img-src 'self' data: blob:";
+      "img-src 'self' data: blob: https: http:";
     return [
       {
         source: '/(.*)',

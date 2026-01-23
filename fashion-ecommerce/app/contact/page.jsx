@@ -67,8 +67,8 @@ export default function ContactPage() {
             link: "#",
         },
     ];
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
-      <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-12 sm:py-16">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+      <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-10 sm:py-16">
         
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center mb-12 sm:mb-16">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 tracking-tight text-gray-900">
@@ -101,7 +101,7 @@ export default function ContactPage() {
 
           
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.4 }} className="lg:col-span-2">
-            <Card className="p-6 sm:p-8 bg-white border-2 border-gray-200 shadow-xl">
+            <Card className="p-5 sm:p-8 bg-white border-2 border-gray-200 shadow-xl">
               <div className="flex items-center gap-3 mb-6">
                 <MessageSquare className="h-6 w-6 text-rose-600"/>
                 <h2 className="text-2xl font-bold text-gray-900">

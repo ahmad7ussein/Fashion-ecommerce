@@ -217,6 +217,32 @@ const startServer = async () => {
             console.warn('⚠️  Database verification warning:', verifyError.message);
         }
         const server = http_1.default.createServer(app);
+        let isShuttingDown = false;
+        const handleShutdown = (signal) => {
+            if (isShuttingDown)
+                return;
+            isShuttingDown = true;
+            process.env.SERVER_SHUTTING_DOWN = 'true';
+            console.log(`dY\`< ${signal} received, shutting down gracefully`);
+            server.close(async () => {
+                if (mongoose_1.default.connection.readyState === 1) {
+                    try {
+                        mongoose_1.default.connection._intentionalDisconnect = true;
+                        await mongoose_1.default.connection.close(false);
+                        console.log('Гo. Database connection closed');
+                    }
+                    catch (closeError) {
+                        console.warn('Гs Л,?  Error closing database connection:', closeError.message);
+                    }
+                }
+                console.log('Гo. Process terminated');
+                process.exit(0);
+            });
+            setTimeout(() => {
+                console.warn('⚠️  Forced shutdown after timeout');
+                process.exit(1);
+            }, 10000);
+        };
         const io = new socket_io_1.Server(server, { cors: socketCorsOptions });
         (0, staffChatSocket_1.default)(io);
         server.listen(env_1.default.port, () => {
@@ -267,7 +293,7 @@ const startServer = async () => {
                 console.error(`     lsof -ti:${env_1.default.port} | xargs kill -9`);
                 console.error('');
                 console.error('   Option 2: Change the port in .env file');
-                console.error(`     Change PORT=5000 to PORT=5001 (or any other available port)`);
+                console.error(`     Change PORT=5000 to another available port`);
                 console.error('');
                 console.error('   Option 3: Use a different terminal/process');
                 console.error('     Make sure you closed any previous server instances');
@@ -285,12 +311,8 @@ const startServer = async () => {
             console.error('❌ Unhandled Rejection:', err.message);
             server.close(() => process.exit(1));
         });
-        process.on('SIGTERM', () => {
-            console.log('👋 SIGTERM received, shutting down gracefully');
-            server.close(() => {
-                console.log('✅ Process terminated');
-            });
-        });
+        process.on('SIGINT', () => handleShutdown('SIGINT'));
+        process.on('SIGTERM', () => handleShutdown('SIGTERM'));
     }
     catch (error) {
         if (mongoose_1.default.connection.readyState === 1) {

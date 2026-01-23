@@ -71,7 +71,7 @@ function ReviewFormContent() {
             setIsSubmitting(false);
         }
     };
-    return (<div className="min-h-screen bg-white pt-24 pb-12 flex items-center justify-center px-4">
+    return (<div className="min-h-[100svh] bg-white pt-24 pb-12 flex items-center justify-center px-4">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="w-full max-w-2xl">
         <Card className="bg-white border border-gray-200 shadow-xl rounded-3xl">
           <CardHeader className="pb-4">
@@ -96,7 +96,7 @@ function ReviewFormContent() {
                 <Label className="text-gray-700 mb-3 block">
                   {isArabic ? "التقييم" : "Rating"}
                 </Label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (<button key={star} type="button" onClick={() => setRating(star)} className="transition-all duration-200 hover:scale-110">
                       <Star className={`h-8 w-8 ${star <= rating
                 ? "fill-yellow-400 text-yellow-400"
@@ -143,7 +143,7 @@ function ReviewFormContent() {
     </div>);
 }
 export default function ReviewPage() {
-    return (<Suspense fallback={<div className="min-h-screen bg-white pt-24 flex items-center justify-center">
+    return (<Suspense fallback={<div className="min-h-[100svh] bg-white pt-24 flex items-center justify-center">
         <AppLoader label="Loading..." size="lg"/>
       </div>}>
       <ReviewFormContent />

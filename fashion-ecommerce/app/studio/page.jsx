@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
+import { sanitizeExternalUrl } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import html2canvas from "html2canvas";
 import { studioProductsApi } from "@/lib/api/studioProducts";
@@ -123,6 +124,16 @@ const isColorValue = (value) =>
 const isValidObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ""));
 
 const normalizeColorKey = (value) => String(value || "").trim().toLowerCase();
+
+const resolveImageUrl = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return sanitizeExternalUrl(value);
+  if (value && typeof value === "object") {
+    const candidate = value.url || value.secure_url || value.path;
+    return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
+  }
+  return "";
+};
 
 const createEmptySideState = () => ({
   textValue: "",
@@ -248,16 +259,29 @@ const resolveProductImage = (product, viewKey, colorKey) => {
   const colorView = normalizedColor ? getColorEntry(colorViews, normalizedColor) : null;
   const colorMockups = product.colorMockups || {};
   const colorMockup = normalizedColor ? getColorEntry(colorMockups, normalizedColor) : null;
-  const colorViewImage = colorView ? getViewEntry(colorView, normalizedViewKey) : null;
+  const colorViewImage = resolveImageUrl(
+    colorView ? getViewEntry(colorView, normalizedViewKey) : null
+  );
   if (colorViewImage) return colorViewImage;
-  const productViewImage = getViewEntry(product.viewMockups || {}, normalizedViewKey);
+  const productViewImage = resolveImageUrl(
+    getViewEntry(product.viewMockups || {}, normalizedViewKey)
+  );
   if (productViewImage) return productViewImage;
-  if (normalizedViewKey !== "front") return null;
-  if (colorView?.front) return colorView.front;
-  if (colorMockup) return colorMockup;
-  if (product.viewMockups?.front) return product.viewMockups.front;
+  if (normalizedViewKey !== "front") {
+    return (
+      resolveImageUrl(colorView?.front) ||
+      resolveImageUrl(product.viewMockups?.front) ||
+      resolveImageUrl(colorMockup) ||
+      resolveImageUrl(product.baseMockupUrl) ||
+      resolveImageUrl(product.image) ||
+      (colorImageMap[normalizedColor] || null)
+    );
+  }
+  if (colorView?.front) return resolveImageUrl(colorView.front);
+  if (colorMockup) return resolveImageUrl(colorMockup);
+  if (product.viewMockups?.front) return resolveImageUrl(product.viewMockups.front);
   if (colorImageMap[normalizedColor]) return colorImageMap[normalizedColor];
-  return product.baseMockupUrl || product.image;
+  return resolveImageUrl(product.baseMockupUrl) || resolveImageUrl(product.image);
 };
 
 export default function DesignStudioPage() {
@@ -1086,7 +1110,7 @@ export default function DesignStudioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
+    <div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-16 sm:pt-20">
       <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
         <div className="w-full xl:w-80 border-b border-gray-200 xl:border-b-0 xl:border-r bg-white overflow-hidden flex flex-col shadow-xl xl:flex-shrink-0">
           <div className="flex-1 overflow-y-auto p-4 space-y-6 studio-theme font-tajawal">
@@ -1104,10 +1128,15 @@ export default function DesignStudioPage() {
                     <>
                       <div className="aspect-square w-full bg-muted/30">
                         <img
-                          src={productPreviewImage || activeProduct?.image || "/placeholder-logo.png"}
+                          src={sanitizeExternalUrl(productPreviewImage || activeProduct?.image || "") || "/placeholder-logo.png"}
                           alt={activeProduct?.name || "Product"}
                           className="h-full w-full object-cover"
                           crossOrigin="anonymous"
+                          onError={(e) => {
+                            if (e.currentTarget.dataset.fallbackApplied) return;
+                            e.currentTarget.dataset.fallbackApplied = "true";
+                            e.currentTarget.src = "/placeholder-logo.png";
+                          }}
                         />
                       </div>
                       <div className="px-3 py-2 text-center space-y-2">
@@ -1176,7 +1205,7 @@ export default function DesignStudioPage() {
 
         <div className="flex-1 flex flex-col bg-muted/30 min-w-0 overflow-hidden">
 
-          <div className="flex-1 overflow-auto p-4 lg:p-6 min-h-0">
+          <div className="flex-1 overflow-auto overflow-x-auto p-4 lg:p-6 min-h-0">
             <div className="max-w-[1280px] mx-auto pt-4 lg:pt-6">
               <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
                 <div className="w-full lg:w-[200px] space-y-5 order-2 lg:order-1">
@@ -1255,7 +1284,7 @@ export default function DesignStudioPage() {
                 </div>
 
                 <div className="flex-1 min-w-0 order-1 lg:order-2">
-                  <div className="relative mx-auto w-full max-w-[1040px] 2xl:max-w-[1280px] shadow-2xl rounded-2xl overflow-hidden bg-background border border-border">
+                  <div className="relative mx-auto w-full min-w-[280px] sm:min-w-[320px] max-w-[1040px] 2xl:max-w-[1280px] shadow-2xl rounded-2xl overflow-hidden bg-background border border-border">
                     <div
                       style={{
                         backgroundImage: showGrid
@@ -1281,6 +1310,11 @@ export default function DesignStudioPage() {
                             alt={`${activeProduct?.name || "Product"} preview`}
                             className="w-full h-full rounded-2xl object-contain"
                             crossOrigin="anonymous"
+                            onError={(e) => {
+                              if (e.currentTarget.dataset.fallbackApplied) return;
+                              e.currentTarget.dataset.fallbackApplied = "true";
+                              e.currentTarget.src = "/placeholder-logo.png";
+                            }}
                           />
 
                           <div
@@ -1563,7 +1597,7 @@ export default function DesignStudioPage() {
                           <div className="relative w-full h-20 bg-muted">
                             {design.thumbnail ? (
                               <img
-                                src={design.thumbnail}
+                                src={sanitizeExternalUrl(design.thumbnail)}
                                 alt={design.name}
                                 className="h-full w-full object-cover"
                               />

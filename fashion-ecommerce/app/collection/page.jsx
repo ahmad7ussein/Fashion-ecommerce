@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { favoritesApi } from "@/lib/api/favorites";
 import { useCart } from "@/lib/cart";
+import { sanitizeExternalUrl } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, } from "@/components/ui/carousel";
 export default function CollectionPage() {
@@ -235,7 +236,7 @@ export default function CollectionPage() {
           <Link href={`/products/${productId}`}>
             <Card className="group overflow-hidden bg-white backdrop-blur-sm border-2 border-gray-200 hover:bg-white hover:border-rose-300 hover:shadow-xl transition-all duration-300 rounded-xl sm:rounded-2xl cursor-pointer h-full flex flex-col">
               <div className="aspect-square overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+                <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
                 <div className="absolute inset-0 bg-gradient-to-t from-white/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"/>
                 <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
                   <Badge className="text-xs sm:text-sm bg-rose-500 text-white border-0 rounded-full px-2 sm:px-3 py-1">
@@ -288,7 +289,7 @@ export default function CollectionPage() {
         </div>
       </motion.div>);
     };
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-24 py-6 sm:py-8 md:py-12">
         
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8 sm:mb-12">

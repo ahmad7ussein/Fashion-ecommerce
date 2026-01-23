@@ -11,6 +11,7 @@ import { useLanguage } from "@/lib/language";
 import { ProductGridSkeleton } from "@/components/skeletons";
 import { ProfessionalNavbar } from "@/components/professional-navbar";
 import { Tag } from "lucide-react";
+import { sanitizeExternalUrl } from "@/lib/api";
 export default function SalePage() {
     const { formatPrice } = useRegion();
     const { language } = useLanguage();
@@ -33,7 +34,7 @@ export default function SalePage() {
         };
         load();
     }, []);
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white">
       <ProfessionalNavbar />
       
       <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-8 sm:py-12 pt-24 sm:pt-28">
@@ -67,7 +68,7 @@ export default function SalePage() {
                   <Link href={`/products/${productId}`}>
                     <Card className="group overflow-hidden bg-white backdrop-blur-sm border-2 border-gray-200 hover:bg-white hover:border-rose-300 hover:shadow-xl transition-all duration-300 rounded-xl sm:rounded-2xl cursor-pointer h-full flex flex-col">
                       <div className="aspect-square overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
                         
                         <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
                           <Badge className="bg-red-500 text-white border-0 rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-bold shadow-lg">

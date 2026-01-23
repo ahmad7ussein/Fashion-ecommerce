@@ -154,20 +154,20 @@ export function CartProvider({ children }) {
         }
         catch (error) {
             logger.error("Failed to add item to cart:", error);
-            setItems((prev) => {
-                const idx = prev.findIndex((i) => i.id === item.id);
-                if (idx !== -1) {
-                    const copy = [...prev];
-                    copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + item.quantity };
-                    if (!isAuthenticated)
+            if (!isAuthenticated) {
+                setItems((prev) => {
+                    const idx = prev.findIndex((i) => i.id === item.id);
+                    if (idx !== -1) {
+                        const copy = [...prev];
+                        copy[idx] = { ...copy[idx], quantity: copy[idx].quantity + item.quantity };
                         persistGuestCart(copy);
-                    return copy;
-                }
-                const next = [...prev, item];
-                if (!isAuthenticated)
+                        return copy;
+                    }
+                    const next = [...prev, item];
                     persistGuestCart(next);
-                return next;
-            });
+                    return next;
+                });
+            }
         }
     };
     const removeItem = async (id) => {

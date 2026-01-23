@@ -25,9 +25,9 @@ import { getContactMessages, updateContactMessage, deleteContactMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/language";
+import { sanitizeExternalUrl } from "@/lib/api";
 import { t } from "@/lib/i18n";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { AdminTopbar } from "@/components/admin/AdminTopbar";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import { StaffChatWidget } from "@/components/staff-chat-widget";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, } from "recharts";
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -57,6 +57,21 @@ const COLOR_OPTIONS = [
 const COLOR_OPTION_MAP = new Map(COLOR_OPTIONS.map((option) => [option.id, option]));
 const normalizeColorKey = (value) => value.trim().toLowerCase();
 const parseColorList = (value) => value.split(",").map((color) => color.trim()).filter(Boolean);
+const resolveImageUrl = (value) => {
+    if (!value)
+        return "";
+    if (typeof value === "string")
+        return sanitizeExternalUrl(value);
+    if (value && typeof value === "object") {
+        const candidate = value.url || value.secure_url || value.path;
+        return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
+    }
+    return "";
+};
+const resolveStockValue = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : 100;
+};
 const getColorLabel = (colorId, language) => {
     const option = COLOR_OPTION_MAP.get(normalizeColorKey(colorId));
     if (!option)
@@ -1311,17 +1326,10 @@ function AdminDashboardContent() {
     const previewSideData = designPreviewItem?.designMetadata?.studio?.data?.designBySide?.[designPreviewSide] || {};
     const previewArea = resolvePreviewArea(previewProduct, designPreviewSide);
     const previewBaseImage = resolvePreviewBaseImage(designPreviewItem, previewProduct, designPreviewSide);
-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="flex min-h-screen">
-        <aside className="w-64 h-screen sticky top-0 shrink-0 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
-          <AdminSidebar activeTab={activeTab} pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}/>
-        </aside>
-        <div className="flex-1 min-w-0">
-          <div className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
-            <AdminTopbar />
-          </div>
-          <div className="p-4 lg:p-8 animate-in fade-in duration-500">
-        {loading ? (<div className="flex items-center justify-center h-screen">
+    return (<>
+      <AdminLayout activeTab={activeTab} pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}>
+        <div className="animate-in fade-in duration-500">
+        {loading ? (<div className="flex items-center justify-center min-h-[60vh]">
             <AppLoader label="Loading dashboard..." size="lg"/>
           </div>) : (<>
         
@@ -1702,7 +1710,7 @@ function AdminDashboardContent() {
                                   <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                       <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" loading="lazy" quality={75} onError={(e) => {
+                                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" loading="lazy" quality={75} onError={(e) => {
                                     const target = e.target;
                                     if (target.src !== "/placeholder-logo.png") {
                                         target.src = "/placeholder-logo.png";
@@ -1716,7 +1724,7 @@ function AdminDashboardContent() {
                                   </TableCell>
                                   <TableCell>{product.category}</TableCell>
                                   <TableCell>${product.price.toFixed(2)}</TableCell>
-                                  <TableCell>{product.stock || 0}</TableCell>
+                                  <TableCell>{resolveStockValue(product.stock)}</TableCell>
                                   <TableCell>
                                     <Badge variant={product.active !== false ? "default" : "secondary"}>
                                       {product.active !== false ? t("active", language) : t("inactive", language)}
@@ -1894,7 +1902,7 @@ function AdminDashboardContent() {
                       <input id="main-image" type="file" accept="image/*" onChange={handleMainImageUpload} className="hidden"/>
                       {productForm.image && (<div className="mt-4 relative w-full max-w-xs mx-auto">
                           <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary">
-                            <img src={productForm.image} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
+                            <img src={sanitizeExternalUrl(productForm.image || "")} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
                           </div>
                           <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => {
                         setProductForm({ ...productForm, image: "" });
@@ -1938,7 +1946,7 @@ function AdminDashboardContent() {
                       {productForm.images.length > 0 && (<div className="mt-4 grid grid-cols-3 gap-4">
                           {Array.from({ length: 3 }).map((_, index) => (<div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-border">
                               {productForm.images[index] ? (<>
-                                  <img src={productForm.images[index]} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
+                                  <img src={sanitizeExternalUrl(productForm.images[index] || "")} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
                                   <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => removeAdditionalImage(index)}>
                                     <X className="h-4 w-4"/>
                                   </Button>
@@ -2286,7 +2294,11 @@ function AdminDashboardContent() {
             const colorMockups = p.colorMockups || {};
             const firstColorView = Object.values(colorViews)[0];
             const firstColorMockup = Object.values(colorMockups)[0];
-            const thumbnailUrl = p.viewMockups?.front || p.baseMockupUrl || firstColorView?.front || firstColorMockup || "/placeholder-logo.png";
+            const thumbnailUrl = resolveImageUrl(p.viewMockups?.front)
+                || resolveImageUrl(p.baseMockupUrl)
+                || resolveImageUrl(firstColorView?.front)
+                || resolveImageUrl(firstColorMockup)
+                || "/placeholder-logo.png";
             return (<TableRow key={p._id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
@@ -2296,6 +2308,12 @@ function AdminDashboardContent() {
                                   alt={p.name}
                                   className="h-full w-full object-cover"
                                   loading="lazy"
+                                  onError={(e) => {
+                    if (e.currentTarget.dataset.fallbackApplied)
+                        return;
+                    e.currentTarget.dataset.fallbackApplied = "true";
+                    e.currentTarget.src = "/placeholder-logo.png";
+                }}
                                 />
                               </div>
                               <span>{p.name}</span>
@@ -3494,7 +3512,7 @@ function AdminDashboardContent() {
                   <Label className="text-sm font-medium mb-2 block">{language === "ar" ? "المنتجات" : "Items"}</Label>
                   <div className="space-y-2">
                     {selectedOrder.items.map((item, index) => (<div key={index} className="flex items-center gap-4 p-3 border rounded">
-                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded"/>
+                        <img src={sanitizeExternalUrl(item.image || "")} alt={item.name} className="w-16 h-16 object-cover rounded"/>
                         <div className="flex-1">
                           <p className="font-medium">{item.name}</p>
                           <p className="text-sm text-muted-foreground">
@@ -3594,7 +3612,7 @@ function AdminDashboardContent() {
                 </div>
                 <div className="relative overflow-hidden rounded-2xl border border-rose-200 bg-white shadow-sm">
                   <div className="relative aspect-[4/5]">
-                    {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                    {previewBaseImage ? (<img src={sanitizeExternalUrl(previewBaseImage || "")} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                         {language === "ar" ? "لا توجد معاينة" : "No preview available"}
                       </div>)}
                     <div className="absolute" style={previewArea}>
@@ -3608,7 +3626,7 @@ function AdminDashboardContent() {
                     maxWidth: "100%",
                     maxHeight: "100%",
                 }}>
-                            <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
+                            <img src={sanitizeExternalUrl(previewSideData.uploadedImage || "")} alt="Design asset" className="h-full w-full object-contain"/>
                           </div>
                         </div>)}
                       {previewSideData?.textValue && (<div className="absolute inset-0 flex items-center justify-center p-2">
@@ -3718,10 +3736,9 @@ function AdminDashboardContent() {
           </DialogContent>
         </Dialog>
           </div>
-        </div>
-      </div>
+        </AdminLayout>
       <StaffChatWidget mode="admin" />
-    </div>);
+    </>);
 }
 
 export default function AdminDashboard() {

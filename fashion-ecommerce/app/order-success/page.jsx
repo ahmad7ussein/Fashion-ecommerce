@@ -31,7 +31,7 @@ function OrderSuccessContent() {
         router.push("/");
     };
     const isArabic = language === "ar";
-    return (<div className="min-h-screen bg-white pt-24 pb-12 flex items-center justify-center px-4">
+    return (<div className="min-h-[100svh] bg-white pt-24 pb-12 flex items-center justify-center px-4">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="w-full max-w-lg">
         <Card className="bg-white border border-gray-200 shadow-xl rounded-3xl">
           <CardContent className="p-6 md:p-8">
@@ -117,7 +117,7 @@ function OrderSuccessContent() {
     </div>);
 }
 export default function OrderSuccessPage() {
-    return (<Suspense fallback={<div className="min-h-screen bg-white pt-24 flex items-center justify-center">
+    return (<Suspense fallback={<div className="min-h-[100svh] bg-white pt-24 flex items-center justify-center">
         <AppLoader label="Loading..." size="lg"/>
       </div>}>
       <OrderSuccessContent />

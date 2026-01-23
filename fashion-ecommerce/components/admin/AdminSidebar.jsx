@@ -2,13 +2,23 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, Package, ShoppingCart, Users, UserCog, Palette as PaletteIcon, Star, Truck, Shapes, Camera, SlidersHorizontal, BadgeCheck, MessageSquare, } from "lucide-react";
+import { ChevronDown, Package, ShoppingCart, Users, UserCog, Palette as PaletteIcon, Star, Truck, Shapes, Camera, SlidersHorizontal, BadgeCheck, MessageSquare, TrendingUp, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { useLanguage } from "@/lib/language";
 import { t } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 const navigationSections = [
+    {
+        id: "dashboard",
+        title: { en: "Dashboard", ar: "Dashboard" },
+        items: [
+            { type: "tab", key: "overview", icon: Shapes, labelKey: "overview" },
+            { type: "tab", key: "analytics", icon: TrendingUp, labelKey: "analytics" },
+            { type: "tab", key: "reports", icon: BadgeCheck, labelKey: "reports" },
+            { type: "tab", key: "settings", icon: SlidersHorizontal, labelKey: "settings" },
+        ],
+    },
     {
         id: "products",
         title: { en: "Products & Orders", ar: "Products & Orders" },
@@ -47,7 +57,7 @@ const navigationSections = [
 const activeClasses = "bg-blue-800 text-white border border-blue-900 dark:bg-blue-900 dark:text-white dark:border-blue-950 shadow-md";
 const inactiveClasses = "text-muted-foreground hover:bg-muted/40 hover:text-foreground hover:translate-x-1";
 const sectionClasses = {
-    general: "bg-slate-100 text-slate-700 border-slate-200",
+    dashboard: "bg-indigo-100 text-indigo-700 border-indigo-200",
     products: "bg-rose-100 text-rose-700 border-rose-200",
     employees: "bg-sky-100 text-sky-700 border-sky-200",
     chat: "bg-cyan-100 text-cyan-700 border-cyan-200",

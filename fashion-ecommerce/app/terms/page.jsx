@@ -49,8 +49,8 @@ export default function TermsPage() {
                 : "All content on our website, including text, graphics, logos, and images, is protected by copyright. You may not copy or use any content without our written permission.",
         },
     ];
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
-      <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-12 sm:py-16">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+      <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-10 sm:py-16">
         
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center justify-center p-3 bg-rose-100 rounded-full mb-4">

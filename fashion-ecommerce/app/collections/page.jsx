@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { favoritesApi } from "@/lib/api/favorites";
 import { useCart } from "@/lib/cart";
+import { sanitizeExternalUrl } from "@/lib/api";
 import { useRouter } from "next/navigation";
 export default function CollectionsPage() {
     const { formatPrice } = useRegion();
@@ -264,14 +265,14 @@ export default function CollectionsPage() {
     }, {});
     const categories = Object.keys(groupedProducts);
     if (isLoading) {
-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-12">
           <ProductGridSkeleton count={12}/>
         </div>
       </div>);
     }
     if (products.length === 0) {
-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24 flex items-center justify-center">
+        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24 flex items-center justify-center">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-md mx-auto px-4">
           <Star className="h-16 w-16 text-rose-300 mx-auto mb-4"/>
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
@@ -290,10 +291,10 @@ export default function CollectionsPage() {
         </motion.div>
       </div>);
     }
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       
-      <section className="relative overflow-hidden min-h-screen flex items-center">
-        <div className="relative w-full h-screen" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
+      <section className="relative overflow-hidden min-h-[100svh] flex items-center">
+        <div className="relative w-full h-[100svh]" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
           <AnimatePresence mode="sync" initial={false} custom={slideDirection}>
             {heroSlides.length > 0 && (<motion.div key={currentSlide} custom={slideDirection} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 flex items-center overflow-hidden" style={{ background: "linear-gradient(135deg, #fdeef4 0%, #fff6fb 45%, #fde0ea 100%)" }}>
                 
@@ -355,7 +356,7 @@ export default function CollectionsPage() {
                           <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-rose-200/30 to-pink-200/30 rounded-full blur-2xl"/>
                           <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-200/30 to-rose-200/30 rounded-full blur-xl"/>
                           <div className="relative w-full h-full min-h-[320px] sm:min-h-[420px] lg:min-h-[520px]">
-                            <Image src={heroSlides[currentSlide].image || "/placeholder-logo.png"} alt={heroSlides[currentSlide].name} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
+                            <Image src={sanitizeExternalUrl(heroSlides[currentSlide].image || "") || "/placeholder-logo.png"} alt={heroSlides[currentSlide].name} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
                           </div>
                         </motion.div>
                       </div>
@@ -370,15 +371,15 @@ export default function CollectionsPage() {
             e.stopPropagation();
             setSlideDirection(-1);
             setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-        }} className="absolute left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Previous slide" disabled={heroSlides.length === 0}>
-            <ChevronLeft className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
+        }} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-2 sm:p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Previous slide" disabled={heroSlides.length === 0}>
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
           </button>
           <button onClick={(e) => {
             e.stopPropagation();
             setSlideDirection(1);
             setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-        }} className="absolute right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Next slide" disabled={heroSlides.length === 0}>
-            <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
+        }} className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-2 sm:p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Next slide" disabled={heroSlides.length === 0}>
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
           </button>
 
           
@@ -438,7 +439,7 @@ export default function CollectionsPage() {
                         <Card className="overflow-hidden bg-white border-2 border-gray-200 hover:border-rose-300 hover:shadow-2xl transition-all duration-500 rounded-2xl h-full flex flex-col relative">
                           
                           <div className="aspect-square overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                            <Image src={product.image || "/placeholder-logo.png"} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+                            <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
                             
                             
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>

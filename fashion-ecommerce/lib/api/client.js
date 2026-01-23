@@ -1,5 +1,5 @@
 import logger from "@/lib/logger";
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+import { API_BASE_URL } from "@/lib/api";
 export class ApiError extends Error {
     constructor(status, message) {
         super(message);
@@ -19,7 +19,7 @@ async function request(endpoint, options = {}) {
     if (token) {
         headers["Authorization"] = `Bearer ${token}`;
     }
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${API_BASE_URL()}${endpoint}`;
     const maxRetries = 2;
     let lastError = null;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -121,16 +121,25 @@ async function request(endpoint, options = {}) {
                 throw detailedError;
             }
             let data;
+            let responseText = "";
+            const responseStatus = response.status;
+            const responseContentType = response.headers.get("content-type");
             try {
-                const text = await response.text();
-                if (!text || text.trim().length === 0) {
+                responseText = await response.text();
+                if (!responseText || responseText.trim().length === 0) {
                     return {};
                 }
-                data = JSON.parse(text);
+                data = JSON.parse(responseText);
             }
             catch (parseError) {
                 try {
-                    logger.error("Failed to parse JSON response");
+                    const preview = typeof responseText === "string" ? responseText.slice(0, 200) : "";
+                    logger.error("Failed to parse JSON response", {
+                        url,
+                        status: responseStatus,
+                        contentType: responseContentType || "(missing)",
+                        preview,
+                    });
                 }
                 catch {
                 }
@@ -160,7 +169,7 @@ async function request(endpoint, options = {}) {
                         }
                         catch {
                         }
-                        throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
+                        throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
                     }
                     if (lastError instanceof ApiError) {
                         throw lastError;
@@ -202,7 +211,7 @@ async function request(endpoint, options = {}) {
             throw new ApiError(504, "Request timeout. Please try again.");
         }
         if (lastError instanceof TypeError && (lastError.message === "Failed to fetch" || lastError.message.includes("fetch"))) {
-            throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
+            throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
         }
         if (lastError instanceof ApiError) {
             throw lastError;

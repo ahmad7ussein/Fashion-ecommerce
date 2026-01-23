@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { featureControlsApi } from "@/lib/api/featureControls";
+import { sanitizeExternalUrl } from "@/lib/api";
 
 const buildEmptySlide = (order) => ({
   image: "",
@@ -193,7 +194,7 @@ export default function HomeSliderSettingsPage() {
             <Card key={`slide-${index}`} className="overflow-hidden">
               <div className="relative aspect-[4/3] w-full bg-muted">
                 {slide.image ? (
-                  <Image src={slide.image} alt={`Slide ${index + 1}`} fill className="object-cover" />
+                  <Image src={sanitizeExternalUrl(slide.image || "") || "/placeholder-logo.png"} alt={`Slide ${index + 1}`} fill className="object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
                     No image
@@ -275,7 +276,7 @@ export default function HomeSliderSettingsPage() {
 
             {slides[editingSlideIndex]?.image && (
               <div className="relative h-48 w-full overflow-hidden rounded-lg border border-border md:col-span-2">
-                <Image src={slides[editingSlideIndex].image} alt={`Slide ${editingSlideIndex + 1}`} fill className="object-cover" />
+                <Image src={sanitizeExternalUrl(slides[editingSlideIndex].image || "") || "/placeholder-logo.png"} alt={`Slide ${editingSlideIndex + 1}`} fill className="object-cover" />
               </div>
             )}
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, LayoutDashboard, Package, ShoppingCart, Users, Eye, Edit, CheckCircle, Clock, Truck, Printer, PackageCheck, Moon, Sun, Languages, MessageSquare, } from "lucide-react";
+import { Bell, LayoutDashboard, Package, ShoppingCart, Users, Eye, Edit, CheckCircle, Clock, Truck, Printer, PackageCheck, Languages, MessageSquare, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +22,7 @@ import { studioProductsApi } from "@/lib/api/studioProducts";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/language";
+import { sanitizeExternalUrl } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { Trash2, Plus, Upload, X, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +31,7 @@ import Image from "next/image";
 import { AppLoader } from "@/components/ui/app-loader";
 import { StaffChatPanel } from "@/components/staff-chat-panel";
 import { StaffChatWidget } from "@/components/staff-chat-widget";
+import { EmployeeLayout } from "@/components/employee/EmployeeLayout";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { getNotifications, markAllAsRead } from "@/lib/api/notifications";
 import { staffChatApi } from "@/lib/api/staffChat";
@@ -74,6 +76,21 @@ const COLOR_OPTIONS = [
 ];
 const normalizeColorKey = (value) => value.trim().toLowerCase();
 const parseColorList = (value) => value.split(",").map((color) => color.trim()).filter(Boolean);
+const resolveImageUrl = (value) => {
+    if (!value)
+        return "";
+    if (typeof value === "string")
+        return sanitizeExternalUrl(value);
+    if (value && typeof value === "object") {
+        const candidate = value.url || value.secure_url || value.path;
+        return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
+    }
+    return "";
+};
+const resolveStockValue = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : 100;
+};
 export default function EmployeeDashboard() {
     const [activeTab, setActiveTab] = useState("overview");
     const [orders, setOrders] = useState([]);
@@ -296,16 +313,18 @@ export default function EmployeeDashboard() {
         }
     }, [user, authLoading, router]);
     useEffect(() => {
+        if (authLoading || !user)
+            return;
         loadOrders();
         loadUsers();
         loadProducts();
         loadUserPreferences();
-    }, []);
+    }, [authLoading, user]);
     useEffect(() => {
-        if (activeTab === "products") {
+        if (activeTab === "products" && user) {
             loadProducts();
         }
-    }, [activeTab]);
+    }, [activeTab, user]);
     useEffect(() => {
         if (activeTab === "studioProducts") {
             loadStudioProducts();
@@ -391,8 +410,43 @@ export default function EmployeeDashboard() {
     const loadProducts = async () => {
         try {
             setLoading(true);
-            const response = await productsAdminApi.getAllProducts({ limit: 1000 });
-            setProducts(response.data || []);
+            const response = await productsAdminApi.getAllProducts({ limit: 10, page: 1 });
+            const productsList = Array.isArray(response.data) ? response.data : [];
+            setProducts(productsList);
+            setLoading(false);
+            if (productsList.length > 0 && response.total && response.total > productsList.length) {
+                const chunks = Math.ceil((response.total - productsList.length) / 10);
+                for (let i = 0; i < Math.min(chunks, 5); i++) {
+                    const page = i + 2;
+                    const chunkLimit = 10;
+                    setTimeout(() => {
+                        productsAdminApi.getAllProducts({
+                            limit: chunkLimit,
+                            page: page
+                        }).then((chunkResponse) => {
+                            const chunkProducts = Array.isArray(chunkResponse.data) ? chunkResponse.data : [];
+                            if (chunkProducts.length > 0) {
+                                setProducts((prev) => {
+                                    const productMap = new Map();
+                                    prev.forEach(product => {
+                                        const id = product._id?.toString() || product.id?.toString();
+                                        if (id)
+                                            productMap.set(id, product);
+                                    });
+                                    chunkProducts.forEach(product => {
+                                        const id = product._id?.toString() || product.id?.toString();
+                                        if (id)
+                                            productMap.set(id, product);
+                                    });
+                                    return Array.from(productMap.values());
+                                });
+                            }
+                        }).catch((err) => {
+                            console.warn(`Failed to load product chunk ${page}:`, err);
+                        });
+                    }, (i + 1) * 1000);
+                }
+            }
         }
         catch (error) {
             console.error("❌ Employee: Error loading products:", error);
@@ -401,8 +455,6 @@ export default function EmployeeDashboard() {
                 description: error.message || "Failed to load products",
                 variant: "destructive",
             });
-        }
-        finally {
             setLoading(false);
         }
     };
@@ -896,9 +948,7 @@ export default function EmployeeDashboard() {
     const previewSideData = designPreviewItem?.designMetadata?.studio?.data?.designBySide?.[designPreviewSide] || {};
     const previewArea = resolvePreviewArea(previewProduct, designPreviewSide);
     const previewBaseImage = resolvePreviewBaseImage(designPreviewItem, previewProduct, designPreviewSide);
-    return (<div className="min-h-screen bg-muted/30">
-      
-      <div className="fixed left-0 top-0 h-full w-64 bg-background border-r border-border overflow-y-auto z-50">
+    const sidebarContent = (<div className="flex h-full flex-col overflow-y-auto">
         <div className="p-6">
           <Link href="/">
             <Logo className="h-20 w-auto"/>
@@ -930,7 +980,7 @@ export default function EmployeeDashboard() {
 
           <button onClick={() => setActiveTab("progress")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "progress" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
             <Printer className="h-5 w-5"/>
-            <span className="font-medium">{language === "ar" ? "تتبع التقدم" : "Progress Tracking"}</span>
+            <span className="font-medium">{language === "ar" ? 'O?O?O"1 O‎O‎O‎,‎O‎,‎O‎.' : "Progress Tracking"}</span>
           </button>
 
           <button onClick={() => setActiveTab("products")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "products" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
@@ -940,7 +990,7 @@ export default function EmployeeDashboard() {
 
           <button onClick={() => setActiveTab("studioProducts")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "studioProducts" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
             <PackageCheck className="h-5 w-5"/>
-            <span className="font-medium">{language === "ar" ? "منتجات الاستديو" : "Studio Products"}</span>
+            <span className="font-medium">{language === "ar" ? "U.U+O?O?O‎‎O? O‎,‎O‎3O?O_USU^" : "Studio Products"}</span>
           </button>
 
           <button onClick={() => setActiveTab("customers")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "customers" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
@@ -954,10 +1004,10 @@ export default function EmployeeDashboard() {
           </button>
         </nav>
 
-        <div className="absolute bottom-6 left-4 right-4 space-y-2">
+        <div className="mt-auto space-y-2 px-4 pb-6">
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="flex-1">
-              {theme === "dark" ? <Sun className="h-4 w-4"/> : <Moon className="h-4 w-4"/>}
+            <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="flex-1 text-base" aria-label="Toggle theme">
+              <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
             </Button>
             <Button variant="outline" size="icon" onClick={() => setLanguage(language === "ar" ? "en" : "ar")} className="flex-1">
               <Languages className="h-4 w-4"/>
@@ -967,21 +1017,20 @@ export default function EmployeeDashboard() {
             window.open("/", "_blank");
         }}>
             <Eye className="h-4 w-4 mr-2"/>
-            {language === "ar" ? "عرض كزائر" : "View as Guest"}
+            {language === "ar" ? "O1O?O‎ U?O?O‎O?O?" : "View as Guest"}
           </Button>
           <Link href="/">
             <Button variant="outline" className="w-full bg-transparent">
-              {language === "ar" ? "العودة للمتجر" : "Back to Store"}
+              {language === "ar" ? "O‎,‎O1U^O‎_Oc U,U,U.O?O?O?" : "Back to Store"}
             </Button>
           </Link>
           <Button variant="outline" className="w-full bg-transparent" onClick={logout}>
             {t("logout", language)}
           </Button>
         </div>
-      </div>
-
-      
-      <div className="ml-64 p-8">
+        </div>);
+    return (<EmployeeLayout sidebar={sidebarContent} title={language === "ar" ? "لوحة الموظف" : "Employee Dashboard"}>
+      <div className="p-4 sm:p-6 lg:p-8">
         <div className="flex items-center justify-end gap-2 mb-6">
           <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
             <DropdownMenuTrigger asChild>
@@ -1160,7 +1209,11 @@ export default function EmployeeDashboard() {
             const colorMockups = p.colorMockups || {};
             const firstColorView = Object.values(colorViews)[0];
             const firstColorMockup = Object.values(colorMockups)[0];
-            const thumbnailUrl = p.viewMockups?.front || p.baseMockupUrl || firstColorView?.front || firstColorMockup || "/placeholder-logo.png";
+            const thumbnailUrl = resolveImageUrl(p.viewMockups?.front)
+                || resolveImageUrl(p.baseMockupUrl)
+                || resolveImageUrl(firstColorView?.front)
+                || resolveImageUrl(firstColorMockup)
+                || "/placeholder-logo.png";
             return (<TableRow key={p._id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
@@ -1170,6 +1223,12 @@ export default function EmployeeDashboard() {
                                   alt={p.name}
                                   className="h-full w-full object-cover"
                                   loading="lazy"
+                                  onError={(e) => {
+                    if (e.currentTarget.dataset.fallbackApplied)
+                        return;
+                    e.currentTarget.dataset.fallbackApplied = "true";
+                    e.currentTarget.src = "/placeholder-logo.png";
+                }}
                                 />
                               </div>
                               <span>{p.name}</span>
@@ -1219,8 +1278,8 @@ export default function EmployeeDashboard() {
                     <Label>View Mockups (Front / Back)</Label>
                     <div className="space-y-3">
                       {["front", "back"].map((viewKey) => {
-            const previewUrl = studioForm.viewMockups?.[viewKey] || (viewKey === "front" ? studioForm.baseMockupUrl : "");
-            return (<div key={viewKey} className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary transition-colors">
+                        const previewUrl = studioForm.viewMockups?.[viewKey] || (viewKey === "front" ? studioForm.baseMockupUrl : "");
+                        return (<div key={viewKey} className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary transition-colors">
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium capitalize">{viewKey}</span>
                               <div className="flex items-center gap-2">
@@ -1243,8 +1302,8 @@ export default function EmployeeDashboard() {
                                   <X className="h-4 w-4"/>
                                 </Button>
                               </div>)}
-                          </div>);
-        })}
+                            </div>);
+                      })}
                     </div>
                     <Label>Price</Label>
                     <Input type="number" value={studioForm.price} onChange={(e) => setStudioForm({ ...studioForm, price: e.target.value })}/>
@@ -1731,7 +1790,7 @@ export default function EmployeeDashboard() {
                                   <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                       <div className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" onError={(e) => {
+                                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" onError={(e) => {
                                     const target = e.target;
                                     if (target.src !== "/placeholder-logo.png") {
                                         target.src = "/placeholder-logo.png";
@@ -1745,7 +1804,7 @@ export default function EmployeeDashboard() {
                                   </TableCell>
                                   <TableCell>{product.category}</TableCell>
                                   <TableCell>${product.price.toFixed(2)}</TableCell>
-                                  <TableCell>{product.stock || 0}</TableCell>
+                                  <TableCell>{resolveStockValue(product.stock)}</TableCell>
                                   <TableCell>
                                     <Badge variant={product.active !== false ? "default" : "secondary"}>
                                       {product.active !== false ? t("active", language) : t("inactive", language)}
@@ -1895,7 +1954,7 @@ export default function EmployeeDashboard() {
                       <input id="main-image" type="file" accept="image/*" onChange={handleMainImageUpload} className="hidden"/>
                       {productForm.image && (<div className="mt-4 relative w-full max-w-xs mx-auto">
                           <div className="relative aspect-square rounded-lg overflow-hidden border-2 border-primary">
-                            <img src={productForm.image} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
+                            <img src={sanitizeExternalUrl(productForm.image || "")} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
                           </div>
                           <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => {
                         setProductForm({ ...productForm, image: "" });
@@ -1939,7 +1998,7 @@ export default function EmployeeDashboard() {
                       {productForm.images.length > 0 && (<div className="mt-4 grid grid-cols-3 gap-4">
                           {Array.from({ length: 3 }).map((_, index) => (<div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-border">
                               {productForm.images[index] ? (<>
-                                  <img src={productForm.images[index]} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
+                                  <img src={sanitizeExternalUrl(productForm.images[index] || "")} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
                                   <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2" onClick={() => removeAdditionalImage(index)}>
                                     <X className="h-4 w-4"/>
                                   </Button>
@@ -2319,7 +2378,7 @@ export default function EmployeeDashboard() {
                     </Label>
                     <div className="space-y-2">
                       {selectedOrder.items.map((item, index) => (<div key={`${item._id || item.name}-${index}`} className="flex items-center gap-4 p-3 border rounded">
-                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded"/>
+                          <img src={sanitizeExternalUrl(item.image || "")} alt={item.name} className="w-12 h-12 object-cover rounded"/>
                           <div className="flex-1">
                             <p className="font-medium">{item.name}</p>
                             <p className="text-xs text-muted-foreground">
@@ -2436,7 +2495,7 @@ export default function EmployeeDashboard() {
               </div>
               <div className="relative overflow-hidden rounded-2xl border border-rose-200 bg-white shadow-sm">
                 <div className="relative aspect-[4/5]">
-                  {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                  {previewBaseImage ? (<img src={sanitizeExternalUrl(previewBaseImage || "")} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                       {language === "ar" ? "لا توجد معاينة" : "No preview available"}
                     </div>)}
                   <div className="absolute" style={previewArea}>
@@ -2450,7 +2509,7 @@ export default function EmployeeDashboard() {
                     maxWidth: "100%",
                     maxHeight: "100%",
                 }}>
-                          <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
+                          <img src={sanitizeExternalUrl(previewSideData.uploadedImage || "")} alt="Design asset" className="h-full w-full object-contain"/>
                         </div>
                       </div>)}
                     {previewSideData?.textValue && (<div className="absolute inset-0 flex items-center justify-center p-2">
@@ -2472,5 +2531,5 @@ export default function EmployeeDashboard() {
       </Dialog>
       </div>
       <StaffChatWidget mode="employee" />
-    </div>);
+    </EmployeeLayout>);
 }

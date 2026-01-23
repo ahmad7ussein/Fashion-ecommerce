@@ -22,6 +22,8 @@ const normalizeImageString = (value) => {
     }
     return null;
 };
+const productsCache = new Map();
+const PRODUCTS_CACHE_TTL_MS = 60 * 1000;
 const getProducts = async (req, res) => {
     try {
         if (mongoose_1.default.connection.readyState !== 1) {
@@ -31,13 +33,16 @@ const getProducts = async (req, res) => {
                 message: 'Database connection not ready. Please try again.',
             });
         }
-        const { search, category, gender, season, style, occasion, sortBy, onSale, inCollection, featured, page = 1, limit = 50, } = req.query;
+        const { search, category, gender, season, style, occasion, sortBy, onSale, inCollection, featured, includeInactive, page = 1, limit = 6, } = req.query;
         const sort = { createdAt: -1 };
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        const skip = (pageNum - 1) * limitNum;
-        const selectFields = 'name nameAr description descriptionAr category gender season style occasion price stock active featured onSale salePercentage image images sizes colors inCollection newArrival createdAt';
-        const query = { active: true };
+        const pageNum = Math.max(parseInt(page) || 1, 1);
+        const requestedLimit = Math.max(parseInt(limit) || 6, 1);
+        const safeLimit = Math.min(requestedLimit, 6);
+        const skip = (pageNum - 1) * safeLimit;
+        const selectFields = 'name nameAr category gender season style occasion price active featured onSale salePercentage image colors createdAt';
+        const isPrivileged = Boolean(req.user && (req.user.role === 'admin' || req.user.role === 'employee'));
+        const allowInactive = includeInactive === 'true' && isPrivileged;
+        const query = allowInactive ? {} : { active: true };
         if (gender && gender !== 'all') {
             query.gender = gender;
         }
@@ -68,29 +73,40 @@ const getProducts = async (req, res) => {
                 { nameAr: { $regex: search, $options: 'i' } },
             ];
         }
-        const safeLimit = Math.min(parseInt(limit) || 50, 50);
+        const cacheKey = JSON.stringify({ query, pageNum, safeLimit });
+        const cachedEntry = productsCache.get(cacheKey);
+        if (cachedEntry && Date.now() - cachedEntry.timestamp < PRODUCTS_CACHE_TTL_MS) {
+            return res.status(200).json(cachedEntry.payload);
+        }
         const queryStartTime = Date.now();
+        const hint = gender && gender !== 'all'
+            ? { active: 1, gender: 1, createdAt: -1 }
+            : featured === 'true'
+                ? { active: 1, featured: 1, createdAt: -1 }
+                : { active: 1, createdAt: -1 };
         const productsQuery = Product_1.default.find(query)
             .select(selectFields)
             .sort(sort)
             .skip(skip)
             .limit(safeLimit)
             .lean()
-            .maxTimeMS(10000);
+            .hint(hint)
+            .maxTimeMS(30000);
         let products;
         try {
-            const queryTimeout = 15000;
+            const queryTimeout = 30000;
             let timeoutId;
             products = await Promise.race([
                 productsQuery,
                 new Promise((_, reject) => {
-                    timeoutId = setTimeout(() => reject(new Error('Query timeout - exceeded 15 seconds')), queryTimeout);
+                    timeoutId = setTimeout(() => reject(new Error('Query timeout - exceeded 30 seconds')), queryTimeout);
                 })
             ]);
             if (timeoutId)
                 clearTimeout(timeoutId);
             const apiResponseTime = Date.now() - queryStartTime;
-            if (process.env.NODE_ENV === 'development') {
+            const enableExplain = process.env.PRODUCTS_EXPLAIN === 'true';
+            if (process.env.NODE_ENV === 'development' && enableExplain) {
                 try {
                     const explainQuery = Product_1.default.find(query).sort(sort).limit(1).lean();
                     const explainResult = await explainQuery.explain('executionStats');
@@ -196,12 +212,12 @@ const getProducts = async (req, res) => {
         }
         let total = 0;
         try {
-            const countQuery = Product_1.default.countDocuments(query).maxTimeMS(10000);
+            const countQuery = Product_1.default.countDocuments(query).maxTimeMS(5000);
             let countTimeoutId;
             total = await Promise.race([
                 countQuery,
                 new Promise((_, reject) => {
-                    countTimeoutId = setTimeout(() => reject(new Error('Count timeout')), 12000);
+                    countTimeoutId = setTimeout(() => reject(new Error('Count timeout')), 5000);
                 })
             ]);
             if (countTimeoutId)
@@ -210,14 +226,16 @@ const getProducts = async (req, res) => {
         catch (countError) {
             total = products.length > 0 ? products.length + skip + 10 : 0;
         }
-        res.status(200).json({
+        const responsePayload = {
             success: true,
             count: products.length,
             total,
             page: pageNum,
-            pages: Math.ceil(total / limitNum),
+            pages: Math.ceil(total / safeLimit),
             data: products,
-        });
+        };
+        productsCache.set(cacheKey, { timestamp: Date.now(), payload: responsePayload });
+        res.status(200).json(responsePayload);
     }
     catch (error) {
         const isTimeoutError = error.name === 'MongoNetworkTimeoutError' ||
@@ -233,19 +251,7 @@ const getProducts = async (req, res) => {
                 host: mongoose_1.default.connection.host
             });
             if (mongoose_1.default.connection.readyState !== 1) {
-                console.log('🔄 Attempting to reconnect to database...');
-                try {
-                    await mongoose_1.default.connection.close();
-                    await mongoose_1.default.connect(process.env.MONGODB_URI || '', {
-                        maxPoolSize: 10,
-                        serverSelectionTimeoutMS: 10000,
-                        socketTimeoutMS: 30000,
-                    });
-                    console.log('✅ Reconnected to database');
-                }
-                catch (reconnectError) {
-                    console.error('❌ Failed to reconnect:', reconnectError);
-                }
+                console.warn('⚠️ Database disconnected; awaiting mongoose reconnect.');
             }
             return res.status(503).json({
                 success: false,
@@ -411,6 +417,7 @@ const createProduct = async (req, res) => {
         if (req.user?._id && (req.user.role === 'admin' || req.user.role === 'employee')) {
             await (0, employeeActivityController_1.logEmployeeActivity)(req.user._id, 'product_added', `Added new product: ${product.name}`, 'Product', product._id, { productName: product.name, productCategory: product.category });
         }
+        productsCache.clear();
         res.status(201).json({
             success: true,
             message: 'Product created successfully',
@@ -583,6 +590,7 @@ const updateProduct = async (req, res) => {
                 stockChange: newStock - oldStock
             });
         }
+        productsCache.clear();
         res.status(200).json({
             success: true,
             message: 'Product updated successfully',
@@ -627,6 +635,7 @@ const deleteProduct = async (req, res) => {
             }
         }
         await Product_1.default.findByIdAndDelete(req.params.id);
+        productsCache.clear();
         res.status(200).json({
             success: true,
             message: 'Product deleted successfully',

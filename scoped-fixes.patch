@@ -1,0 +1,873 @@
+﻿diff --git a/fashion-ecommerce/lib/api/client.js b/fashion-ecommerce/lib/api/client.js
+index 2d77201..a44dd5c 100644
+--- a/fashion-ecommerce/lib/api/client.js
++++ b/fashion-ecommerce/lib/api/client.js
+@@ -2 +2 @@ import logger from "@/lib/logger";
+-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++import { API_BASE_URL } from "@/lib/api";
+@@ -123,0 +124,3 @@ async function request(endpoint, options = {}) {
++            let responseText = "";
++            const responseStatus = response.status;
++            const responseContentType = response.headers.get("content-type");
+@@ -125,2 +128,2 @@ async function request(endpoint, options = {}) {
+-                const text = await response.text();
+-                if (!text || text.trim().length === 0) {
++                responseText = await response.text();
++                if (!responseText || responseText.trim().length === 0) {
+@@ -129 +132 @@ async function request(endpoint, options = {}) {
+-                data = JSON.parse(text);
++                data = JSON.parse(responseText);
+@@ -133 +136,7 @@ async function request(endpoint, options = {}) {
+-                    logger.error("Failed to parse JSON response");
++                    const preview = typeof responseText === "string" ? responseText.slice(0, 200) : "";
++                    logger.error("Failed to parse JSON response", {
++                        url,
++                        status: responseStatus,
++                        contentType: responseContentType || "(missing)",
++                        preview,
++                    });
+diff --git a/fashion-ecommerce/lib/api/auth.js b/fashion-ecommerce/lib/api/auth.js
+index b085d22..5a37d5e 100644
+--- a/fashion-ecommerce/lib/api/auth.js
++++ b/fashion-ecommerce/lib/api/auth.js
+@@ -5 +5 @@ export const authApi = {
+-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++        const { API_BASE_URL } = await import("@/lib/api");
+@@ -127 +127 @@ export const authApi = {
+-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++        const { API_BASE_URL } = await import("@/lib/api");
+diff --git a/fashion-ecommerce/components/staff-chat-panel.jsx b/fashion-ecommerce/components/staff-chat-panel.jsx
+index 5cbf22d..0fa9a4a 100644
+--- a/fashion-ecommerce/components/staff-chat-panel.jsx
++++ b/fashion-ecommerce/components/staff-chat-panel.jsx
+@@ -13,0 +14 @@ import { Loader2 } from "lucide-react";
++import { API_BASE_URL } from "@/lib/api";
+@@ -15 +15,0 @@ import { Loader2 } from "lucide-react";
+-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+diff --git a/fashion-ecommerce/next.config.mjs b/fashion-ecommerce/next.config.mjs
+index 543287c..f7dd4ff 100644
+--- a/fashion-ecommerce/next.config.mjs
++++ b/fashion-ecommerce/next.config.mjs
+@@ -31,0 +32,13 @@ const nextConfig = {
++  async rewrites() {
++    const target = process.env.API_PROXY_TARGET;
++    if (!target) {
++      return [];
++    }
++    const normalizedTarget = target.replace(/\/$/, "");
++    return [
++      {
++        source: "/api/:path*",
++        destination: `${normalizedTarget}/api/:path*`,
++      },
++    ];
++  },
+@@ -47 +60 @@ const nextConfig = {
+-      "img-src 'self' data: blob:";
++      "img-src 'self' data: blob: https: http:";
+diff --git a/fashion-ecommerce/app/admin/page.jsx b/fashion-ecommerce/app/admin/page.jsx
+index c8f94be..47e7e38 100644
+--- a/fashion-ecommerce/app/admin/page.jsx
++++ b/fashion-ecommerce/app/admin/page.jsx
+@@ -27,0 +28 @@ import { useLanguage } from "@/lib/language";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -29,2 +30 @@ import { t } from "@/lib/i18n";
+-import { AdminSidebar } from "@/components/admin/AdminSidebar";
+-import { AdminTopbar } from "@/components/admin/AdminTopbar";
++import { AdminLayout } from "@/components/admin/AdminLayout";
+@@ -59,0 +60,11 @@ const parseColorList = (value) => value.split(",").map((color) => color.trim()).
++const resolveImageUrl = (value) => {
++    if (!value)
++        return "";
++    if (typeof value === "string")
++        return sanitizeExternalUrl(value);
++    if (value && typeof value === "object") {
++        const candidate = value.url || value.secure_url || value.path;
++        return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
++    }
++    return "";
++};
+@@ -1314,11 +1325,4 @@ function AdminDashboardContent() {
+-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+-      <div className="flex min-h-screen">
+-        <aside className="w-64 h-screen sticky top-0 shrink-0 border-r border-border/50 bg-gradient-to-b from-background via-background to-muted/30">
+-          <AdminSidebar activeTab={activeTab} pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}/>
+-        </aside>
+-        <div className="flex-1 min-w-0">
+-          <div className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur">
+-            <AdminTopbar />
+-          </div>
+-          <div className="p-4 lg:p-8 animate-in fade-in duration-500">
+-        {loading ? (<div className="flex items-center justify-center h-screen">
++    return (<>
++      <AdminLayout activeTab={activeTab} pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}>
++        <div className="animate-in fade-in duration-500">
++        {loading ? (<div className="flex items-center justify-center min-h-[60vh]">
+@@ -1705 +1709 @@ function AdminDashboardContent() {
+-                                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" loading="lazy" quality={75} onError={(e) => {
++                                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" loading="lazy" quality={75} onError={(e) => {
+@@ -1897 +1901 @@ function AdminDashboardContent() {
+-                            <img src={productForm.image} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
++                            <img src={sanitizeExternalUrl(productForm.image || "")} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
+@@ -1941 +1945 @@ function AdminDashboardContent() {
+-                                  <img src={productForm.images[index]} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
++                                  <img src={sanitizeExternalUrl(productForm.images[index] || "")} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
+@@ -2289 +2293,5 @@ function AdminDashboardContent() {
+-            const thumbnailUrl = p.viewMockups?.front || p.baseMockupUrl || firstColorView?.front || firstColorMockup || "/placeholder-logo.png";
++            const thumbnailUrl = resolveImageUrl(p.viewMockups?.front)
++                || resolveImageUrl(p.baseMockupUrl)
++                || resolveImageUrl(firstColorView?.front)
++                || resolveImageUrl(firstColorMockup)
++                || "/placeholder-logo.png";
+@@ -2298,0 +2307,6 @@ function AdminDashboardContent() {
++                                  onError={(e) => {
++                    if (e.currentTarget.dataset.fallbackApplied)
++                        return;
++                    e.currentTarget.dataset.fallbackApplied = "true";
++                    e.currentTarget.src = "/placeholder-logo.png";
++                }}
+@@ -3497 +3511 @@ function AdminDashboardContent() {
+-                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded"/>
++                        <img src={sanitizeExternalUrl(item.image || "")} alt={item.name} className="w-16 h-16 object-cover rounded"/>
+@@ -3597 +3611 @@ function AdminDashboardContent() {
+-                    {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
++                    {previewBaseImage ? (<img src={sanitizeExternalUrl(previewBaseImage || "")} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+@@ -3611 +3625 @@ function AdminDashboardContent() {
+-                            <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
++                            <img src={sanitizeExternalUrl(previewSideData.uploadedImage || "")} alt="Design asset" className="h-full w-full object-contain"/>
+@@ -3721,2 +3735 @@ function AdminDashboardContent() {
+-        </div>
+-      </div>
++        </AdminLayout>
+@@ -3724 +3737 @@ function AdminDashboardContent() {
+-    </div>);
++    </>);
+diff --git a/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx b/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx
+index 224e3b3..ed3c96e 100644
+--- a/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx
++++ b/fashion-ecommerce/app/admin/(modules)/home-slider/page.jsx
+@@ -10,0 +11 @@ import { featureControlsApi } from "@/lib/api/featureControls";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -196 +197 @@ export default function HomeSliderSettingsPage() {
+-                  <Image src={slide.image} alt={`Slide ${index + 1}`} fill className="object-cover" />
++                  <Image src={sanitizeExternalUrl(slide.image || "") || "/placeholder-logo.png"} alt={`Slide ${index + 1}`} fill className="object-cover" />
+@@ -278 +279 @@ export default function HomeSliderSettingsPage() {
+-                <Image src={slides[editingSlideIndex].image} alt={`Slide ${editingSlideIndex + 1}`} fill className="object-cover" />
++                <Image src={sanitizeExternalUrl(slides[editingSlideIndex].image || "") || "/placeholder-logo.png"} alt={`Slide ${editingSlideIndex + 1}`} fill className="object-cover" />
+diff --git a/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx b/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx
+index d91b178..2b22f02 100644
+--- a/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx
++++ b/fashion-ecommerce/app/admin/(modules)/virtual-experience/page.jsx
+@@ -5,0 +6 @@ import { useAuth } from "@/lib/auth";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -124 +125 @@ export default function VirtualExperienceControlPage() {
+-            const imageUrl = product.image || product.images?.[0] || "/placeholder-logo.png";
++            const imageUrl = sanitizeExternalUrl(product.image || product.images?.[0] || "") || "/placeholder-logo.png";
+diff --git a/fashion-ecommerce/app/cart/page.jsx b/fashion-ecommerce/app/cart/page.jsx
+index fc6e309..81204b3 100644
+--- a/fashion-ecommerce/app/cart/page.jsx
++++ b/fashion-ecommerce/app/cart/page.jsx
+@@ -11,0 +12 @@ import { useRegion } from "@/lib/region";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -19 +20 @@ export default function CartPage() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+@@ -43 +44 @@ export default function CartPage() {
+-                          <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 128px"/>
++                          <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 128px"/>
+diff --git a/fashion-ecommerce/app/checkout/page.jsx b/fashion-ecommerce/app/checkout/page.jsx
+index 979d58a..12c3651 100644
+--- a/fashion-ecommerce/app/checkout/page.jsx
++++ b/fashion-ecommerce/app/checkout/page.jsx
+@@ -17,0 +18 @@ import { paymentsApi } from "@/lib/api/payments";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -175,2 +176,2 @@ export default function CheckoutPage() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
+-      <div className="container mx-auto px-6 md:px-12 lg:px-24 py-12">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
+@@ -178 +179 @@ export default function CheckoutPage() {
+-          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-5xl md:text-6xl font-bold mb-12 text-gray-900">
++          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-8 sm:mb-10 md:mb-12 text-gray-900">
+@@ -195 +196 @@ export default function CheckoutPage() {
+-                    <div className="grid grid-cols-2 gap-4">
++                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+@@ -221 +222 @@ export default function CheckoutPage() {
+-                    <div className="grid grid-cols-2 gap-4">
++                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+@@ -232 +233 @@ export default function CheckoutPage() {
+-                    <div className="grid grid-cols-2 gap-4">
++                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+@@ -258 +259 @@ export default function CheckoutPage() {
+-                            <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
++                            <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
+diff --git a/fashion-ecommerce/app/collection/page.jsx b/fashion-ecommerce/app/collection/page.jsx
+index 396f8ad..c31ab8c 100644
+--- a/fashion-ecommerce/app/collection/page.jsx
++++ b/fashion-ecommerce/app/collection/page.jsx
+@@ -17,0 +18 @@ import { useCart } from "@/lib/cart";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -238 +239 @@ export default function CollectionPage() {
+-                <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
++                <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+@@ -291 +292 @@ export default function CollectionPage() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+diff --git a/fashion-ecommerce/app/collections/page.jsx b/fashion-ecommerce/app/collections/page.jsx
+index 23ef527..0844d7f 100644
+--- a/fashion-ecommerce/app/collections/page.jsx
++++ b/fashion-ecommerce/app/collections/page.jsx
+@@ -17,0 +18 @@ import { useCart } from "@/lib/cart";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -267 +268 @@ export default function CollectionsPage() {
+-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+@@ -274 +275 @@ export default function CollectionsPage() {
+-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24 flex items-center justify-center">
++        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24 flex items-center justify-center">
+@@ -293 +294 @@ export default function CollectionsPage() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+@@ -295,2 +296,2 @@ export default function CollectionsPage() {
+-      <section className="relative overflow-hidden min-h-screen flex items-center">
+-        <div className="relative w-full h-screen" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
++      <section className="relative overflow-hidden min-h-[100svh] flex items-center">
++        <div className="relative w-full h-[100svh]" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
+@@ -358 +359 @@ export default function CollectionsPage() {
+-                            <Image src={heroSlides[currentSlide].image || "/placeholder-logo.png"} alt={heroSlides[currentSlide].name} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
++                            <Image src={sanitizeExternalUrl(heroSlides[currentSlide].image || "") || "/placeholder-logo.png"} alt={heroSlides[currentSlide].name} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
+@@ -373,2 +374,2 @@ export default function CollectionsPage() {
+-        }} className="absolute left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Previous slide" disabled={heroSlides.length === 0}>
+-            <ChevronLeft className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
++        }} className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-2 sm:p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Previous slide" disabled={heroSlides.length === 0}>
++            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
+@@ -380,2 +381,2 @@ export default function CollectionsPage() {
+-        }} className="absolute right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Next slide" disabled={heroSlides.length === 0}>
+-            <ChevronRight className="h-6 w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
++        }} className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-40 bg-white/90 hover:bg-white backdrop-blur-sm rounded-full p-2 sm:p-3 shadow-lg border border-rose-200 transition-all duration-300 hover:scale-110 group" aria-label="Next slide" disabled={heroSlides.length === 0}>
++            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-gray-700 group-hover:text-rose-600 transition-colors"/>
+@@ -441 +442 @@ export default function CollectionsPage() {
+-                            <Image src={product.image || "/placeholder-logo.png"} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
++                            <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+diff --git a/fashion-ecommerce/app/employee/page.jsx b/fashion-ecommerce/app/employee/page.jsx
+index 8331fe5..acec07b 100644
+--- a/fashion-ecommerce/app/employee/page.jsx
++++ b/fashion-ecommerce/app/employee/page.jsx
+@@ -24,0 +25 @@ import { useLanguage } from "@/lib/language";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -32,0 +34 @@ import { StaffChatWidget } from "@/components/staff-chat-widget";
++import { EmployeeLayout } from "@/components/employee/EmployeeLayout";
+@@ -76,0 +79,11 @@ const parseColorList = (value) => value.split(",").map((color) => color.trim()).
++const resolveImageUrl = (value) => {
++    if (!value)
++        return "";
++    if (typeof value === "string")
++        return sanitizeExternalUrl(value);
++    if (value && typeof value === "object") {
++        const candidate = value.url || value.secure_url || value.path;
++        return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
++    }
++    return "";
++};
+@@ -899,3 +912 @@ export default function EmployeeDashboard() {
+-    return (<div className="min-h-screen bg-muted/30">
+-      
+-      <div className="fixed left-0 top-0 h-full w-64 bg-background border-r border-border overflow-y-auto z-50">
++    const sidebarContent = (<div className="flex h-full flex-col overflow-y-auto">
+@@ -933 +944 @@ export default function EmployeeDashboard() {
+-            <span className="font-medium">{language === "ar" ? "تتبع التقدم" : "Progress Tracking"}</span>
++            <span className="font-medium">{language === "ar" ? 'O?O?O"1 O‎O‎O‎,‎O‎,‎O‎.' : "Progress Tracking"}</span>
+@@ -943 +954 @@ export default function EmployeeDashboard() {
+-            <span className="font-medium">{language === "ar" ? "منتجات الاستديو" : "Studio Products"}</span>
++            <span className="font-medium">{language === "ar" ? "U.U+O?O?O‎‎O? O‎,‎O‎3O?O_USU^" : "Studio Products"}</span>
+@@ -957 +968 @@ export default function EmployeeDashboard() {
+-        <div className="absolute bottom-6 left-4 right-4 space-y-2">
++        <div className="mt-auto space-y-2 px-4 pb-6">
+@@ -970 +981 @@ export default function EmployeeDashboard() {
+-            {language === "ar" ? "عرض كزائر" : "View as Guest"}
++            {language === "ar" ? "O1O?O‎ U?O?O‎O?O?" : "View as Guest"}
+@@ -974 +985 @@ export default function EmployeeDashboard() {
+-              {language === "ar" ? "العودة للمتجر" : "Back to Store"}
++              {language === "ar" ? "O‎,‎O1U^O‎_Oc U,U,U.O?O?O?" : "Back to Store"}
+@@ -981,4 +992,3 @@ export default function EmployeeDashboard() {
+-      </div>
+-
+-      
+-      <div className="ml-64 p-8">
++        </div>);
++    return (<EmployeeLayout sidebar={sidebarContent} title={language === "ar" ? "لوحة الموظف" : "Employee Dashboard"}>
++      <div className="p-4 sm:p-6 lg:p-8">
+@@ -1163 +1173,5 @@ export default function EmployeeDashboard() {
+-            const thumbnailUrl = p.viewMockups?.front || p.baseMockupUrl || firstColorView?.front || firstColorMockup || "/placeholder-logo.png";
++            const thumbnailUrl = resolveImageUrl(p.viewMockups?.front)
++                || resolveImageUrl(p.baseMockupUrl)
++                || resolveImageUrl(firstColorView?.front)
++                || resolveImageUrl(firstColorMockup)
++                || "/placeholder-logo.png";
+@@ -1172,0 +1187,6 @@ export default function EmployeeDashboard() {
++                                  onError={(e) => {
++                    if (e.currentTarget.dataset.fallbackApplied)
++                        return;
++                    e.currentTarget.dataset.fallbackApplied = "true";
++                    e.currentTarget.src = "/placeholder-logo.png";
++                }}
+@@ -1222,2 +1242,2 @@ export default function EmployeeDashboard() {
+-            const previewUrl = studioForm.viewMockups?.[viewKey] || (viewKey === "front" ? studioForm.baseMockupUrl : "");
+-            return (<div key={viewKey} className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary transition-colors">
++                        const previewUrl = studioForm.viewMockups?.[viewKey] || (viewKey === "front" ? studioForm.baseMockupUrl : "");
++                        return (<div key={viewKey} className="border-2 border-dashed border-border rounded-lg p-3 hover:border-primary transition-colors">
+@@ -1246,2 +1266,2 @@ export default function EmployeeDashboard() {
+-                          </div>);
+-        })}
++                            </div>);
++                      })}
+@@ -1734 +1754 @@ export default function EmployeeDashboard() {
+-                                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" onError={(e) => {
++                                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover" sizes="64px" onError={(e) => {
+@@ -1898 +1918 @@ export default function EmployeeDashboard() {
+-                            <img src={productForm.image} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
++                            <img src={sanitizeExternalUrl(productForm.image || "")} alt={language === "ar" ? "معاينة الصورة الرئيسية" : "Main image preview"} className="w-full h-full object-cover"/>
+@@ -1942 +1962 @@ export default function EmployeeDashboard() {
+-                                  <img src={productForm.images[index]} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
++                                  <img src={sanitizeExternalUrl(productForm.images[index] || "")} alt={language === "ar" ? `صورة إضافية ${index + 1}` : `Additional image ${index + 1}`} className="w-full h-full object-cover"/>
+@@ -2322 +2342 @@ export default function EmployeeDashboard() {
+-                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded"/>
++                          <img src={sanitizeExternalUrl(item.image || "")} alt={item.name} className="w-12 h-12 object-cover rounded"/>
+@@ -2439 +2459 @@ export default function EmployeeDashboard() {
+-                  {previewBaseImage ? (<img src={previewBaseImage} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
++                  {previewBaseImage ? (<img src={sanitizeExternalUrl(previewBaseImage || "")} alt={designPreviewItem.name} className="h-full w-full object-contain"/>) : (<div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+@@ -2453 +2473 @@ export default function EmployeeDashboard() {
+-                          <img src={previewSideData.uploadedImage} alt="Design asset" className="h-full w-full object-contain"/>
++                          <img src={sanitizeExternalUrl(previewSideData.uploadedImage || "")} alt="Design asset" className="h-full w-full object-contain"/>
+@@ -2475 +2495 @@ export default function EmployeeDashboard() {
+-    </div>);
++    </EmployeeLayout>);
+diff --git a/fashion-ecommerce/app/my-designs/page.jsx b/fashion-ecommerce/app/my-designs/page.jsx
+index c4f69fa..bb3d01e 100644
+--- a/fashion-ecommerce/app/my-designs/page.jsx
++++ b/fashion-ecommerce/app/my-designs/page.jsx
+@@ -13,0 +14 @@ import { useToast } from "@/hooks/use-toast";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -68 +69 @@ const parseLocalDesigns = (key) => {
+-            thumbnail: design.thumbnail || "",
++            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
+@@ -209 +210 @@ export default function MyDesignsPage() {
+-                image: design.thumbnail || design.designImageURL || "",
++                image: sanitizeExternalUrl(design.thumbnail || design.designImageURL || ""),
+@@ -342 +343 @@ export default function MyDesignsPage() {
+-                  <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
++                  <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+@@ -383 +384 @@ export default function MyDesignsPage() {
+-                      <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
++                      <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
+diff --git a/fashion-ecommerce/app/new-arrival/page.jsx b/fashion-ecommerce/app/new-arrival/page.jsx
+index c9911d2..4cbe89c 100644
+--- a/fashion-ecommerce/app/new-arrival/page.jsx
++++ b/fashion-ecommerce/app/new-arrival/page.jsx
+@@ -17,0 +18 @@ import { useCart } from "@/lib/cart";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -244 +245 @@ export default function NewArrivalPage() {
+-                          <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
++                          <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+diff --git a/fashion-ecommerce/app/page.jsx b/fashion-ecommerce/app/page.jsx
+index e52f7a4..7ddad00 100644
+--- a/fashion-ecommerce/app/page.jsx
++++ b/fashion-ecommerce/app/page.jsx
+@@ -19,0 +20 @@ import { FeaturedProductsSkeleton } from "@/components/skeletons";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -133 +134 @@ export default function HomePage() {
+-                        image: product.viewMockups?.front || product.baseMockupUrl || product.image || "",
++                        image: sanitizeExternalUrl(product.viewMockups?.front || product.baseMockupUrl || product.image || ""),
+@@ -242 +243 @@ export default function HomePage() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white">
+@@ -247 +248 @@ export default function HomePage() {
+-      <section className="relative overflow-hidden min-h-screen flex items-center pt-20">
++      <section className="relative overflow-hidden min-h-[100svh] flex items-center pt-20">
+@@ -249 +250 @@ export default function HomePage() {
+-        <div className="relative w-full h-screen" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
++        <div className="relative w-full h-[100svh]" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onTouchStart={() => setIsPaused(true)} onTouchEnd={() => setIsPaused(false)}>
+@@ -361 +362 @@ export default function HomePage() {
+-                          <Image src={activeSlide.image} alt={activeSlide.title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
++                          <Image src={sanitizeExternalUrl(activeSlide.image || "") || "/placeholder-logo.png"} alt={activeSlide.title} fill className="object-contain rounded-2xl" priority={currentSlide === 0} sizes="(max-width: 768px) 100vw, 50vw"/>
+@@ -441 +442 @@ export default function HomePage() {
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -498 +499 @@ export default function HomePage() {
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -545 +546 @@ export default function HomePage() {
+-                    <img src="https://res.cloudinary.com/fashionhub1/image/upload/v1768498925/stylecraft/virtual-try-on/j0qvmnzfwpc2ydfeb757.png" alt={language === "ar" ? "معاينة التجربة الافتراضية" : "Virtual try-on preview"} className="h-full w-full object-cover"/>
++                    <img src="/try-on.png" alt={language === "ar" ? "معاينة التجربة الافتراضية" : "Virtual try-on preview"} className="h-full w-full object-cover"/>
+@@ -582 +583 @@ export default function HomePage() {
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -628 +629 @@ export default function HomePage() {
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -674 +675 @@ export default function HomePage() {
+-                              {product.image ? (<Image src={product.image} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
++                              {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name} fill className="object-cover"/>) : (<div className="w-full h-full flex items-center justify-center">
+@@ -753 +754 @@ export default function HomePage() {
+-                      {product.image ? (<Image src={product.image} alt={product.name || "Product"} fill className="object-cover group-hover:scale-110 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>) : (<div className="w-full h-full flex items-center justify-center">
++                      {product.image ? (<Image src={sanitizeExternalUrl(product.image) || "/placeholder-logo.png"} alt={product.name || "Product"} fill className="object-cover group-hover:scale-110 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>) : (<div className="w-full h-full flex items-center justify-center">
+diff --git a/fashion-ecommerce/app/products/page.jsx b/fashion-ecommerce/app/products/page.jsx
+index 49f9dc1..3a4959e 100644
+--- a/fashion-ecommerce/app/products/page.jsx
++++ b/fashion-ecommerce/app/products/page.jsx
+@@ -21,0 +22 @@ import { useRouter } from "next/navigation";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -31,0 +33,2 @@ function ProductsPageContent() {
++    const [loadError, setLoadError] = useState("");
++    const [reloadKey, setReloadKey] = useState(0);
+@@ -89,0 +93 @@ function ProductsPageContent() {
++            setLoadError("");
+@@ -144,0 +149,6 @@ function ProductsPageContent() {
++                    setLoadError(error?.message || "Failed to load products");
++                    toast({
++                        title: language === "ar" ? "U?O'U, OU,O¦O-U.USU," : "Load Failed",
++                        description: error?.message || "Failed to load products from the server",
++                        variant: "destructive",
++                    });
+@@ -152 +162 @@ function ProductsPageContent() {
+-    }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy, currentPage]);
++    }, [searchParams, searchQuery, categoryFilter, genderFilter, seasonFilter, styleFilter, occasionFilter, sortBy, currentPage, reloadKey, toast, language]);
+@@ -345 +355 @@ function ProductsPageContent() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+@@ -347,0 +358,9 @@ function ProductsPageContent() {
++        {!isLoading && loadError && (<div className="mb-6 rounded-2xl border-2 border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
++            <div className="flex flex-wrap items-center justify-between gap-3">
++              <span>{language === "ar" ? `U?O'U, OU,O¦O-U.USU,: ${loadError}` : `Failed to load products: ${loadError}`}</span>
++              <Button variant="outline" size="sm" className="border-rose-300 text-rose-700 hover:bg-rose-100" onClick={() => setReloadKey((prev) => prev + 1)}>
++                Retry
++              </Button>
++            </div>
++          </div>)}
++
+@@ -530 +549 @@ function ProductsPageContent() {
+-                      <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onError={(e) => {
++                      <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onError={(e) => {
+diff --git a/fashion-ecommerce/app/products/[id]/ProductDetailPageClient.jsx b/fashion-ecommerce/app/products/[id]/ProductDetailPageClient.jsx
+index 1e2fa58..fd6b659 100644
+--- a/fashion-ecommerce/app/products/[id]/ProductDetailPageClient.jsx
++++ b/fashion-ecommerce/app/products/[id]/ProductDetailPageClient.jsx
+@@ -19,0 +20 @@ import { favoritesApi } from "@/lib/api/favorites";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -267 +268 @@ export default function ProductDetailPageClient() {
+-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
++        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
+@@ -272 +273 @@ export default function ProductDetailPageClient() {
+-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
++        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
+@@ -297 +298 @@ export default function ProductDetailPageClient() {
+-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
++        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
+@@ -327 +328 @@ export default function ProductDetailPageClient() {
+-    const images = allImages.filter(img => img && img.trim() !== "");
++    const images = allImages.map((value) => sanitizeExternalUrl(value || "")).filter(Boolean);
+@@ -332 +333 @@ export default function ProductDetailPageClient() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+@@ -506 +507 @@ export default function ProductDetailPageClient() {
+-                            <Image src={relatedProduct.image || "/placeholder-logo.png"} alt={relatedProduct.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
++                            <Image src={sanitizeExternalUrl(relatedProduct.image || "") || "/placeholder-logo.png"} alt={relatedProduct.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+@@ -548 +549 @@ export default function ProductDetailPageClient() {
+-                                    image: relatedProduct.image,
++                                    image: sanitizeExternalUrl(relatedProduct.image || ""),
+diff --git a/fashion-ecommerce/app/profile/page.jsx b/fashion-ecommerce/app/profile/page.jsx
+index 1fecf18..f8c5bda 100644
+--- a/fashion-ecommerce/app/profile/page.jsx
++++ b/fashion-ecommerce/app/profile/page.jsx
+@@ -14,0 +15 @@ import { useToast } from "@/hooks/use-toast";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -69 +70 @@ const parseLocalDesigns = (key) => {
+-            thumbnail: design.thumbnail || "",
++            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
+@@ -225 +226 @@ export default function ProfilePage() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+@@ -241,2 +242,2 @@ export default function ProfilePage() {
+-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 bg-white backdrop-blur-sm border-2 border-gray-200 p-2 rounded-xl sm:rounded-2xl h-auto gap-2">
+-              <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
++            <TabsList className="flex w-full flex-nowrap overflow-x-auto sm:grid sm:grid-cols-5 bg-white backdrop-blur-sm border-2 border-gray-200 p-2 rounded-xl sm:rounded-2xl h-auto gap-2">
++              <TabsTrigger value="profile" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+@@ -246 +247 @@ export default function ProfilePage() {
+-              <TabsTrigger value="orders" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
++              <TabsTrigger value="orders" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+@@ -250 +251 @@ export default function ProfilePage() {
+-              <TabsTrigger value="designs" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
++              <TabsTrigger value="designs" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+@@ -254 +255 @@ export default function ProfilePage() {
+-              <TabsTrigger value="addresses" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
++              <TabsTrigger value="addresses" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+@@ -258 +259 @@ export default function ProfilePage() {
+-              <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
++              <TabsTrigger value="settings" className="whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-rose-500 data-[state=active]:to-pink-500 data-[state=active]:text-white text-gray-600 rounded-lg sm:rounded-xl h-10 sm:h-12 text-sm sm:text-base">
+@@ -292,2 +293,2 @@ export default function ProfilePage() {
+-                  <div className="flex gap-4">
+-                    <Button className="bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 rounded-full" onClick={async () => {
++                  <div className="flex flex-col sm:flex-row gap-3">
++                    <Button className="w-full sm:w-auto bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 rounded-full" onClick={async () => {
+@@ -323 +324 @@ export default function ProfilePage() {
+-                    <Button variant="outline" className="bg-white border-2 border-gray-200 hover:bg-rose-50 hover:border-rose-300 text-gray-700 hover:text-rose-600 rounded-full" onClick={() => {
++                    <Button variant="outline" className="w-full sm:w-auto bg-white border-2 border-gray-200 hover:bg-rose-50 hover:border-rose-300 text-gray-700 hover:text-rose-600 rounded-full" onClick={() => {
+@@ -360 +361 @@ export default function ProfilePage() {
+-                  <Button>Update Password</Button>
++                  <Button className="w-full sm:w-auto">Update Password</Button>
+@@ -381,3 +382,3 @@ export default function ProfilePage() {
+-                        <div className="flex items-start justify-between mb-4">
+-                          <div>
+-                            <h3 className="font-semibold text-lg text-gray-900">{order.orderNumber}</h3>
++                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
++                      <div>
++                        <h3 className="font-semibold text-lg text-gray-900">{order.orderNumber}</h3>
+@@ -400 +401 @@ export default function ProfilePage() {
+-                                <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
++                                <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
+@@ -411 +412 @@ export default function ProfilePage() {
+-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
++                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-gray-200">
+@@ -442 +443 @@ export default function ProfilePage() {
+-                        <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
++                        <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
+diff --git a/fashion-ecommerce/app/reset-password/page.jsx b/fashion-ecommerce/app/reset-password/page.jsx
+index a9edc25..7083d4a 100644
+--- a/fashion-ecommerce/app/reset-password/page.jsx
++++ b/fashion-ecommerce/app/reset-password/page.jsx
+@@ -12,0 +13 @@ import logger from "@/lib/logger";
++import { API_BASE_URL } from "@/lib/api";
+@@ -62 +62,0 @@ function ResetPasswordContent() {
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+@@ -104 +104 @@ function ResetPasswordContent() {
+-        return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
++        return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+@@ -128 +128 @@ function ResetPasswordContent() {
+-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
++    return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+@@ -206 +206 @@ export default function ResetPasswordPage() {
+-    return (<Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20"/>}>
++    return (<Suspense fallback={<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20"/>}>
+diff --git a/fashion-ecommerce/app/sale/page.jsx b/fashion-ecommerce/app/sale/page.jsx
+index c18751d..334efbd 100644
+--- a/fashion-ecommerce/app/sale/page.jsx
++++ b/fashion-ecommerce/app/sale/page.jsx
+@@ -13,0 +14 @@ import { Tag } from "lucide-react";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -36 +37 @@ export default function SalePage() {
+-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white">
++    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white">
+@@ -70 +71 @@ export default function SalePage() {
+-                        <Image src={product.image || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
++                        <Image src={sanitizeExternalUrl(product.image || "") || "/placeholder-logo.png"} alt={product.name} width={300} height={300} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy"/>
+diff --git a/fashion-ecommerce/app/signup/page.jsx b/fashion-ecommerce/app/signup/page.jsx
+index c858122..9af81dd 100644
+--- a/fashion-ecommerce/app/signup/page.jsx
++++ b/fashion-ecommerce/app/signup/page.jsx
+@@ -14,0 +15 @@ import { Separator } from "@/components/ui/separator";
++import { API_BASE_URL } from "@/lib/api";
+@@ -96 +97 @@ export default function SignupPage() {
+-                errorMessage = "Cannot connect to the server. Please make sure the backend server is running on http://localhost:5000";
++                errorMessage = `Cannot connect to the server. Please make sure the backend server is running on ${API_BASE_URL.replace("/api", "")}`;
+@@ -117,0 +119,80 @@ export default function SignupPage() {
++    const exchangeGoogleToken = async (idToken) => {
++        if (!idToken) {
++            toast({
++                title: "Google login failed",
++                description: "No credential returned by Google.",
++                variant: "destructive",
++            });
++            return;
++        }
++        setIsGoogleLoading(true);
++        try {
++            toast({
++                title: "جاري إنشاء الحساب...",
++                description: "يرجى الانتظار",
++            });
++            const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
++                method: 'POST',
++                headers: {
++                    'Content-Type': 'application/json',
++                },
++                credentials: 'include',
++                body: JSON.stringify({
++                    idToken,
++                }),
++            });
++            const data = await backendResponse.json();
++            if (!backendResponse.ok || !data.success) {
++                throw new Error(data.message || 'Google login failed');
++            }
++            if (data.data.token) {
++                localStorage.setItem('auth_token', data.data.token);
++            }
++            toast({
++                title: "تم إنشاء الحساب بنجاح! ✨",
++                description: `مرحباً ${data.data.user.firstName}!`,
++            });
++            const role = String(data.data.user.role || "").toLowerCase().trim();
++            const redirectUrl = role === "admin"
++                ? "/admin"
++                : role === "employee"
++                    ? "/employee"
++                    : "/profile";
++            router.replace(redirectUrl);
++        }
++        catch (error) {
++            console.error("❌ Google login error:", error);
++            toast({
++                title: "فشل التسجيل",
++                description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
++                variant: "destructive",
++            });
++        }
++        finally {
++            setIsGoogleLoading(false);
++        }
++    };
++    const handleNativeGoogleLogin = async (e) => {
++        if (e) {
++            e.preventDefault();
++            e.stopPropagation();
++        }
++        try {
++            const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
++            const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
++            if (clientId) {
++                await GoogleAuth.initialize({ clientId });
++            }
++            const result = await GoogleAuth.signIn();
++            const idToken = result?.authentication?.idToken || result?.idToken;
++            await exchangeGoogleToken(idToken);
++        }
++        catch (error) {
++            console.error("❌ Google native login error:", error);
++            toast({
++                title: "فشل التسجيل",
++                description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
++                variant: "destructive",
++            });
++        }
++    };
+@@ -125,0 +207,4 @@ export default function SignupPage() {
++        if (typeof window !== "undefined" && window?.Capacitor?.isNativePlatform?.()) {
++            await handleNativeGoogleLogin(e);
++            return;
++        }
+@@ -179,45 +264 @@ export default function SignupPage() {
+-                try {
+-                    setIsGoogleLoading(false);
+-                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+-                    toast({
+-                        title: "جاري إنشاء الحساب...",
+-                        description: "يرجى الانتظار",
+-                    });
+-                    const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
+-                        method: 'POST',
+-                        headers: {
+-                            'Content-Type': 'application/json',
+-                        },
+-                        credentials: 'include',
+-                        body: JSON.stringify({
+-                            idToken: response.credential,
+-                        }),
+-                    });
+-                    const data = await backendResponse.json();
+-                    if (!backendResponse.ok || !data.success) {
+-                        throw new Error(data.message || 'Google login failed');
+-                    }
+-                    if (data.data.token) {
+-                        localStorage.setItem('auth_token', data.data.token);
+-                    }
+-                    toast({
+-                        title: "تم إنشاء الحساب بنجاح! ✨",
+-                        description: `مرحباً ${data.data.user.firstName}!`,
+-                    });
+-                    const role = String(data.data.user.role || "").toLowerCase().trim();
+-                    const redirectUrl = role === "admin"
+-                        ? "/admin"
+-                        : role === "employee"
+-                            ? "/employee"
+-                            : "/profile";
+-                    router.replace(redirectUrl);
+-                }
+-                catch (error) {
+-                    setIsGoogleLoading(false);
+-                    console.error("❌ Google login error:", error);
+-                    toast({
+-                        title: "فشل التسجيل",
+-                        description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
+-                        variant: "destructive",
+-                    });
+-                }
++                await exchangeGoogleToken(response?.credential);
+@@ -261 +302 @@ export default function SignupPage() {
+-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
++    return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+@@ -285 +326 @@ export default function SignupPage() {
+-              <div className="grid grid-cols-2 gap-4">
++              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+diff --git a/fashion-ecommerce/app/forgot-password/page.jsx b/fashion-ecommerce/app/forgot-password/page.jsx
+index 584cbc6..0c46f33 100644
+--- a/fashion-ecommerce/app/forgot-password/page.jsx
++++ b/fashion-ecommerce/app/forgot-password/page.jsx
+@@ -11,0 +12 @@ import logger from "@/lib/logger";
++import { API_BASE_URL } from "@/lib/api";
+@@ -38 +38,0 @@ export default function ForgotPasswordPage() {
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+@@ -74 +74 @@ export default function ForgotPasswordPage() {
+-        return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
++        return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+@@ -114 +114 @@ export default function ForgotPasswordPage() {
+-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
++    return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+diff --git a/fashion-ecommerce/app/login/page.jsx b/fashion-ecommerce/app/login/page.jsx
+index 5eb9c72..bff9866 100644
+--- a/fashion-ecommerce/app/login/page.jsx
++++ b/fashion-ecommerce/app/login/page.jsx
+@@ -14,0 +15 @@ import logger from "@/lib/logger";
++import { API_BASE_URL } from "@/lib/api";
+@@ -141,2 +142,2 @@ export default function LoginPage() {
+-    const handleGoogleCredentialResponse = useCallback(async (response) => {
+-        if (!response?.credential) {
++    const exchangeGoogleToken = useCallback(async (idToken) => {
++        if (!idToken) {
+@@ -152 +152,0 @@ export default function LoginPage() {
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+@@ -160 +160 @@ export default function LoginPage() {
+-                    idToken: response.credential,
++                    idToken,
+@@ -193,0 +194,23 @@ export default function LoginPage() {
++    const handleGoogleCredentialResponse = useCallback(async (response) => {
++        await exchangeGoogleToken(response?.credential);
++    }, [exchangeGoogleToken]);
++    const handleNativeGoogleLogin = useCallback(async () => {
++        try {
++            const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
++            const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
++            if (clientId) {
++                await GoogleAuth.initialize({ clientId });
++            }
++            const result = await GoogleAuth.signIn();
++            const idToken = result?.authentication?.idToken || result?.idToken;
++            await exchangeGoogleToken(idToken);
++        }
++        catch (error) {
++            logger.error("Google native login error:", error);
++            toast({
++                title: "Google login failed",
++                description: error?.message || "Please try again.",
++                variant: "destructive",
++            });
++        }
++    }, [exchangeGoogleToken, toast]);
+@@ -204,0 +228,3 @@ export default function LoginPage() {
++        if (window?.Capacitor?.isNativePlatform?.()) {
++            return;
++        }
+@@ -323 +349 @@ export default function LoginPage() {
+-                errorDetails = "The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on http://localhost:5000\n• Check if the server is started correctly\n• Verify your internet connection";
++                errorDetails = `The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on ${API_BASE_URL.replace("/api", "")}\n• Check if the server is started correctly\n• Verify your internet connection`;
+@@ -444 +470 @@ export default function LoginPage() {
+-              <li>Make sure the backend server is running on http://localhost:5000</li>
++              <li>Make sure the backend server is running on {API_BASE_URL.replace("/api", "")}</li>
+@@ -500 +526 @@ export default function LoginPage() {
+-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
++    return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+@@ -671 +697,7 @@ export default function LoginPage() {
+-                <div ref={googleButtonRef} className="inline-block" />
++                {typeof window !== "undefined" && window?.Capacitor?.isNativePlatform?.() ? (
++                  <Button variant="outline" type="button" className="w-full h-12 sm:h-14 text-base font-semibold" onClick={handleNativeGoogleLogin} disabled={isGoogleLoading}>
++                    {isGoogleLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />جاري التحميل...</>) : "تسجيل الدخول باستخدام Google"}
++                  </Button>
++                ) : (
++                  <div ref={googleButtonRef} className="inline-block" />
++                )}
+diff --git a/fashion-ecommerce/app/studio/page.jsx b/fashion-ecommerce/app/studio/page.jsx
+index 09e4696..88d44fb 100644
+--- a/fashion-ecommerce/app/studio/page.jsx
++++ b/fashion-ecommerce/app/studio/page.jsx
+@@ -34,0 +35 @@ import { useAuth } from "@/lib/auth";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -126,0 +128,10 @@ const normalizeColorKey = (value) => String(value || "").trim().toLowerCase();
++const resolveImageUrl = (value) => {
++  if (!value) return "";
++  if (typeof value === "string") return sanitizeExternalUrl(value);
++  if (value && typeof value === "object") {
++    const candidate = value.url || value.secure_url || value.path;
++    return typeof candidate === "string" ? sanitizeExternalUrl(candidate) : "";
++  }
++  return "";
++};
++
+@@ -251 +262,3 @@ const resolveProductImage = (product, viewKey, colorKey) => {
+-  const colorViewImage = colorView ? getViewEntry(colorView, normalizedViewKey) : null;
++  const colorViewImage = resolveImageUrl(
++    colorView ? getViewEntry(colorView, normalizedViewKey) : null
++  );
+@@ -253 +266,3 @@ const resolveProductImage = (product, viewKey, colorKey) => {
+-  const productViewImage = getViewEntry(product.viewMockups || {}, normalizedViewKey);
++  const productViewImage = resolveImageUrl(
++    getViewEntry(product.viewMockups || {}, normalizedViewKey)
++  );
+@@ -255,4 +270,13 @@ const resolveProductImage = (product, viewKey, colorKey) => {
+-  if (normalizedViewKey !== "front") return null;
+-  if (colorView?.front) return colorView.front;
+-  if (colorMockup) return colorMockup;
+-  if (product.viewMockups?.front) return product.viewMockups.front;
++  if (normalizedViewKey !== "front") {
++    return (
++      resolveImageUrl(colorView?.front) ||
++      resolveImageUrl(product.viewMockups?.front) ||
++      resolveImageUrl(colorMockup) ||
++      resolveImageUrl(product.baseMockupUrl) ||
++      resolveImageUrl(product.image) ||
++      (colorImageMap[normalizedColor] || null)
++    );
++  }
++  if (colorView?.front) return resolveImageUrl(colorView.front);
++  if (colorMockup) return resolveImageUrl(colorMockup);
++  if (product.viewMockups?.front) return resolveImageUrl(product.viewMockups.front);
+@@ -260 +284 @@ const resolveProductImage = (product, viewKey, colorKey) => {
+-  return product.baseMockupUrl || product.image;
++  return resolveImageUrl(product.baseMockupUrl) || resolveImageUrl(product.image);
+@@ -1089 +1113 @@ export default function DesignStudioPage() {
+-    <div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-20">
++    <div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white flex flex-col pt-16 sm:pt-20">
+@@ -1107 +1131 @@ export default function DesignStudioPage() {
+-                          src={productPreviewImage || activeProduct?.image || "/placeholder-logo.png"}
++                          src={sanitizeExternalUrl(productPreviewImage || activeProduct?.image || "") || "/placeholder-logo.png"}
+@@ -1110,0 +1135,5 @@ export default function DesignStudioPage() {
++                          onError={(e) => {
++                            if (e.currentTarget.dataset.fallbackApplied) return;
++                            e.currentTarget.dataset.fallbackApplied = "true";
++                            e.currentTarget.src = "/placeholder-logo.png";
++                          }}
+@@ -1179 +1208 @@ export default function DesignStudioPage() {
+-          <div className="flex-1 overflow-auto p-4 lg:p-6 min-h-0">
++          <div className="flex-1 overflow-auto overflow-x-auto p-4 lg:p-6 min-h-0">
+@@ -1258 +1287 @@ export default function DesignStudioPage() {
+-                  <div className="relative mx-auto w-full max-w-[1040px] 2xl:max-w-[1280px] shadow-2xl rounded-2xl overflow-hidden bg-background border border-border">
++                  <div className="relative mx-auto w-full min-w-[280px] sm:min-w-[320px] max-w-[1040px] 2xl:max-w-[1280px] shadow-2xl rounded-2xl overflow-hidden bg-background border border-border">
+@@ -1283,0 +1313,5 @@ export default function DesignStudioPage() {
++                            onError={(e) => {
++                              if (e.currentTarget.dataset.fallbackApplied) return;
++                              e.currentTarget.dataset.fallbackApplied = "true";
++                              e.currentTarget.src = "/placeholder-logo.png";
++                            }}
+@@ -1566 +1600 @@ export default function DesignStudioPage() {
+-                                src={design.thumbnail}
++                                src={sanitizeExternalUrl(design.thumbnail)}
+diff --git a/fashion-ecommerce/app/studio/components/ProductPreview.jsx b/fashion-ecommerce/app/studio/components/ProductPreview.jsx
+index c0e6260..dc356d6 100644
+--- a/fashion-ecommerce/app/studio/components/ProductPreview.jsx
++++ b/fashion-ecommerce/app/studio/components/ProductPreview.jsx
+@@ -2,0 +3 @@ import { getProductImagePath } from "../utils/productImages";
++import { sanitizeExternalUrl } from "@/lib/api";
+@@ -4 +5 @@ export function ProductPreview({ productType, productColor, currentSide, onSideC
+-    const currentImage = mockupUrl || getProductImagePath(productType, currentSide);
++    const currentImage = sanitizeExternalUrl(mockupUrl || getProductImagePath(productType, currentSide)) || "/placeholder-logo.png";
+@@ -22 +23 @@ export function ProductPreview({ productType, productColor, currentSide, onSideC
+-            e.target.src = mockupUrl || "/placeholder-logo.png";
++            e.target.src = currentImage || "/placeholder-logo.png";
