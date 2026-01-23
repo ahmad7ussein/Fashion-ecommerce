@@ -89,7 +89,7 @@ export function AdminTopbar() {
             loadNotifications();
         }
     }, [notificationsOpen, loadNotifications]);
-    return (<div className="flex min-h-16 flex-wrap items-center gap-3 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] lg:px-6">
+    return (<div className="flex min-h-16 flex-wrap items-center gap-3 px-4 pb-2 app-safe-top lg:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <span className="sr-only">{adminEmail}</span>
         <nav className="hidden items-center gap-2 overflow-x-auto md:flex" aria-label="Admin sections">

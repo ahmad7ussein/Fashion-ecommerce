@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/logo";
 import logger from "@/lib/logger";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, getApiUrl } from "@/lib/api";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 const loginSchema = z.object({
@@ -150,7 +150,7 @@ export default function LoginPage() {
         }
         setIsGoogleLoading(true);
         try {
-            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
+            const backendResponse = await fetch(getApiUrl("/auth/google"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

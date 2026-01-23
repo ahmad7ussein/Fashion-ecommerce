@@ -33,11 +33,15 @@ const nextConfig = {
     if (process.env.CAPACITOR_BUILD === 'true') {
       return [];
     }
-    const target = process.env.API_PROXY_TARGET;
-    if (!target) {
+    const apiBase =
+      process.env.NEXT_PUBLIC_API_BASE ||
+      process.env.API_BASE_URL ||
+      process.env.API_PROXY_TARGET ||
+      "http://localhost:5000";
+    if (!apiBase) {
       return [];
     }
-    const normalizedTarget = target.replace(/\/$/, "");
+    const normalizedTarget = apiBase.replace(/\/$/, "");
     return [
       {
         source: "/api/:path*",

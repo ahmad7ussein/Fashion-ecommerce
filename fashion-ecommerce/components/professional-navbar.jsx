@@ -106,7 +106,7 @@ export function ProfessionalNavbar() {
         },
     ];
     return (<>
-      <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 pt-[calc(env(safe-area-inset-top)+0.5rem)] ${scrolled
+      <motion.header initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 app-safe-top ${scrolled
             ? "bg-background/98 backdrop-blur-xl border-b border-border shadow-lg"
             : "bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm"}`}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">

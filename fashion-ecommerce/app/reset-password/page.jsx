@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import logger from "@/lib/logger";
-import { API_BASE_URL } from "@/lib/api";
+import { getApiUrl } from "@/lib/api";
 function ResetPasswordContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -60,7 +60,7 @@ function ResetPasswordContent() {
         setIsLoading(true);
         logger.log("Resetting password for:", email);
         try {
-            const response = await fetch(`${API_BASE_URL()}/auth/reset-password`, {
+            const response = await fetch(getApiUrl("/auth/reset-password"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

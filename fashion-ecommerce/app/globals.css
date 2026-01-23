@@ -137,6 +137,16 @@ body {
   overflow-x: hidden;
 }
 
+.app-safe-top {
+  padding-top: calc(env(safe-area-inset-top) + 0.75rem);
+}
+
+@media (min-width: 768px) {
+  .app-safe-top {
+    padding-top: calc(env(safe-area-inset-top) + 0.5rem);
+  }
+}
+
  
 ::-webkit-scrollbar {
   width: 6px;
