@@ -11,6 +11,7 @@ import { designsApi } from "@/lib/api/designs";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { sanitizeExternalUrl } from "@/lib/api";
 import logger from "@/lib/logger";
 import { ProfessionalNavbar } from "@/components/professional-navbar";
 import { useCart } from "@/lib/cart";
@@ -65,7 +66,7 @@ const parseLocalDesigns = (key) => {
         return parsed.map((design) => ({
             _id: design.id,
             name: design.name || "My design",
-            thumbnail: design.thumbnail || "",
+            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
             createdAt: design.createdAt || new Date().toISOString(),
             updatedAt: design.createdAt || new Date().toISOString(),
             baseProduct: {
@@ -206,7 +207,7 @@ export default function MyDesignsPage() {
                 quantity: 1,
                 size,
                 color,
-                image: design.thumbnail || design.designImageURL || "",
+                image: sanitizeExternalUrl(design.thumbnail || design.designImageURL || ""),
                 isCustom: true,
                 notes: orderNotes || undefined,
                 design: design._id,
@@ -339,7 +340,7 @@ export default function MyDesignsPage() {
           </Card>) : viewMode === "grid" ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredDesigns.map((design) => (<Card key={design._id} className="group overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="relative aspect-square bg-muted overflow-hidden">
-                  <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+                  <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
                   {design.status === "published" && (<Badge className="absolute top-3 left-3 bg-green-500">Published</Badge>)}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <Link href={getDesignLink(design)}>
@@ -380,7 +381,7 @@ export default function MyDesignsPage() {
                 <CardContent className="p-6">
                   <div className="flex gap-6">
                     <div className="w-32 h-32 rounded-lg bg-muted overflow-hidden flex-shrink-0 relative">
-                      <Image src={design.thumbnail || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
+                      <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">

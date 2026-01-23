@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/logo";
 import logger from "@/lib/logger";
+import { API_BASE_URL } from "@/lib/api";
 import { Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 const loginSchema = z.object({
@@ -138,8 +139,8 @@ export default function LoginPage() {
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    const handleGoogleCredentialResponse = useCallback(async (response) => {
-        if (!response?.credential) {
+    const exchangeGoogleToken = useCallback(async (idToken) => {
+        if (!idToken) {
             toast({
                 title: "Google login failed",
                 description: "No credential returned by Google.",
@@ -149,15 +150,14 @@ export default function LoginPage() {
         }
         setIsGoogleLoading(true);
         try {
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
-            const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
+            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 credentials: "include",
                 body: JSON.stringify({
-                    idToken: response.credential,
+                    idToken,
                 }),
             });
             const data = await backendResponse.json();
@@ -191,6 +191,29 @@ export default function LoginPage() {
             setIsGoogleLoading(false);
         }
     }, [toast]);
+    const handleGoogleCredentialResponse = useCallback(async (response) => {
+        await exchangeGoogleToken(response?.credential);
+    }, [exchangeGoogleToken]);
+    const handleNativeGoogleLogin = useCallback(async () => {
+        try {
+            const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+            const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+            if (clientId) {
+                await GoogleAuth.initialize({ clientId });
+            }
+            const result = await GoogleAuth.signIn();
+            const idToken = result?.authentication?.idToken || result?.idToken;
+            await exchangeGoogleToken(idToken);
+        }
+        catch (error) {
+            logger.error("Google native login error:", error);
+            toast({
+                title: "Google login failed",
+                description: error?.message || "Please try again.",
+                variant: "destructive",
+            });
+        }
+    }, [exchangeGoogleToken, toast]);
     useEffect(() => {
         if (typeof window === "undefined")
             return;
@@ -202,6 +225,9 @@ export default function LoginPage() {
     useEffect(() => {
         if (typeof window === "undefined")
             return;
+        if (window?.Capacitor?.isNativePlatform?.()) {
+            return;
+        }
         const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
         if (!clientId) {
             logger.error("Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID");
@@ -320,7 +346,7 @@ export default function LoginPage() {
                 errorMessage.includes("ERR_NETWORK")) {
                 errorTitle = "🔌 Connection Error";
                 errorMessage = "Cannot connect to the server";
-                errorDetails = "The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on http://localhost:5000\n• Check if the server is started correctly\n• Verify your internet connection";
+                errorDetails = `The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on ${API_BASE_URL().replace("/api", "")}\n• Check if the server is started correctly\n• Verify your internet connection`;
             }
             else if (errorMessage.includes("Invalid email or password") || errorMessage.includes("Invalid credentials") || errorMessage.includes("401")) {
                 errorTitle = "Authentication Failed";
@@ -441,7 +467,7 @@ export default function LoginPage() {
                 errorDetails = (<div className="space-y-1">
             <p>The backend server is not running or not accessible.</p>
             <ul className="list-disc list-inside text-xs space-y-0.5 mt-1">
-              <li>Make sure the backend server is running on http://localhost:5000</li>
+              <li>Make sure the backend server is running on {API_BASE_URL().replace("/api", "")}</li>
               <li>Check if the server is started correctly</li>
               <li>Verify your internet connection</li>
             </ul>
@@ -497,7 +523,7 @@ export default function LoginPage() {
             });
         }
     };
-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+    return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-md">
         
         <div className="text-center mb-6 sm:mb-8 space-y-4 sm:space-y-5">
@@ -668,7 +694,13 @@ export default function LoginPage() {
                 <Loader2 className="h-5 w-5 animate-spin text-primary"/>
               </div>)}
               <div className="mx-auto flex w-full max-w-xs justify-center sm:max-w-sm">
-                <div ref={googleButtonRef} className="inline-block" />
+                {typeof window !== "undefined" && window?.Capacitor?.isNativePlatform?.() ? (
+                  <Button variant="outline" type="button" className="w-full h-12 sm:h-14 text-base font-semibold" onClick={handleNativeGoogleLogin} disabled={isGoogleLoading}>
+                    {isGoogleLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />جاري التحميل...</>) : "تسجيل الدخول باستخدام Google"}
+                  </Button>
+                ) : (
+                  <div ref={googleButtonRef} className="inline-block" />
+                )}
               </div>
             </div>
 

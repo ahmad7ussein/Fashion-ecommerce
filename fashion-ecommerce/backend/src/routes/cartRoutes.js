@@ -164,30 +164,53 @@ router.post('/items', async (req, res) => {
                 subtotal: 0,
             });
         }
-        const existingItemIndex = cart.items.findIndex((item) => {
-            if (item.size !== size || item.color !== color || item.isCustom !== isCustom) {
-                return false;
+        const normalizedIsCustom = Boolean(isCustom);
+        const incomingDesignKey = typeof designKey === 'string' ? designKey : undefined;
+        const baseQuery = { user: userId };
+        const arrayMatch = {
+            "elem.size": size,
+            "elem.color": color,
+            "elem.isCustom": normalizedIsCustom,
+        };
+        if (normalizedIsCustom) {
+            if (design) {
+                baseQuery["items.design"] = design;
+                arrayMatch["elem.design"] = design;
             }
-            if (isCustom) {
-                const incomingDesignKey = typeof designKey === 'string' ? designKey : undefined;
-                if (design && item.design?.toString() === design) {
-                    return true;
-                }
-                if (incomingDesignKey && item.designKey === incomingDesignKey) {
-                    return true;
-                }
-                return false;
-            }
-            return item.product?.toString() === product;
-        });
-        if (existingItemIndex > -1) {
-            cart.items[existingItemIndex].quantity += quantity;
-            if (typeof notes === 'string' && notes.trim()) {
-                cart.items[existingItemIndex].notes = notes.trim().slice(0, 1000);
+            else if (incomingDesignKey) {
+                baseQuery["items.designKey"] = incomingDesignKey;
+                arrayMatch["elem.designKey"] = incomingDesignKey;
             }
         }
-        else {
-            cart.items.push({
+        else if (product) {
+            baseQuery["items.product"] = product;
+            arrayMatch["elem.product"] = product;
+        }
+        const notePayload = typeof notes === 'string' && notes.trim() ? notes.trim().slice(0, 1000) : undefined;
+        const subtotalDelta = Number(price) * Number(quantity);
+        let updatedExisting = false;
+        const updatePayload = {
+            $inc: {
+                "items.$[elem].quantity": quantity,
+                subtotal: subtotalDelta,
+            },
+        };
+        if (notePayload) {
+            updatePayload.$set = {
+                "items.$[elem].notes": notePayload,
+            };
+        }
+        try {
+            const updateResult = await Cart_1.default.updateOne(baseQuery, updatePayload, {
+                arrayFilters: [arrayMatch],
+            });
+            updatedExisting = Boolean(updateResult.modifiedCount);
+        }
+        catch (updateError) {
+            console.error('Error updating existing cart item:', updateError);
+        }
+        if (!updatedExisting) {
+            const newItem = {
                 product,
                 design,
                 baseProductId,
@@ -198,13 +221,24 @@ router.post('/items', async (req, res) => {
                 size,
                 color,
                 image,
-                isCustom: isCustom || false,
+                isCustom: normalizedIsCustom,
                 designMetadata,
                 designKey,
-                notes: typeof notes === 'string' && notes.trim() ? notes.trim().slice(0, 1000) : undefined,
+                notes: notePayload,
+            };
+            cart = await Cart_1.default.findOneAndUpdate({ user: userId }, {
+                $push: { items: newItem },
+                $inc: { subtotal: subtotalDelta },
+                $setOnInsert: { user: userId },
+            }, {
+                new: true,
+                upsert: true,
+                setDefaultsOnInsert: true,
             });
         }
-        await cart.save();
+        if (!cart) {
+            cart = await Cart_1.default.findOne({ user: userId });
+        }
         cart = await Cart_1.default.findById(cart._id)
             .populate('items.product')
             .populate('items.design');
@@ -300,8 +334,18 @@ router.delete('/items/:itemId', async (req, res) => {
         if (!cart) {
             return res.status(404).json({ message: 'Cart not found' });
         }
-        cart.items = cart.items.filter((item) => !item._id || item._id.toString() !== itemId);
-        await cart.save();
+        const itemToRemove = cart.items.find((item) => item._id && item._id.toString() === itemId);
+        if (!itemToRemove) {
+            return res.status(404).json({
+                success: false,
+                message: 'Item not found in cart',
+            });
+        }
+        const itemTotal = (itemToRemove.price || 0) * (itemToRemove.quantity || 0);
+        await Cart_1.default.updateOne({ user: userId }, {
+            $pull: { items: { _id: itemId } },
+            $inc: { subtotal: -itemTotal },
+        });
         const updatedCart = await Cart_1.default.findById(cart._id)
             .populate('items.product')
             .populate('items.design');

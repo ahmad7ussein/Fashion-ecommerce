@@ -1,0 +1,202 @@
+diff --git a/fashion-ecommerce/app/forgot-password/page.jsx b/fashion-ecommerce/app/forgot-password/page.jsx
+index 584cbc6..cd8e035 100644
+--- a/fashion-ecommerce/app/forgot-password/page.jsx
++++ b/fashion-ecommerce/app/forgot-password/page.jsx
+@@ -11,0 +12,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -38,2 +39,1 @@
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+-            const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
++            const response = await fetch(`${API_BASE_URL()}/auth/forgot-password`, {
+diff --git a/fashion-ecommerce/app/login/page.jsx b/fashion-ecommerce/app/login/page.jsx
+index 5eb9c72..ab996fd 100644
+--- a/fashion-ecommerce/app/login/page.jsx
++++ b/fashion-ecommerce/app/login/page.jsx
+@@ -14,0 +15,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -152,2 +153,1 @@
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+-            const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
++            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
+@@ -323,1 +349,1 @@
+-                errorDetails = "The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on http://localhost:5000\n• Check if the server is started correctly\n• Verify your internet connection";
++                errorDetails = `The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on ${API_BASE_URL().replace("/api", "")}\n• Check if the server is started correctly\n• Verify your internet connection`;
+@@ -444,1 +470,1 @@
+-              <li>Make sure the backend server is running on http://localhost:5000</li>
++              <li>Make sure the backend server is running on {API_BASE_URL().replace("/api", "")}</li>
+diff --git a/fashion-ecommerce/app/reset-password/page.jsx b/fashion-ecommerce/app/reset-password/page.jsx
+index a9edc25..050b6f9 100644
+--- a/fashion-ecommerce/app/reset-password/page.jsx
++++ b/fashion-ecommerce/app/reset-password/page.jsx
+@@ -12,0 +13,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -62,2 +63,1 @@
+-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+-            const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
++            const response = await fetch(`${API_BASE_URL()}/auth/reset-password`, {
+diff --git a/fashion-ecommerce/app/signup/page.jsx b/fashion-ecommerce/app/signup/page.jsx
+index c858122..5672dc2 100644
+--- a/fashion-ecommerce/app/signup/page.jsx
++++ b/fashion-ecommerce/app/signup/page.jsx
+@@ -14,0 +15,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -96,1 +97,1 @@
+-                errorMessage = "Cannot connect to the server. Please make sure the backend server is running on http://localhost:5000";
++                errorMessage = `Cannot connect to the server. Please make sure the backend server is running on ${API_BASE_URL().replace("/api", "")}`;
+@@ -117,0 +134,1 @@
++            const backendResponse = await fetch(`${API_BASE_URL()}/auth/google`, {
+@@ -181,1 +264,0 @@
+-                    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+@@ -186,1 +264,0 @@
+-                    const backendResponse = await fetch(`${API_BASE_URL}/auth/google`, {
+diff --git a/fashion-ecommerce/components/staff-chat-panel.jsx b/fashion-ecommerce/components/staff-chat-panel.jsx
+index 5cbf22d..df9c282 100644
+--- a/fashion-ecommerce/components/staff-chat-panel.jsx
++++ b/fashion-ecommerce/components/staff-chat-panel.jsx
+@@ -13,0 +14,1 @@
++import { API_BASE_URL } from "@/lib/api";
+@@ -15,2 +16,1 @@
+-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+-const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
++const SOCKET_URL = API_BASE_URL().replace(/\/api\/?$/, "");
+diff --git a/fashion-ecommerce/lib/api/auth.js b/fashion-ecommerce/lib/api/auth.js
+index b085d22..ae448bf 100644
+--- a/fashion-ecommerce/lib/api/auth.js
++++ b/fashion-ecommerce/lib/api/auth.js
+@@ -5,1 +5,1 @@
+-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++        const { API_BASE_URL } = await import("@/lib/api");
+@@ -8,2 +8,2 @@
+-            logger.log("🔍 Attempting login to:", `${API_BASE_URL}/auth/login`);
+-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
++            logger.log("🔍 Attempting login to:", `${API_BASE_URL()}/auth/login`);
++            const response = await fetch(`${API_BASE_URL()}/auth/login`, {
+@@ -105,1 +105,1 @@
+-                logger.error("API URL:", API_BASE_URL);
++                logger.error("API URL:", API_BASE_URL());
+@@ -107,1 +107,1 @@
+-                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+@@ -127,1 +127,1 @@
+-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++        const { API_BASE_URL } = await import("@/lib/api");
+@@ -129,2 +129,2 @@
+-            logger.log("🔍 Attempting Google auth to:", `${API_BASE_URL}/auth/google`);
+-            const response = await fetch(`${API_BASE_URL}/auth/google`, {
++            logger.log("🔍 Attempting Google auth to:", `${API_BASE_URL()}/auth/google`);
++            const response = await fetch(`${API_BASE_URL()}/auth/google`, {
+@@ -156,1 +156,1 @@
+-                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+diff --git a/fashion-ecommerce/lib/api/client.js b/fashion-ecommerce/lib/api/client.js
+index 2d77201..12c7ae0 100644
+--- a/fashion-ecommerce/lib/api/client.js
++++ b/fashion-ecommerce/lib/api/client.js
+@@ -2,1 +2,1 @@
+-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
++import { API_BASE_URL } from "@/lib/api";
+@@ -22,1 +22,1 @@
+-    const url = `${API_BASE_URL}${endpoint}`;
++    const url = `${API_BASE_URL()}${endpoint}`;
+@@ -163,1 +172,1 @@
+-                        throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++                        throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+@@ -205,1 +214,1 @@
+-            throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
++            throw new ApiError(503, `Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
+diff --git a/fashion-ecommerce/.env.example b/fashion-ecommerce/.env.example
+new file mode 100644
+index 0000000..70a79de
+--- /dev/null
++++ b/fashion-ecommerce/.env.example
+@@ -0,0 +2,1 @@
++NEXT_PUBLIC_API_BASE_URL=/api
+diff --git a/fashion-ecommerce/lib/api.ts b/fashion-ecommerce/lib/api.ts
+new file mode 100644
+index 0000000..39bc28b
+--- /dev/null
++++ b/fashion-ecommerce/lib/api.ts
+@@ -0,0 +1,83 @@
++const RAW_API_BASE_URL =
++  process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || "";
++const ANDROID_API_URL = process.env.NEXT_PUBLIC_ANDROID_API_URL || "";
++const USE_PROXY = process.env.NEXT_PUBLIC_USE_PROXY === "true";
++const FALLBACK_DEV_WEB_API_URL = "http://localhost:5000/api";
++
++const resolveIsNative = () => {
++  if (typeof window === "undefined") {
++    return false;
++  }
++  const protocol = window.location?.protocol;
++  if (protocol === "capacitor:" || protocol === "ionic:") {
++    return true;
++  }
++  return Boolean(window?.Capacitor?.isNativePlatform?.());
++};
++
++const isHttpsPage = () =>
++  typeof window !== "undefined" && window.location?.protocol === "https:";
++
++const isProduction = () => process.env.NODE_ENV === "production";
++
++const isHttpUrl = (value: string) => value.startsWith("http://");
++
++const ensureHttpsApiUrl = (value: string) => {
++  if (!value) {
++    return value;
++  }
++  if (isHttpUrl(value)) {
++    if (isHttpsPage() || isProduction()) {
++      console.error("[API] Insecure API URL blocked on HTTPS page:", value);
++      return "";
++    }
++    console.warn("[API] Insecure API URL in development:", value);
++  }
++  return value;
++};
++
++export const getApiBaseUrl = () => {
++  if (resolveIsNative()) {
++    return ANDROID_API_URL || RAW_API_BASE_URL || FALLBACK_DEV_WEB_API_URL;
++  }
++
++  if (USE_PROXY) {
++    return "/api";
++  }
++
++  const safeApiUrl = ensureHttpsApiUrl(RAW_API_BASE_URL);
++  if (safeApiUrl) {
++    return safeApiUrl;
++  }
++
++  if (isHttpsPage() || isProduction()) {
++    return "/api";
++  }
++
++  return FALLBACK_DEV_WEB_API_URL;
++};
++
++export const API_BASE_URL = () => getApiBaseUrl();
++
++const CLOUDINARY_HTTP_PREFIX = "http://res.cloudinary.com/";
++const CLOUDINARY_HTTPS_PREFIX = "https://res.cloudinary.com/";
++
++export const sanitizeExternalUrl = (value: string) => {
++  if (!value) {
++    return "";
++  }
++  if (value.startsWith(CLOUDINARY_HTTP_PREFIX)) {
++    if (!isProduction()) {
++      console.warn("[Assets] Upgrading Cloudinary URL to HTTPS:", value);
++    }
++    return CLOUDINARY_HTTPS_PREFIX + value.slice(CLOUDINARY_HTTP_PREFIX.length);
++  }
++  if (value.startsWith("http://")) {
++    if (isHttpsPage() || isProduction()) {
++      console.error("[Assets] Insecure asset URL blocked:", value);
++      return "";
++    }
++    console.warn("[Assets] Insecure asset URL in development:", value);
++  }
++  return value;
++};

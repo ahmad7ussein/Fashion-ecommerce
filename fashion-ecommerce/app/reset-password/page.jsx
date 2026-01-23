@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/logo";
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import logger from "@/lib/logger";
+import { API_BASE_URL } from "@/lib/api";
 function ResetPasswordContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -59,8 +60,7 @@ function ResetPasswordContent() {
         setIsLoading(true);
         logger.log("Resetting password for:", email);
         try {
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-            const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+            const response = await fetch(`${API_BASE_URL()}/auth/reset-password`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -101,7 +101,7 @@ function ResetPasswordContent() {
         }
     };
     if (isSuccess) {
-        return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+        return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
         <div className="w-full max-w-md">
           <Card className="shadow-lg border-2">
             <CardHeader className="space-y-1 pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6 text-center">
@@ -125,7 +125,7 @@ function ResetPasswordContent() {
         </div>
       </div>);
     }
-    return (<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
+    return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-6 sm:mb-8 space-y-3 sm:space-y-4">
           <Link href="/" className="inline-block mb-3 sm:mb-4 transition-transform hover:scale-105">
@@ -203,7 +203,7 @@ function ResetPasswordContent() {
 }
 
 export default function ResetPasswordPage() {
-    return (<Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20"/>}>
+    return (<Suspense fallback={<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20"/>}>
       <ResetPasswordContent />
     </Suspense>);
 }

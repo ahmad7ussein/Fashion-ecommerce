@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { featureControlsApi } from "@/lib/api/featureControls";
 import { productsAdminApi } from "@/lib/api/productsAdmin";
 import { useAuth } from "@/lib/auth";
+import { sanitizeExternalUrl } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +38,7 @@ export default function VirtualExperienceControlPage() {
         };
         loadProducts();
     }, []);
-    if (!user || user.role !== "admin") {
-        return <div className="p-6">Access restricted.</div>;
-    }
+    const isAdmin = Boolean(user && user.role === "admin");
     const handleSave = async () => {
         if (!settings)
             return;
@@ -53,10 +52,7 @@ export default function VirtualExperienceControlPage() {
             setMessage(error?.message || "Failed to save settings");
         }
     };
-    if (!settings) {
-        return <div className="p-6">Loading...</div>;
-    }
-    const supportedIds = Array.isArray(settings.supportedProductIds)
+    const supportedIds = Array.isArray(settings?.supportedProductIds)
         ? settings.supportedProductIds
         : [];
     const supportedProducts = useMemo(() => {
@@ -77,7 +73,7 @@ export default function VirtualExperienceControlPage() {
         return filtered.filter((product) => !supportedIds.includes(String(product._id || product.id)));
     }, [products, searchQuery, supportedIds]);
     const handleAddProduct = () => {
-        if (!selectedProductId)
+        if (!settings || !selectedProductId)
             return;
         if (supportedIds.includes(selectedProductId))
             return;
@@ -85,11 +81,19 @@ export default function VirtualExperienceControlPage() {
         setSelectedProductId("");
     };
     const handleRemoveProduct = (productId) => {
+        if (!settings)
+            return;
         setSettings({
             ...settings,
             supportedProductIds: supportedIds.filter((id) => String(id) !== String(productId)),
         });
     };
+    if (!isAdmin) {
+        return <div className="p-6">Access restricted.</div>;
+    }
+    if (!settings) {
+        return <div className="p-6">Loading...</div>;
+    }
     return (<div className="p-6">
       <Card>
         <CardHeader>
@@ -121,7 +125,7 @@ export default function VirtualExperienceControlPage() {
                 No products added yet.
               </div>)}
             {supportedProducts.map((product) => {
-            const imageUrl = product.image || product.images?.[0] || "/placeholder-logo.png";
+            const imageUrl = sanitizeExternalUrl(product.image || product.images?.[0] || "") || "/placeholder-logo.png";
             return (<Card key={product._id || product.id} className="overflow-hidden">
                   <div className="relative aspect-[4/3] w-full bg-muted">
                     <img src={imageUrl} alt={product.name || "Product"} className="h-full w-full object-cover"/>

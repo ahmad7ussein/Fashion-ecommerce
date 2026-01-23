@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Bell, Eye, Home, Languages, LogOut, MessageSquare, Moon, Settings, Sun } from "lucide-react";
+import { Bell, Eye, Home, Languages, LogOut, MessageSquare, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
@@ -89,10 +89,10 @@ export function AdminTopbar() {
             loadNotifications();
         }
     }, [notificationsOpen, loadNotifications]);
-    return (<div className="flex h-16 items-center gap-4 px-4 lg:px-6">
-      <div className="flex min-w-0 flex-1 items-center gap-4">
+    return (<div className="flex min-h-16 flex-wrap items-center gap-3 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] lg:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <span className="sr-only">{adminEmail}</span>
-        <nav className="flex items-center gap-2 overflow-x-auto" aria-label="Admin sections">
+        <nav className="hidden items-center gap-2 overflow-x-auto md:flex" aria-label="Admin sections">
           {topbarTabs.map((tab) => {
             const isActive = isAdminRoot && currentTab === tab.key;
             return (<Link key={tab.key} href={`/admin?tab=${tab.key}`} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${isActive ? activeTabClasses : inactiveTabClasses}`}>
@@ -101,7 +101,7 @@ export function AdminTopbar() {
         })}
         </nav>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
         <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative h-8 w-8 border-border/60" aria-label="Notifications">
@@ -135,6 +135,9 @@ export function AdminTopbar() {
             {unreadMessages > 99 ? "99+" : unreadMessages}
           </span>)}
         </Button>
+        <Button variant="outline" size="icon" className="h-8 w-8 border-border/60 text-base" aria-label="Toggle theme" onClick={handleToggleTheme}>
+          <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8 border-border/60" aria-label="Settings">
@@ -147,10 +150,6 @@ export function AdminTopbar() {
             <DropdownMenuItem onSelect={handleOpenSettings}>
               <Settings className="h-4 w-4"/>
               {t("settings", language)}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleToggleTheme}>
-              {theme === "dark" ? <Sun className="h-4 w-4"/> : <Moon className="h-4 w-4"/>}
-              {theme === "dark" ? t("lightMode", language) : t("darkMode", language)}
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={handleToggleLanguage}>
               <Languages className="h-4 w-4"/>
@@ -172,9 +171,9 @@ export function AdminTopbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button variant="default" size="sm" className="h-8 px-3 bg-blue-500 text-white hover:bg-blue-600" onClick={logout}>
+        <Button variant="default" size="sm" className="h-8 px-2 sm:px-3 bg-blue-500 text-white hover:bg-blue-600" onClick={logout}>
           <LogOut className="h-4 w-4"/>
-          <span className="text-sm font-semibold">{t("logout", language)}</span>
+          <span className="hidden text-sm font-semibold sm:inline">{t("logout", language)}</span>
         </Button>
       </div>
     </div>);

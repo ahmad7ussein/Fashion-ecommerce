@@ -89,8 +89,8 @@ export default function FAQPage() {
                 : "You can contact us via email at support@fashionhub.com, phone at 0592639933, or use the contact form on our website.",
         },
     ];
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
-      <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-12 sm:py-16">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+      <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24 py-10 sm:py-16">
         
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center justify-center p-3 bg-rose-100 rounded-full mb-4">
@@ -112,10 +112,10 @@ export default function FAQPage() {
               <Card className={`overflow-hidden border-2 transition-all cursor-pointer ${openIndex === index
                 ? "border-rose-500 shadow-lg"
                 : "border-gray-200 hover:border-rose-300"}`} onClick={() => setOpenIndex(openIndex === index ? null : index)}>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
                         {faq.question}
                       </h3>
                       {openIndex === index && (<motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }} className="text-gray-600 leading-relaxed">

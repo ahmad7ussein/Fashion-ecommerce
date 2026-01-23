@@ -17,6 +17,7 @@ import { useRegion } from "@/lib/region";
 import { useRouter } from "next/navigation";
 import { ProductDetailSkeleton, ProductGridSkeleton } from "@/components/skeletons";
 import { favoritesApi } from "@/lib/api/favorites";
+import { sanitizeExternalUrl } from "@/lib/api";
 const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 const defaultColors = ["White", "Black", "Gray", "Navy"];
 const features = ["100% Premium Cotton", "Pre-shrunk fabric", "Reinforced seams", "Tagless for comfort", "Machine washable"];
@@ -264,12 +265,12 @@ export default function ProductDetailPageClient() {
         }
     };
     if (isLoading) {
-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
+        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
         <ProductDetailSkeleton />
       </div>);
     }
     if (loadError) {
-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
+        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-12">
           <div className="max-w-2xl mx-auto text-center">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="space-y-6">
@@ -294,7 +295,7 @@ export default function ProductDetailPageClient() {
       </div>);
     }
     if (productNotFound || !product) {
-        return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
+        return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-12">
           <div className="max-w-2xl mx-auto text-center">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="space-y-6">
@@ -324,12 +325,12 @@ export default function ProductDetailPageClient() {
     const allImages = productData.image
         ? [productData.image, ...(productData.images || [])]
         : [productData.image];
-    const images = allImages.filter(img => img && img.trim() !== "");
+    const images = allImages.map((value) => sanitizeExternalUrl(value || "")).filter(Boolean);
     const productColors = productData.colors && productData.colors.length > 0
         ? productData.colors
         : defaultColors;
     const actionsDisabled = !product || !!loadError;
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12">
         
         <nav className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 mb-4 sm:mb-6 md:mb-8 px-2" aria-label="Breadcrumb">
@@ -503,7 +504,7 @@ export default function ProductDetailPageClient() {
                       <Link href={`/products/${relatedProductId}`}>
                         <Card className="group overflow-hidden bg-white border-2 border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all duration-500 rounded-2xl h-full flex flex-col shadow-lg">
                           <div className="aspect-square overflow-hidden bg-white relative">
-                            <Image src={relatedProduct.image || "/placeholder-logo.png"} alt={relatedProduct.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+                            <Image src={sanitizeExternalUrl(relatedProduct.image || "") || "/placeholder-logo.png"} alt={relatedProduct.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
                             <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                             <div className="absolute top-3 left-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-500 transform -translate-y-2 group-hover:translate-y-0">
                               {relatedProduct.gender && (<Badge className="text-xs bg-rose-500 text-white border-0 rounded-full px-3 py-1">
@@ -545,7 +546,7 @@ export default function ProductDetailPageClient() {
                                     quantity: 1,
                                     size: "M",
                                     color: "White",
-                                    image: relatedProduct.image,
+                                    image: sanitizeExternalUrl(relatedProduct.image || ""),
                                     isCustom: false,
                                 });
                                 toast({

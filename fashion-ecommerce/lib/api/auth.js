@@ -2,11 +2,11 @@ import apiClient from "./client";
 import logger from "@/lib/logger";
 export const authApi = {
     async login(identifier, password) {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+        const { API_BASE_URL } = await import("@/lib/api");
         const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
         try {
-            logger.log("🔍 Attempting login to:", `${API_BASE_URL}/auth/login`);
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            logger.log("🔍 Attempting login to:", `${API_BASE_URL()}/auth/login`);
+            const response = await fetch(`${API_BASE_URL()}/auth/login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -102,9 +102,9 @@ export const authApi = {
         catch (error) {
             if (error instanceof TypeError && error.message === "Failed to fetch") {
                 logger.error("❌ Network Error - Backend may be offline");
-                logger.error("API URL:", API_BASE_URL);
+                logger.error("API URL:", API_BASE_URL());
                 logger.error("Error:", error);
-                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
+                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
             }
             if (error instanceof Error) {
                 throw error;
@@ -124,10 +124,10 @@ export const authApi = {
         return await apiClient.put("/auth/profile", profileData);
     },
     async googleAuth(idToken) {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+        const { API_BASE_URL } = await import("@/lib/api");
         try {
-            logger.log("🔍 Attempting Google auth to:", `${API_BASE_URL}/auth/google`);
-            const response = await fetch(`${API_BASE_URL}/auth/google`, {
+            logger.log("🔍 Attempting Google auth to:", `${API_BASE_URL()}/auth/google`);
+            const response = await fetch(`${API_BASE_URL()}/auth/google`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -153,7 +153,7 @@ export const authApi = {
         catch (error) {
             logger.error("❌ Google auth error:", error);
             if (error instanceof TypeError && error.message === "Failed to fetch") {
-                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL.replace("/api", "")}`);
+                throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
             }
             throw error instanceof Error ? error : new Error(error?.message || "An unexpected error occurred during Google authentication");
         }

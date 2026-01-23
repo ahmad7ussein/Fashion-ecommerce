@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function PaymentCancelPage() {
   return (
-    <div className="min-h-screen bg-white pt-24 pb-12 flex items-center justify-center px-4">
+    <div className="min-h-[100svh] bg-white pt-24 pb-12 flex items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

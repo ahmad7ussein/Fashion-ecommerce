@@ -11,7 +11,7 @@ const upload_1 = require("../middleware/upload");
 const router = express_1.default.Router();
 router.get('/meta/categories', productController_1.getCategories);
 router.get('/meta/genders', productController_1.getGenders);
-router.get('/', productController_1.getProducts);
+router.get('/', auth_1.optionalAuth, productController_1.getProducts);
 router.get('/:id', productController_1.getProduct);
 router.post('/', auth_1.protect, (0, auth_1.authorize)('admin', 'employee'), upload_1.uploadProductImages, validator_1.productValidation, validator_1.validate, productController_1.createProduct);
 router.put('/:id', auth_1.protect, (0, auth_1.authorize)('admin', 'employee'), upload_1.uploadProductImages, productController_1.updateProduct);

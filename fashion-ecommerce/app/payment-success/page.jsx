@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AppLoader } from "@/components/ui/app-loader";
 import { paymentsApi } from "@/lib/api/payments";
+import { useCart } from "@/lib/cart";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -13,6 +14,7 @@ function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { clear } = useCart();
   const [status, setStatus] = useState("verifying");
   const [message, setMessage] = useState("Confirming your payment...");
 
@@ -31,6 +33,7 @@ function PaymentSuccessContent() {
         if (!isMounted) return;
         setStatus("success");
         setMessage("Payment verified. Redirecting to your order...");
+        clear();
         const orderNumber = result?.orderNumber || result?.orderId;
         if (orderNumber) {
           router.push(`/order-success?order=${orderNumber}`);
@@ -56,7 +59,7 @@ function PaymentSuccessContent() {
   }, [router, searchParams, toast]);
 
   return (
-    <div className="min-h-screen bg-white pt-24 pb-12 flex items-center justify-center px-4">
+    <div className="min-h-[100svh] bg-white pt-24 pb-12 flex items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -96,7 +99,7 @@ export default function PaymentSuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white pt-24 flex items-center justify-center">
+        <div className="min-h-[100svh] bg-white pt-24 flex items-center justify-center">
           <AppLoader label="Loading..." size="lg" />
         </div>
       }

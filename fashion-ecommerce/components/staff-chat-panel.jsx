@@ -11,9 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, "");
+const SOCKET_URL = API_BASE_URL().replace(/\/api\/?$/, "");
 
 const getDisplayName = (user) => {
   if (!user) {

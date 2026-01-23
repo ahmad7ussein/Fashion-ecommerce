@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, User, UserCircle2, Package, Settings, LogOut, Languages, Moon, Sun } from "lucide-react";
+import { ShoppingBag, Menu, User, UserCircle2, Package, Settings, LogOut, Languages } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
@@ -52,7 +52,7 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           
           <Link href="/" className="flex items-center space-x-2">
-            <Logo />
+            <Logo className="dark:invert dark:brightness-110 dark:drop-shadow-[0_2px_8px_rgba(255,255,255,0.25)]"/>
           </Link>
 
           
@@ -170,7 +170,7 @@ export function Header() {
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600">
+                <Button variant="ghost" size="icon" className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600 text-base">
                   <Languages className="h-5 w-5 group-hover:rotate-180 transition-transform duration-500"/>
                   <span className="sr-only">Change Language</span>
                 </Button>
@@ -186,8 +186,8 @@ export function Header() {
             </DropdownMenu>
 
             
-            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600" title={theme === "dark" ? (language === "ar" ? "الوضع الفاتح" : "Light Mode") : (language === "ar" ? "الوضع الداكن" : "Dark Mode")}>
-              {theme === "dark" ? <Sun className="h-5 w-5"/> : <Moon className="h-5 w-5"/>}
+            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600 text-base" title={theme === "dark" ? (language === "ar" ? "الوضع الفاتح" : "Light Mode") : (language === "ar" ? "الوضع الداكن" : "Dark Mode")}>
+              <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
               <span className="sr-only">Toggle Theme</span>
             </Button>
 

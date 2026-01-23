@@ -15,6 +15,7 @@ import { useRegion } from "@/lib/region";
 import { ordersApi } from "@/lib/api/orders";
 import { designsApi } from "@/lib/api/designs";
 import { paymentsApi } from "@/lib/api/payments";
+import { sanitizeExternalUrl } from "@/lib/api";
 import logger from "@/lib/logger";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -157,7 +158,6 @@ export default function CheckoutPage() {
             if (!checkoutSession?.url) {
                 throw new Error("Failed to start Stripe checkout session");
             }
-            clear();
             window.location.href = checkoutSession.url;
         }
         catch (error) {
@@ -172,10 +172,10 @@ export default function CheckoutPage() {
             setIsSubmitting(false);
         }
     };
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-24">
-      <div className="container mx-auto px-6 md:px-12 lg:px-24 py-12">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
         <div className="max-w-6xl mx-auto">
-          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-5xl md:text-6xl font-bold mb-12 text-gray-900">
+          <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-8 sm:mb-10 md:mb-12 text-gray-900">
             Checkout
           </motion.h1>
 
@@ -192,7 +192,7 @@ export default function CheckoutPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="firstName">First Name</Label>
                         <Input id="firstName" {...form.register("firstName")}/>
@@ -218,7 +218,7 @@ export default function CheckoutPage() {
                       <Input id="address" {...form.register("address")}/>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="city">City</Label>
                         <Input id="city" {...form.register("city")}/>
@@ -229,7 +229,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="zip">ZIP Code</Label>
                         <Input id="zip" {...form.register("zip")}/>
@@ -255,7 +255,7 @@ export default function CheckoutPage() {
                     <div className="space-y-3 max-h-[400px] overflow-y-auto">
                       {items.map((item) => (<div key={item.id} className="flex gap-3 pb-3 border-b border-border">
                           <div className="w-16 h-16 rounded bg-muted flex-shrink-0 overflow-hidden relative">
-                            <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
+                            <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="64px"/>
                         </div>
                         <div className="flex-1">
                             <p className="text-sm font-medium">{item.name}</p>

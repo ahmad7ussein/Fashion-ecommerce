@@ -5,6 +5,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const env_1 = __importDefault(require("./env"));
+let reconnectTimer = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+const RECONNECT_BASE_DELAY_MS = 2000;
 const connectDB = async () => {
     try {
         const mongoURI = env_1.default.mongodbUri;
@@ -145,6 +149,36 @@ mongoose_1.default.connection.on('disconnected', () => {
     if (!isIntentional) {
         console.log('  MongoDB Disconnected');
         console.log(' Attempting to reconnect...');
+        if (reconnectTimer) {
+            return;
+        }
+        const attemptReconnect = async () => {
+            reconnectAttempts += 1;
+            if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+                console.warn('⚠️  Max MongoDB reconnect attempts reached. Waiting for manual restart.');
+                reconnectTimer = null;
+                return;
+            }
+            if (mongoose_1.default.connection.readyState === 1 || mongoose_1.default.connection.readyState === 2) {
+                reconnectAttempts = 0;
+                reconnectTimer = null;
+                return;
+            }
+            const delay = Math.min(RECONNECT_BASE_DELAY_MS * reconnectAttempts, 15000);
+            reconnectTimer = setTimeout(async () => {
+                reconnectTimer = null;
+                try {
+                    console.log(`🔄 Reconnect attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`);
+                    await connectDB();
+                    reconnectAttempts = 0;
+                }
+                catch (reconnectError) {
+                    console.warn('⚠️  Reconnect attempt failed:', reconnectError?.message || reconnectError);
+                    attemptReconnect();
+                }
+            }, delay);
+        };
+        attemptReconnect();
     }
     else {
         mongoose_1.default.connection._intentionalDisconnect = false;
@@ -157,6 +191,10 @@ mongoose_1.default.connection.on('reconnected', () => {
     console.log(' MongoDB Reconnected');
 });
 process.on('SIGINT', async () => {
+    if (!process.env.SERVER_SHUTTING_DOWN) {
+        console.log(' MongoDB disconnect skipped (server still running)');
+        return;
+    }
     await mongoose_1.default.connection.close();
     console.log(' MongoDB connection closed through app termination');
     process.exit(0);

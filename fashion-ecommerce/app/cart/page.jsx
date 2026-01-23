@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ShoppingBag, Minus, Plus, Trash2, ArrowRight, Tag } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { useRegion } from "@/lib/region";
+import { sanitizeExternalUrl } from "@/lib/api";
 export default function CartPage() {
     const { items: cartItems, updateQuantity, removeItem, subtotal } = useCart();
     const { formatPrice, convertPrice } = useRegion();
@@ -16,7 +17,7 @@ export default function CartPage() {
     const shipping = subtotal > 100 ? 0 : 9.99;
     const tax = subtotal * 0.08;
     const total = subtotal + shipping + tax;
-    return (<div className="min-h-screen bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
+    return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-24 py-6 sm:py-8 md:py-12">
         <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 sm:mb-8 md:mb-12 text-gray-900">
           Shopping <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 bg-clip-text text-transparent">Cart</span>
@@ -40,7 +41,7 @@ export default function CartPage() {
                     <CardContent className="p-4 sm:p-5 md:p-6">
                       <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                         <div className="w-full sm:w-24 md:w-32 h-48 sm:h-24 md:h-32 rounded-xl overflow-hidden bg-gradient-to-br from-rose-50 to-pink-50 flex-shrink-0 relative">
-                          <Image src={item.image || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 128px"/>
+                          <Image src={sanitizeExternalUrl(item.image || "") || "/placeholder-logo.png"} alt={item.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 128px"/>
                         </div>
 
                         <div className="flex-1">

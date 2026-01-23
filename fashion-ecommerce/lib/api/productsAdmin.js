@@ -118,6 +118,7 @@ export const productsAdminApi = {
             queryParams.append("search", params.search);
         if (params?.category)
             queryParams.append("category", params.category);
+        queryParams.append("includeInactive", "true");
         const response = await apiClient.get(`/products?${queryParams.toString()}`);
         if (response && typeof response === 'object') {
             if ('data' in response && Array.isArray(response.data)) {
