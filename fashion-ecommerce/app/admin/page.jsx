@@ -1277,14 +1277,24 @@ function AdminDashboardContent() {
             });
         }
     };
-    const handleDeleteUser = async (id) => {
-        if (!confirm("Are you sure you want to delete this user?"))
+    const handleDeleteUser = async (id, options = {}) => {
+        const { confirmMessage, onSuccess } = options;
+        const message = confirmMessage || (language === "ar"
+            ? "هل أنت متأكد من حذف هذا المستخدم؟"
+            : "Are you sure you want to delete this user?");
+        if (!confirm(message))
             return;
         try {
             await adminApi.deleteUser(id);
             toast({ title: "Success", description: "User deleted successfully" });
-            if (activeTab === "customers") {
+            if (typeof onSuccess === "function") {
+                onSuccess();
+            }
+            else if (activeTab === "customers") {
                 loadCustomers();
+            }
+            else if (activeTab === "staff") {
+                loadStaff();
             }
             else {
                 loadDashboardData();
@@ -2504,9 +2514,11 @@ function AdminDashboardContent() {
                               <Eye className="h-4 w-4"/>
                             </Button>
                                   <Button variant="ghost" size="icon" onClick={async () => {
-                            if (confirm(language === "ar" ? `هل أنت متأكد من حذف العميل ${user.firstName} ${user.lastName}؟` : `Are you sure you want to delete customer ${user.firstName} ${user.lastName}?`)) {
-                                await handleDeleteUser(user._id);
-                            }
+                            await handleDeleteUser(user._id, {
+                                confirmMessage: language === "ar"
+                                    ? `هل أنت متأكد من حذف العميل ${user.firstName} ${user.lastName}؟`
+                                    : `Are you sure you want to delete customer ${user.firstName} ${user.lastName}?`,
+                            });
                         }}>
                                     <Trash2 className="h-4 w-4 text-destructive"/>
                                   </Button>
@@ -2648,7 +2660,18 @@ function AdminDashboardContent() {
                                 {new Date(user.createdAt).toLocaleDateString()}
                               </p>
                       </div>
-                      <Badge>Employee</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge>Employee</Badge>
+                        <Button variant="ghost" size="icon" onClick={async () => {
+                        await handleDeleteUser(user._id, {
+                            confirmMessage: language === "ar"
+                                ? `هل أنت متأكد من حذف الموظف ${user.firstName} ${user.lastName}؟`
+                                : `Are you sure you want to delete employee ${user.firstName} ${user.lastName}?`,
+                        });
+                    }} title={language === "ar" ? "حذف" : "Delete"}>
+                          <Trash2 className="h-4 w-4 text-destructive"/>
+                        </Button>
+                      </div>
                     </div>))) : (<p className="text-center text-muted-foreground py-8">
                             {language === "ar" ? "لا يوجد موظفون" : "No employees yet"}
                           </p>)}
