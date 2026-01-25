@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -16,87 +16,7 @@ import logger from "@/lib/logger";
 import { ProfessionalNavbar } from "@/components/professional-navbar";
 import { useCart } from "@/lib/cart";
 import { useLanguage } from "@/lib/language";
-
-const LOCAL_DESIGNS_KEY = "fashionhub_simple_studio_designs";
-const getLocalDesignsKey = (user) => {
-    const userKey = user?._id || user?.id || user?.email || "guest";
-    return `${LOCAL_DESIGNS_KEY}:${userKey}`;
-};
-const mergeUniqueDesigns = (primary, incoming) => {
-    const seen = new Set(primary.map((design) => String(design.id)));
-    const merged = [...primary];
-    incoming.forEach((design) => {
-        const key = String(design.id);
-        if (!seen.has(key)) {
-            seen.add(key);
-            merged.push(design);
-        }
-    });
-    return merged;
-};
-const migrateLocalDesigns = (key) => {
-    try {
-        const oldRaw = localStorage.getItem(LOCAL_DESIGNS_KEY);
-        if (!oldRaw)
-            return;
-        const oldParsed = JSON.parse(oldRaw);
-        if (!Array.isArray(oldParsed) || oldParsed.length === 0) {
-            localStorage.removeItem(LOCAL_DESIGNS_KEY);
-            return;
-        }
-        const newRaw = localStorage.getItem(key);
-        const newParsed = newRaw ? JSON.parse(newRaw) : [];
-        const next = Array.isArray(newParsed)
-            ? mergeUniqueDesigns(newParsed, oldParsed)
-            : oldParsed;
-        localStorage.setItem(key, JSON.stringify(next));
-        localStorage.removeItem(LOCAL_DESIGNS_KEY);
-    }
-    catch {
-    }
-};
-
-const parseLocalDesigns = (key) => {
-    try {
-        const raw = localStorage.getItem(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-        return parsed.map((design) => ({
-            _id: design.id,
-            name: design.name || "My design",
-            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
-            createdAt: design.createdAt || new Date().toISOString(),
-            updatedAt: design.createdAt || new Date().toISOString(),
-            baseProduct: {
-                type: design.data?.selectedProduct || "Product",
-            },
-            status: "draft",
-            isLocal: true,
-            isFavorite: Boolean(design.isFavorite),
-        }));
-    }
-    catch {
-        return [];
-    }
-};
-
-const removeLocalDesign = (key, designId) => {
-    try {
-        const raw = localStorage.getItem(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-        const next = parsed.filter((design) => String(design.id) !== String(designId));
-        localStorage.setItem(key, JSON.stringify(next));
-        return next;
-    }
-    catch {
-        return [];
-    }
-};
+import { syncLocalDesignsToAccount } from "@/lib/localDesignSync";
 export default function MyDesignsPage() {
     const { user, isLoading: authLoading } = useAuth();
     const router = useRouter();
@@ -104,7 +24,6 @@ export default function MyDesignsPage() {
     const { addItem } = useCart();
     const { language } = useLanguage();
     const [designs, setDesigns] = useState([]);
-    const [localDesigns, setLocalDesigns] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState("grid");
@@ -120,8 +39,12 @@ export default function MyDesignsPage() {
     const loadDesigns = async () => {
         setIsLoading(true);
         try {
+            await syncLocalDesignsToAccount(user);
             const data = await designsApi.getMyDesigns();
             setDesigns(data);
+            if (process.env.NODE_ENV === "development") {
+                console.log("[My Designs] Loaded count", Array.isArray(data) ? data.length : 0);
+            }
         }
         catch (error) {
             logger.error("Failed to load designs:", error);
@@ -132,9 +55,6 @@ export default function MyDesignsPage() {
             });
         }
         finally {
-            const key = getLocalDesignsKey(user);
-            migrateLocalDesigns(key);
-            setLocalDesigns(parseLocalDesigns(key));
             setIsLoading(false);
         }
     };
@@ -142,16 +62,8 @@ export default function MyDesignsPage() {
         if (!confirm("Are you sure you want to delete this design?"))
             return;
         try {
-            const target = allDesigns.find((design) => design._id === id);
-            if (target?.isLocal) {
-                const key = getLocalDesignsKey(user);
-                removeLocalDesign(key, id);
-                setLocalDesigns(parseLocalDesigns(key));
-            }
-            else {
-                await designsApi.deleteDesign(id);
-                setDesigns(designs.filter((d) => d._id !== id));
-            }
+            await designsApi.deleteDesign(id);
+            setDesigns(designs.filter((d) => d._id !== id));
             toast({
                 title: "Design deleted",
                 description: "Your design has been deleted successfully",
@@ -166,36 +78,24 @@ export default function MyDesignsPage() {
             });
         }
     };
-    const allDesigns = useMemo(() => {
-        const merged = [...designs];
-        localDesigns.forEach((localDesign) => {
-            if (!merged.some((design) => design._id === localDesign._id)) {
-                merged.push(localDesign);
-            }
-        });
-        return merged;
-    }, [designs, localDesigns]);
-    const filteredDesigns = allDesigns.filter((design) => {
+    const filteredDesigns = designs.filter((design) => {
         const matchesSearch = design.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             design.baseProduct?.type?.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesSearch;
     });
-    const getDesignLink = (design) =>
-        design.isLocal ? `/studio?localDesign=${design._id}` : `/studio?design=${design._id}`;
+    const resolveDesignPreviewUrl = (design) => {
+        return (design?.previewFrontUrl ||
+            design?.thumbnail ||
+            design?.designImageURL ||
+            design?.baseFrontUrl ||
+            design?.designMetadata?.studio?.data?.baseFrontUrl ||
+            "");
+    };
+    const getDesignLink = (design) => `/studio?design=${design._id}`;
     const handleOrderDesign = async (design, event) => {
         event?.preventDefault();
         event?.stopPropagation();
-        if (design.isLocal) {
-            toast({
-                title: language === "ar" ? "احفظ التصميم أولاً" : "Save your design first",
-                description: language === "ar"
-                    ? "الطلب يتطلب حفظ التصميم بحسابك. افتح التصميم ثم احفظه."
-                    : "Ordering requires saving the design to your account. Open it and save first.",
-                variant: "default",
-            });
-            return;
-        }
-        try {
+    try {
             const size = design.baseProduct?.size || "M";
             const color = design.baseProduct?.color || "white";
             const orderNotes = design?.designMetadata?.studio?.data?.orderNotes || "";
@@ -207,7 +107,11 @@ export default function MyDesignsPage() {
                 quantity: 1,
                 size,
                 color,
-                image: sanitizeExternalUrl(design.thumbnail || design.designImageURL || ""),
+                image: sanitizeExternalUrl(design.thumbnail ||
+                    design.designImageURL ||
+                    design.baseFrontUrl ||
+                    design?.designMetadata?.studio?.data?.baseFrontUrl ||
+                    ""),
                 isCustom: true,
                 notes: orderNotes || undefined,
                 design: design._id,
@@ -266,7 +170,7 @@ export default function MyDesignsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Total Designs</p>
-                  <p className="text-3xl font-bold">{allDesigns.length}</p>
+                  <p className="text-3xl font-bold">{designs.length}</p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                   <Grid3x3 className="h-6 w-6 text-primary"/>
@@ -281,7 +185,7 @@ export default function MyDesignsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">This Month</p>
                   <p className="text-3xl font-bold">
-                    {allDesigns.filter((d) => {
+                    {designs.filter((d) => {
             const designDate = new Date(d.createdAt);
             const now = new Date();
             return designDate.getMonth() === now.getMonth() && designDate.getFullYear() === now.getFullYear();
@@ -340,7 +244,7 @@ export default function MyDesignsPage() {
           </Card>) : viewMode === "grid" ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredDesigns.map((design) => (<Card key={design._id} className="group overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="relative aspect-square bg-muted overflow-hidden">
-                  <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
+                  <Image src={sanitizeExternalUrl(resolveDesignPreviewUrl(design)) || "/placeholder-logo.png"} alt={design.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"/>
                   {design.status === "published" && (<Badge className="absolute top-3 left-3 bg-green-500">Published</Badge>)}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <Link href={getDesignLink(design)}>
@@ -381,7 +285,7 @@ export default function MyDesignsPage() {
                 <CardContent className="p-6">
                   <div className="flex gap-6">
                     <div className="w-32 h-32 rounded-lg bg-muted overflow-hidden flex-shrink-0 relative">
-                      <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
+                      <Image src={sanitizeExternalUrl(resolveDesignPreviewUrl(design)) || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="128px"/>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">

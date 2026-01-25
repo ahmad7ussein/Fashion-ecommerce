@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -18,86 +18,7 @@ import { ordersApi } from "@/lib/api/orders";
 import { designsApi } from "@/lib/api/designs";
 import Image from "next/image";
 import logger from "@/lib/logger";
-const LOCAL_DESIGNS_KEY = "fashionhub_simple_studio_designs";
-const getLocalDesignsKey = (user) => {
-    const userKey = user?._id || user?.id || user?.email || "guest";
-    return `${LOCAL_DESIGNS_KEY}:${userKey}`;
-};
-const mergeUniqueDesigns = (primary, incoming) => {
-    const seen = new Set(primary.map((design) => String(design.id)));
-    const merged = [...primary];
-    incoming.forEach((design) => {
-        const key = String(design.id);
-        if (!seen.has(key)) {
-            seen.add(key);
-            merged.push(design);
-        }
-    });
-    return merged;
-};
-const migrateLocalDesigns = (key) => {
-    try {
-        const oldRaw = localStorage.getItem(LOCAL_DESIGNS_KEY);
-        if (!oldRaw)
-            return;
-        const oldParsed = JSON.parse(oldRaw);
-        if (!Array.isArray(oldParsed) || oldParsed.length === 0) {
-            localStorage.removeItem(LOCAL_DESIGNS_KEY);
-            return;
-        }
-        const newRaw = localStorage.getItem(key);
-        const newParsed = newRaw ? JSON.parse(newRaw) : [];
-        const next = Array.isArray(newParsed)
-            ? mergeUniqueDesigns(newParsed, oldParsed)
-            : oldParsed;
-        localStorage.setItem(key, JSON.stringify(next));
-        localStorage.removeItem(LOCAL_DESIGNS_KEY);
-    }
-    catch {
-    }
-};
-
-const parseLocalDesigns = (key) => {
-    try {
-        const raw = localStorage.getItem(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-        return parsed.map((design) => ({
-            _id: design.id,
-            name: design.name || "My design",
-            thumbnail: sanitizeExternalUrl(design.thumbnail || ""),
-            createdAt: design.createdAt || new Date().toISOString(),
-            updatedAt: design.createdAt || new Date().toISOString(),
-            baseProduct: {
-                type: design.data?.selectedProduct || "Product",
-            },
-            status: "draft",
-            isLocal: true,
-            isFavorite: Boolean(design.isFavorite),
-        }));
-    }
-    catch {
-        return [];
-    }
-};
-
-const removeLocalDesign = (key, designId) => {
-    try {
-        const raw = localStorage.getItem(key);
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(parsed)) {
-            return [];
-        }
-        const next = parsed.filter((design) => String(design.id) !== String(designId));
-        localStorage.setItem(key, JSON.stringify(next));
-        return next;
-    }
-    catch {
-        return [];
-    }
-};
+import { syncLocalDesignsToAccount } from "@/lib/localDesignSync";
 export default function ProfilePage() {
     const { user, logout, refreshUser, isLoading } = useAuth();
     const router = useRouter();
@@ -105,7 +26,6 @@ export default function ProfilePage() {
     const hasRedirected = React.useRef(false);
     const [orders, setOrders] = useState([]);
     const [designs, setDesigns] = useState([]);
-    const [localDesigns, setLocalDesigns] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
     const [loadingDesigns, setLoadingDesigns] = useState(false);
     const [userData, setUserData] = useState({
@@ -151,21 +71,29 @@ export default function ProfilePage() {
     }, [user]);
     React.useEffect(() => {
         if (user && user.role === "customer") {
-            setLoadingDesigns(true);
-            designsApi
-                .getMyDesigns()
-                .then((data) => {
-                setDesigns(data);
-            })
-                .catch((error) => {
-                logger.error("Failed to load designs:", error);
-            })
-                .finally(() => {
-                const key = getLocalDesignsKey(user);
-                migrateLocalDesigns(key);
-                setLocalDesigns(parseLocalDesigns(key));
-                setLoadingDesigns(false);
-            });
+            let isMounted = true;
+            const loadDesigns = async () => {
+                setLoadingDesigns(true);
+                try {
+                    await syncLocalDesignsToAccount(user);
+                    const data = await designsApi.getMyDesigns();
+                    if (isMounted) {
+                        setDesigns(data);
+                    }
+                }
+                catch (error) {
+                    logger.error("Failed to load designs:", error);
+                }
+                finally {
+                    if (isMounted) {
+                        setLoadingDesigns(false);
+                    }
+                }
+            };
+            loadDesigns();
+            return () => {
+                isMounted = false;
+            };
         }
     }, [user]);
     const [shippingAddress, setShippingAddress] = useState({
@@ -211,18 +139,7 @@ export default function ProfilePage() {
         logout();
         router.push("/");
     };
-    const allDesigns = useMemo(() => {
-        const merged = [...designs];
-        localDesigns.forEach((localDesign) => {
-            if (!merged.some((design) => design._id === localDesign._id)) {
-                merged.push(localDesign);
-            }
-        });
-        return merged;
-    }, [designs, localDesigns]);
-    const getDesignLink = (design) => design.isLocal
-        ? `/studio?localDesign=${design._id}`
-        : `/studio?design=${design._id}`;
+    const getDesignLink = (design) => `/studio?design=${design._id}`;
     return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
       <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-24 py-6 sm:py-8 md:py-12">
         <div className="max-w-6xl mx-auto">
@@ -428,7 +345,7 @@ export default function ProfilePage() {
             <TabsContent value="designs">
               {loadingDesigns ? (<div className="text-center py-12">
                   <p className="text-gray-600">Loading designs...</p>
-                </div>) : allDesigns.length === 0 ? (<Card className="bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 shadow-xl rounded-xl sm:rounded-2xl">
+                </div>) : designs.length === 0 ? (<Card className="bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 shadow-xl rounded-xl sm:rounded-2xl">
                   <CardContent className="p-12 text-center">
                     <Heart className="h-16 w-16 mx-auto mb-4 text-rose-400"/>
                     <h3 className="text-xl font-semibold mb-2 text-gray-900">No designs yet</h3>
@@ -438,9 +355,14 @@ export default function ProfilePage() {
                     </Button>
                   </CardContent>
                 </Card>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {allDesigns.map((design) => (<Card key={design._id} className="overflow-hidden bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all rounded-xl sm:rounded-2xl">
+                  {designs.map((design) => (<Card key={design._id} className="overflow-hidden bg-white backdrop-blur-sm border-2 border-gray-200 hover:border-rose-300 hover:shadow-xl transition-all rounded-xl sm:rounded-2xl">
                       <div className="aspect-square bg-gradient-to-br from-rose-50 to-pink-50 relative">
-                        <Image src={sanitizeExternalUrl(design.thumbnail || "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
+                        <Image src={sanitizeExternalUrl(design.previewFrontUrl ||
+                            design.thumbnail ||
+                            design.designImageURL ||
+                            design.baseFrontUrl ||
+                            design?.designMetadata?.studio?.data?.baseFrontUrl ||
+                            "") || "/placeholder-logo.png"} alt={design.name} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"/>
                       </div>
                       <CardContent className="p-4">
                         <h3 className="font-semibold mb-1 text-gray-900">{design.name}</h3>
@@ -454,15 +376,8 @@ export default function ProfilePage() {
                           <Button size="sm" variant="outline" className="bg-white border-2 border-gray-200 hover:bg-rose-50 hover:border-rose-300 text-gray-700 hover:text-rose-600 rounded-full" onClick={async () => {
                     if (confirm("Are you sure you want to delete this design?")) {
                         try {
-                            if (design.isLocal) {
-                                const key = getLocalDesignsKey(user);
-                                removeLocalDesign(key, design._id);
-                                setLocalDesigns(parseLocalDesigns(key));
-                            }
-                            else {
-                                await designsApi.deleteDesign(design._id);
-                                setDesigns(designs.filter((d) => d._id !== design._id));
-                            }
+                            await designsApi.deleteDesign(design._id);
+                            setDesigns(designs.filter((d) => d._id !== design._id));
                             toast({
                                 title: "Design deleted",
                                 description: "Your design has been deleted successfully",

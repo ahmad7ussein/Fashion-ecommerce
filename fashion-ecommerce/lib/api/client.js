@@ -221,27 +221,29 @@ async function request(endpoint, options = {}) {
     throw new ApiError(500, "Unexpected error in request");
 }
 export const apiClient = {
-    get(endpoint) {
-        return request(endpoint, { method: "GET" });
+    get(endpoint, options = {}) {
+        return request(endpoint, { method: "GET", ...options });
     },
-    post(endpoint, data) {
+    post(endpoint, data, options = {}) {
         const isFormData = data instanceof FormData;
         return request(endpoint, {
             method: "POST",
             body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
             headers: isFormData ? {} : undefined,
+            ...options,
         });
     },
-    put(endpoint, data) {
+    put(endpoint, data, options = {}) {
         const isFormData = data instanceof FormData;
         return request(endpoint, {
             method: "PUT",
             body: isFormData ? data : JSON.stringify(data),
             headers: isFormData ? {} : undefined,
+            ...options,
         });
     },
-    delete(endpoint) {
-        return request(endpoint, { method: "DELETE" });
+    delete(endpoint, options = {}) {
+        return request(endpoint, { method: "DELETE", ...options });
     },
 };
 export default apiClient;

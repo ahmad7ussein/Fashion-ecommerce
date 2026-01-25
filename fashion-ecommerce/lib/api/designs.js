@@ -1,7 +1,10 @@
 import apiClient from "./client";
 export const designsApi = {
     async getMyDesigns() {
-        const response = await apiClient.get("/designs/my-designs");
+        const response = await apiClient.get("/designs/my-designs", {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-store" },
+        });
         if (Array.isArray(response)) {
             return response;
         }
@@ -11,7 +14,10 @@ export const designsApi = {
         return [];
     },
     async getDesign(id) {
-        return await apiClient.get(`/designs/${id}`);
+        return await apiClient.get(`/designs/${id}`, {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-store" },
+        });
     },
     async createDesign(designData) {
         return await apiClient.post("/designs", designData);

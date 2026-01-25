@@ -148,11 +148,15 @@ export default function EmployeeDashboard() {
         };
     };
     const resolvePreviewBaseImage = (item, studioProduct, side) => {
+        const metadataBase = item?.designMetadata?.studio?.data;
+        const explicitBase = side === "back"
+            ? item?.baseBackUrl || metadataBase?.baseBackUrl
+            : item?.baseFrontUrl || metadataBase?.baseFrontUrl;
         const viewMockups = studioProduct?.viewMockups || {};
         if (side === "back") {
-            return viewMockups.back || studioProduct?.baseMockupUrl || item?.image || "";
+            return explicitBase || viewMockups.back || studioProduct?.baseMockupUrl || item?.image || "";
         }
-        return viewMockups.front || studioProduct?.baseMockupUrl || item?.image || "";
+        return explicitBase || viewMockups.front || studioProduct?.baseMockupUrl || item?.image || "";
     };
     const openDesignPreview = (item) => {
         setDesignPreviewItem(item);

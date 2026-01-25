@@ -9,6 +9,12 @@ const StudioProduct_1 = __importDefault(require("../models/StudioProduct"));
 const Cart_1 = __importDefault(require("../models/Cart"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const cloudinary_1 = require("../config/cloudinary");
+const setNoStoreHeaders = (res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Surrogate-Control', 'no-store');
+};
 const normalizeViews = (views) => {
     if (!Array.isArray(views))
         return [];
@@ -29,7 +35,7 @@ const createDesign = async (req, res) => {
                 message: 'User not authenticated',
             });
         }
-        const { name, baseProduct, baseProductId, elements, views, thumbnail, designImageURL, designMetadata, userDescription } = req.body;
+        const { name, baseProduct, baseProductId, elements, views, thumbnail, previewFrontUrl, previewBackUrl, baseFrontUrl, baseBackUrl, productId, variantId, colorKey, colorName, designImageURL, designMetadata, userDescription } = req.body;
         const validStatuses = ['draft', 'published', 'archived'];
         const designStatus = 'draft';
         if (!baseProductId || !mongoose_1.default.Types.ObjectId.isValid(baseProductId)) {
@@ -47,6 +53,14 @@ const createDesign = async (req, res) => {
             elements,
             views: normalizeViews(views),
             thumbnail,
+            previewFrontUrl,
+            previewBackUrl,
+            baseFrontUrl,
+            baseBackUrl,
+            productId,
+            variantId,
+            colorKey,
+            colorName,
             designImageURL,
             designMetadata,
             userDescription,
@@ -76,6 +90,7 @@ const getMyDesigns = async (req, res) => {
             query.status = status;
         }
         const designs = await Design_1.default.find(query).sort({ createdAt: -1 }).allowDiskUse(true);
+        setNoStoreHeaders(res);
         res.status(200).json({
             success: true,
             count: designs.length,
@@ -166,6 +181,7 @@ const getDesign = async (req, res) => {
                 message: 'Not authorized to access this design',
             });
         }
+        setNoStoreHeaders(res);
         res.status(200).json({
             success: true,
             data: design,
@@ -208,6 +224,7 @@ const updateDesign = async (req, res) => {
             new: true,
             runValidators: true,
         });
+        setNoStoreHeaders(res);
         res.status(200).json({
             success: true,
             message: 'Design updated successfully',
@@ -243,6 +260,9 @@ const deleteDesign = async (req, res) => {
                 message: 'Not authorized to delete this design',
             });
         }
+        await Cart_1.default.updateOne({ user: req.user._id }, {
+            $pull: { items: { design: design._id } },
+        });
         await design.deleteOne();
         res.status(200).json({
             success: true,
@@ -274,6 +294,7 @@ const getAllDesigns = async (req, res) => {
             .limit(limitNum)
             .populate('user', 'firstName lastName email');
         const total = await Design_1.default.countDocuments(query);
+        setNoStoreHeaders(res);
         res.status(200).json({
             success: true,
             count: designs.length,
