@@ -86,14 +86,14 @@ exports.getDashboardStats = getDashboardStats;
 const getAllUsers = async (req, res) => {
     try {
         const { role, page = 1, limit = 20, search } = req.query;
-        console.log('🔍 getAllUsers called with params:', { role, page, limit, search });
+        console.log(' getAllUsers called with params:', { role, page, limit, search });
         const query = { isDeleted: { $ne: true } };
         if (role && role !== 'all') {
             query.role = role;
-            console.log('✅ Filtering by role:', role);
+            console.log(' Filtering by role:', role);
         }
         else {
-            console.log('ℹ️ No role filter, showing all users');
+            console.log('ℹ No role filter, showing all users');
         }
         if (search) {
             query.$or = [
@@ -101,9 +101,9 @@ const getAllUsers = async (req, res) => {
                 { lastName: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
             ];
-            console.log('🔍 Adding search filter:', search);
+            console.log(' Adding search filter:', search);
         }
-        console.log('📋 Final query:', JSON.stringify(query, null, 2));
+        console.log(' Final query:', JSON.stringify(query, null, 2));
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
@@ -114,7 +114,7 @@ const getAllUsers = async (req, res) => {
             .skip(skip)
             .limit(limitNum);
         const total = await User_1.default.countDocuments(query);
-        console.log('✅ Found users:', {
+        console.log(' Found users:', {
             total,
             returned: users.length,
             query: query,
@@ -130,7 +130,7 @@ const getAllUsers = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error in getAllUsers:', error);
+        console.error(' Error in getAllUsers:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',

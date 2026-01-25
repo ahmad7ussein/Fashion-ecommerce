@@ -15,16 +15,16 @@ dotenv_1.default.config();
 async function checkIndexes() {
     try {
         await (0, database_1.default)();
-        console.log('✅ Connected to database\n');
-        console.log('📊 Checking indexes...\n');
+        console.log(' Connected to database\n');
+        console.log(' Checking indexes...\n');
         const collection = Product_1.default.collection;
         const existingIndexes = await collection.indexes();
-        console.log(`📋 Found ${existingIndexes.length} indexes:\n`);
+        console.log(` Found ${existingIndexes.length} indexes:\n`);
         existingIndexes.forEach((index) => {
             const indexName = index.name;
             const indexKey = JSON.stringify(index.key);
             const isTextIndex = indexName.includes('text');
-            console.log(`  ${isTextIndex ? '🔍' : '📌'} ${indexName}: ${indexKey}`);
+            console.log(`  ${isTextIndex ? '' : ''} ${indexName}: ${indexKey}`);
         });
         const requiredIndexes = [
             { active: 1, createdAt: -1 },
@@ -39,7 +39,7 @@ async function checkIndexes() {
             { active: 1, onSale: 1, price: 1 },
             { active: 1, category: 1, gender: 1, createdAt: -1 },
         ];
-        console.log('\n🔍 Checking required indexes...\n');
+        console.log('\n Checking required indexes...\n');
         let missingIndexes = [];
         for (const requiredIndex of requiredIndexes) {
             const indexKeyStr = JSON.stringify(requiredIndex);
@@ -48,30 +48,30 @@ async function checkIndexes() {
                 return existingKeyStr === indexKeyStr;
             });
             if (exists) {
-                console.log(`  ✅ ${indexKeyStr}`);
+                console.log(`   ${indexKeyStr}`);
             }
             else {
-                console.log(`  ❌ MISSING: ${indexKeyStr}`);
+                console.log(`   MISSING: ${indexKeyStr}`);
                 missingIndexes.push(requiredIndex);
             }
         }
         const hasTextIndex = existingIndexes.some((idx) => idx.name.includes('text') ||
             (idx.key && typeof idx.key.name === 'string' && idx.key.name === 'text'));
         if (hasTextIndex) {
-            console.log(`  ✅ Text search index exists`);
+            console.log(`   Text search index exists`);
         }
         else {
-            console.log(`  ❌ MISSING: Text search index`);
+            console.log(`   MISSING: Text search index`);
             missingIndexes.push({ name: 'text', nameAr: 'text', description: 'text', descriptionAr: 'text' });
         }
         if (missingIndexes.length > 0) {
-            console.log(`\n⚠️  Found ${missingIndexes.length} missing indexes!`);
-            console.log('💡 Run: node src/scripts/createIndexes.js\n');
+            console.log(`\n  Found ${missingIndexes.length} missing indexes!`);
+            console.log(' Run: node src/scripts/createIndexes.js\n');
             process.exit(1);
         }
         else {
-            console.log('\n✅ All required indexes are present!\n');
-            console.log('🧪 Testing sample query...');
+            console.log('\n All required indexes are present!\n');
+            console.log(' Testing sample query...');
             const testStartTime = Date.now();
             const testQuery = Product_1.default.find({ active: true, gender: 'Men' })
                 .sort({ createdAt: -1 })
@@ -81,19 +81,19 @@ async function checkIndexes() {
             try {
                 const testResults = await testQuery;
                 const testTime = Date.now() - testStartTime;
-                console.log(`✅ Test query completed in ${testTime}ms (found ${testResults.length} products)`);
+                console.log(` Test query completed in ${testTime}ms (found ${testResults.length} products)`);
                 if (testTime > 1000) {
-                    console.log('⚠️  Query is slower than expected. Indexes may not be used properly.');
+                    console.log('  Query is slower than expected. Indexes may not be used properly.');
                 }
             }
             catch (testError) {
-                console.error('❌ Test query failed:', testError.message);
+                console.error(' Test query failed:', testError.message);
             }
             process.exit(0);
         }
     }
     catch (error) {
-        console.error('❌ Error:', error.message);
+        console.error(' Error:', error.message);
         process.exit(1);
     }
 }

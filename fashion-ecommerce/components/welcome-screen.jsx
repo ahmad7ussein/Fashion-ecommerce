@@ -60,7 +60,7 @@ export function WelcomeScreen() {
                     setTimeout(() => {
                         checkDevice();
                     }, 100);
-                    console.log("✅ Welcome screen reset! Reload the page to see it again.");
+                    console.log(" Welcome screen reset! Reload the page to see it again.");
                 }
             };
             window.addEventListener('keydown', handleKeyPress);

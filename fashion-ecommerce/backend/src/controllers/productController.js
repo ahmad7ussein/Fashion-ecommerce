@@ -141,7 +141,7 @@ const getProducts = async (req, res) => {
                         const totalDocsExamined = executionStats.totalDocsExamined || 0;
                         const mongoExecutionTime = executionStats.executionTimeMillis || 0;
                         if (ixscanStage) {
-                            console.log(`🔍 Index usage:`, {
+                            console.log(` Index usage:`, {
                                 stage: 'IXSCAN',
                                 indexUsed: indexUsed || 'auto-selected',
                                 totalDocsExamined: totalDocsExamined,
@@ -149,10 +149,10 @@ const getProducts = async (req, res) => {
                                 apiResponseTime: `${apiResponseTime}ms`,
                                 resultsCount: products.length
                             });
-                            console.log(`✅ Using index: ${indexUsed || 'auto-selected'}`);
+                            console.log(` Using index: ${indexUsed || 'auto-selected'}`);
                         }
                         else if (stage === 'LIMIT' || stage === 'FETCH' || stage === 'SORT') {
-                            console.log(`🔍 Query execution:`, {
+                            console.log(` Query execution:`, {
                                 topStage: stage,
                                 totalDocsExamined: totalDocsExamined,
                                 mongoExecutionTime: `${mongoExecutionTime}ms`,
@@ -161,11 +161,11 @@ const getProducts = async (req, res) => {
                         }
                         else {
                             if (stage !== 'IXSCAN' && stage !== 'FETCH' && stage !== 'LIMIT' && stage !== 'SORT') {
-                                console.warn(`⚠️ Unexpected execution stage: ${stage}`);
+                                console.warn(` Unexpected execution stage: ${stage}`);
                             }
                         }
                         if (mongoExecutionTime > 100) {
-                            console.warn('⚠️ Slow MongoDB query', {
+                            console.warn(' Slow MongoDB query', {
                                 query: JSON.stringify(query),
                                 mongoExecutionTime: mongoExecutionTime,
                                 apiResponseTime: apiResponseTime,
@@ -173,7 +173,7 @@ const getProducts = async (req, res) => {
                             });
                         }
                         else if (apiResponseTime > 1000 && mongoExecutionTime < 100) {
-                            console.warn('⚠️ API response slow despite fast MongoDB query', {
+                            console.warn(' API response slow despite fast MongoDB query', {
                                 mongoExecutionTime: mongoExecutionTime,
                                 apiResponseTime: apiResponseTime,
                                 overhead: `${apiResponseTime - mongoExecutionTime}ms (likely network latency)`
@@ -187,7 +187,7 @@ const getProducts = async (req, res) => {
         }
         catch (queryError) {
             const queryTime = Date.now() - queryStartTime;
-            console.error('❌ Query failed:', {
+            console.error(' Query failed:', {
                 error: queryError.message,
                 queryTime: `${queryTime}ms`,
                 query: JSON.stringify(query),
@@ -244,14 +244,14 @@ const getProducts = async (req, res) => {
             error.message?.includes('timed out') ||
             error.message?.includes('connection');
         if (isTimeoutError) {
-            console.warn('⚠️ Database timeout in getProducts:', {
+            console.warn(' Database timeout in getProducts:', {
                 error: error.message,
                 name: error.name,
                 readyState: mongoose_1.default.connection.readyState,
                 host: mongoose_1.default.connection.host
             });
             if (mongoose_1.default.connection.readyState !== 1) {
-                console.warn('⚠️ Database disconnected; awaiting mongoose reconnect.');
+                console.warn(' Database disconnected; awaiting mongoose reconnect.');
             }
             return res.status(503).json({
                 success: false,

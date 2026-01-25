@@ -10,7 +10,7 @@ dotenv_1.default.config();
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/stylecraft';
 async function createAdminAndEmployee() {
     try {
-        console.log('🌐 Connecting to MongoDB...');
+        console.log(' Connecting to MongoDB...');
         await mongoose_1.default.connect(MONGODB_URI);
         console.log(' Connected to MongoDB');
         const adminData = {
@@ -57,24 +57,24 @@ async function createAdminAndEmployee() {
             console.log(' ID:', employee._id);
         }
         console.log('');
-        console.log('🎉 ========================================');
-        console.log('🎉 Admin and Employee accounts ready!');
-        console.log('🎉 ========================================');
+        console.log(' ========================================');
+        console.log(' Admin and Employee accounts ready!');
+        console.log(' ========================================');
         console.log('');
-        console.log('📝 Admin Login:');
+        console.log(' Admin Login:');
         console.log('   Email: admin@fashionhub.com');
         console.log('   Password: Admin@123');
         console.log('');
-        console.log('📝 Employee Login:');
+        console.log(' Employee Login:');
         console.log('   Email: employee@stylecraft.com');
         console.log('   Password: Employee@123');
         console.log('');
         await mongoose_1.default.disconnect();
-        console.log('✅ Disconnected from MongoDB');
+        console.log(' Disconnected from MongoDB');
         process.exit(0);
     }
     catch (error) {
-        console.error('❌ Error:', error.message);
+        console.error(' Error:', error.message);
         process.exit(1);
     }
 }

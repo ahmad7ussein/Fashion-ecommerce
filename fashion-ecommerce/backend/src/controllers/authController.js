@@ -83,9 +83,9 @@ exports.register = register;
 const login = async (req, res) => {
     try {
         const { identifier, password } = req.body;
-        console.log('🔐 Login attempt:', { identifier: identifier?.substring(0, 10) + '...', hasPassword: !!password });
+        console.log(' Login attempt:', { identifier: identifier?.substring(0, 10) + '...', hasPassword: !!password });
         if (!identifier || !password) {
-            console.log('❌ Missing identifier or password');
+            console.log(' Missing identifier or password');
             return res.status(400).json({
                 success: false,
                 message: 'Email and password are required',
@@ -96,31 +96,31 @@ const login = async (req, res) => {
         const normalizedEmail = normalizedIdentifier.toLowerCase();
         const user = await User_1.default.findOne(isObjectId ? { _id: normalizedIdentifier } : { email: normalizedEmail }).select('+password');
         if (!user) {
-            console.log('❌ User not found for email:', normalizedEmail);
+            console.log(' User not found for email:', normalizedEmail);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials',
             });
         }
         if (user.isDeleted) {
-            console.log('❌ Deleted user attempted login:', normalizedEmail);
+            console.log(' Deleted user attempted login:', normalizedEmail);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials',
             });
         }
-        console.log('✅ User found:', { id: user._id, email: user.email, role: user.role });
+        console.log(' User found:', { id: user._id, email: user.email, role: user.role });
         const isPasswordMatch = await user.comparePassword(password);
         if (!isPasswordMatch) {
-            console.log('❌ Password mismatch for user:', user.email);
+            console.log(' Password mismatch for user:', user.email);
             return res.status(401).json({
                 success: false,
                 message: 'Invalid credentials',
             });
         }
-        console.log('✅ Password verified for user:', user.email);
+        console.log(' Password verified for user:', user.email);
         const token = generateToken(user._id.toString());
-        console.log('✅ Login successful, token generated for user:', user.email);
+        console.log(' Login successful, token generated for user:', user.email);
         if (user.role === 'employee' || user.role === 'admin') {
             await (0, employeeActivityController_1.logEmployeeActivity)(user._id, 'login', `User logged in: ${user.firstName} ${user.lastName} (${user.email})`, 'User', user._id, { loginTime: new Date().toISOString() });
         }
@@ -140,8 +140,8 @@ const login = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Login error:', error);
-        console.error('❌ Error stack:', error.stack);
+        console.error(' Login error:', error);
+        console.error(' Error stack:', error.stack);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -180,7 +180,7 @@ const getMe = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error in getMe:', error);
+        console.error(' Error in getMe:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -315,7 +315,7 @@ const googleAuth = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Google auth error:', error);
+        console.error(' Google auth error:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error during Google authentication',
@@ -342,15 +342,15 @@ const forgotPassword = async (req, res) => {
             user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000);
             await user.save({ validateBeforeSave: false });
             const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-            console.log('🔐 Password reset token generated for:', email);
-            console.log('🔗 Reset URL:', resetUrl);
+            console.log(' Password reset token generated for:', email);
+            console.log(' Reset URL:', resetUrl);
             const emailSent = await (0, emailService_1.sendPasswordResetEmail)(email, resetToken, `${user.firstName} ${user.lastName}`);
             if (!emailSent) {
-                console.warn('⚠️ Failed to send email. Token (dev only):', resetToken);
-                console.warn('⚠️ Reset URL (dev only):', resetUrl);
+                console.warn(' Failed to send email. Token (dev only):', resetToken);
+                console.warn(' Reset URL (dev only):', resetUrl);
             }
             else {
-                console.log('✅ Password reset email sent successfully to:', email);
+                console.log(' Password reset email sent successfully to:', email);
             }
         }
         res.status(200).json({

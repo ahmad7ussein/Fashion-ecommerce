@@ -144,10 +144,10 @@ orderSchema.pre('save', async function (next) {
                 this.orderNumber = `ORD-${newTimestamp}-${newRandomStr}`;
                 attempts++;
             }
-            console.log('📝 Generated order number:', this.orderNumber);
+            console.log(' Generated order number:', this.orderNumber);
         }
         catch (error) {
-            console.error('❌ Error generating order number:', error);
+            console.error(' Error generating order number:', error);
             this.orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
         }
     }

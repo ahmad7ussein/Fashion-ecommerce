@@ -17,21 +17,21 @@ const productName = 'Quarter-Zip Polo Shirt';
 async function deleteProductByName() {
     try {
         await (0, database_1.default)();
-        console.log('✅ Connected to database');
+        console.log(' Connected to database');
         const product = await Product_1.default.findOne({
             name: { $regex: productName, $options: 'i' }
         });
         if (!product) {
-            console.log(`❌ Product "${productName}" not found`);
+            console.log(` Product "${productName}" not found`);
             process.exit(1);
         }
-        console.log(`📦 Found product: ${product.name} (ID: ${product._id})`);
+        console.log(` Found product: ${product.name} (ID: ${product._id})`);
         if (product.image && product.image.includes('cloudinary.com')) {
-            console.log('🗑️  Deleting main image from Cloudinary...');
+            console.log('  Deleting main image from Cloudinary...');
             await (0, cloudinary_1.deleteFromCloudinary)(product.image);
         }
         if (product.images && product.images.length > 0) {
-            console.log(`🗑️  Deleting ${product.images.length} additional images from Cloudinary...`);
+            console.log(`  Deleting ${product.images.length} additional images from Cloudinary...`);
             for (const img of product.images) {
                 if (img.includes('cloudinary.com')) {
                     await (0, cloudinary_1.deleteFromCloudinary)(img);
@@ -39,11 +39,11 @@ async function deleteProductByName() {
             }
         }
         await Product_1.default.findByIdAndDelete(product._id);
-        console.log(`✅ Product "${product.name}" deleted successfully`);
+        console.log(` Product "${product.name}" deleted successfully`);
         process.exit(0);
     }
     catch (error) {
-        console.error('❌ Error:', error.message);
+        console.error(' Error:', error.message);
         process.exit(1);
     }
 }

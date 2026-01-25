@@ -52,12 +52,12 @@ async function request(endpoint, options = {}) {
                     break;
                 }
                 if (fetchError.name === 'AbortError') {
-                    logger.warn(`⚠️ Request timeout (attempt ${attempt + 1}/${maxRetries + 1}), retrying...`);
+                    logger.warn(` Request timeout (attempt ${attempt + 1}/${maxRetries + 1}), retrying...`);
                     await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
                     continue;
                 }
                 if (fetchError instanceof TypeError && (fetchError.message === "Failed to fetch" || fetchError.message.includes("fetch"))) {
-                    logger.warn(`⚠️ Network error (attempt ${attempt + 1}/${maxRetries + 1}), retrying...`);
+                    logger.warn(` Network error (attempt ${attempt + 1}/${maxRetries + 1}), retrying...`);
                     await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
                     continue;
                 }
@@ -88,7 +88,7 @@ async function request(endpoint, options = {}) {
                 if (response.status === 401) {
                     if (typeof window !== 'undefined') {
                         localStorage.removeItem('auth_token');
-                        logger.warn("⚠️ 401 Unauthorized - Token cleared. Redirecting to login...");
+                        logger.warn(" 401 Unauthorized - Token cleared. Redirecting to login...");
                         const currentPath = window.location.pathname;
                         if (!currentPath.includes('/login') && !currentPath.includes('/signup')) {
                             setTimeout(() => {

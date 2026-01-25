@@ -274,7 +274,7 @@ export default function ProductDetailPageClient() {
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-12">
           <div className="max-w-2xl mx-auto text-center">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="space-y-6">
-              <div className="text-6xl sm:text-7xl md:text-8xl mb-4">⚠️</div>
+              <div className="text-6xl sm:text-7xl md:text-8xl mb-4"></div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
                 {language === "ar" ? "حدث خطأ أثناء تحميل المنتج" : "Error Loading Product"}
               </h1>
@@ -299,7 +299,7 @@ export default function ProductDetailPageClient() {
         <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-12">
           <div className="max-w-2xl mx-auto text-center">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="space-y-6">
-              <div className="text-6xl sm:text-7xl md:text-8xl mb-4">😕</div>
+              <div className="text-6xl sm:text-7xl md:text-8xl mb-4"></div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
                 {language === "ar" ? "المنتج غير موجود" : "Product Not Found"}
               </h1>

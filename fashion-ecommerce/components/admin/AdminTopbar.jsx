@@ -136,7 +136,7 @@ export function AdminTopbar() {
           </span>)}
         </Button>
         <Button variant="outline" size="icon" className="h-8 w-8 border-border/60 text-base" aria-label="Toggle theme" onClick={handleToggleTheme}>
-          <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
+          <span aria-hidden="true">{theme === "dark" ? "" : ""}</span>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

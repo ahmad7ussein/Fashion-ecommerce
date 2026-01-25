@@ -62,7 +62,7 @@ export function Header() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="text-sm font-semibold group relative overflow-hidden transition-all hover:bg-accent/80 hover:scale-105">
                     <span className="flex items-center gap-1.5 relative z-10">
-                      👔 {t("men")}
+                       {t("men")}
                     </span>
                     <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"/>
                   </NavigationMenuTrigger>
@@ -81,7 +81,7 @@ export function Header() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="text-sm font-semibold group relative overflow-hidden transition-all hover:bg-accent/80 hover:scale-105">
                     <span className="flex items-center gap-1.5 relative z-10">
-                      👗 {t("women")}
+                       {t("women")}
                     </span>
                     <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"/>
                   </NavigationMenuTrigger>
@@ -100,7 +100,7 @@ export function Header() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="text-sm font-semibold group relative overflow-hidden transition-all hover:bg-accent/80 hover:scale-105">
                     <span className="flex items-center gap-1.5 relative z-10">
-                      👶 {t("kids")}
+                       {t("kids")}
                     </span>
                     <span className="absolute inset-0 bg-primary/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"/>
                   </NavigationMenuTrigger>
@@ -187,7 +187,7 @@ export function Header() {
 
             
             <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600 text-base" title={theme === "dark" ? (language === "ar" ? "الوضع الفاتح" : "Light Mode") : (language === "ar" ? "الوضع الداكن" : "Dark Mode")}>
-              <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
+              <span aria-hidden="true">{theme === "dark" ? "" : ""}</span>
               <span className="sr-only">Toggle Theme</span>
             </Button>
 
@@ -289,7 +289,7 @@ export function Header() {
                     <AccordionItem value="men" className="border-b">
                       <AccordionTrigger className="px-3 py-3 text-base font-semibold hover:no-underline hover:bg-primary/5 transition-all">
                         <span className="flex items-center gap-2">
-                          <span className="text-lg">👔</span>
+                          <span className="text-lg"></span>
                           {t("men")}
                         </span>
                       </AccordionTrigger>
@@ -306,7 +306,7 @@ export function Header() {
                     <AccordionItem value="women" className="border-b">
                       <AccordionTrigger className="px-3 py-3 text-base font-semibold hover:no-underline hover:bg-primary/5 transition-all">
                         <span className="flex items-center gap-2">
-                          <span className="text-lg">👗</span>
+                          <span className="text-lg"></span>
                           {t("women")}
                         </span>
                       </AccordionTrigger>
@@ -323,7 +323,7 @@ export function Header() {
                     <AccordionItem value="kids" className="border-b">
                       <AccordionTrigger className="px-3 py-3 text-base font-semibold hover:no-underline hover:bg-primary/5 transition-all">
                         <span className="flex items-center gap-2">
-                          <span className="text-lg">👶</span>
+                          <span className="text-lg"></span>
                           {t("kids")}
                         </span>
                       </AccordionTrigger>

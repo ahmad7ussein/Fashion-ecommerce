@@ -9,11 +9,11 @@ function setToken(token) {
         return;
     if (token) {
         localStorage.setItem(TOKEN_KEY, token);
-        logger.log("💾 Token saved to localStorage");
+        logger.log(" Token saved to localStorage");
     }
     else {
         localStorage.removeItem(TOKEN_KEY);
-        logger.log("🗑️ Token removed from localStorage");
+        logger.log(" Token removed from localStorage");
     }
 }
 function getToken() {
@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
                 .getMe()
                 .then((userData) => {
                 if (!userData) {
-                    logger.warn("⚠️ getMe returned null/undefined");
+                    logger.warn(" getMe returned null/undefined");
                     setUser(null);
                     setToken(null);
                     return;
@@ -51,11 +51,11 @@ export function AuthProvider({ children }) {
                     employeeId: userData.employeeId,
                     adminId: userData.adminId,
                 };
-                logger.log("✅ User loaded from database:", newUser);
+                logger.log(" User loaded from database:", newUser);
                 setUser(newUser);
             })
                 .catch((error) => {
-                logger.warn("⚠️ Failed to get user from database:", error?.message || "Unknown error");
+                logger.warn(" Failed to get user from database:", error?.message || "Unknown error");
                 setUser(null);
                 setToken(null);
             })
@@ -68,7 +68,7 @@ export function AuthProvider({ children }) {
     const login = async (identifier, password) => {
         try {
             const response = await authApi.login(identifier, password);
-            logger.log("🔍 Login API Response:", response);
+            logger.log(" Login API Response:", response);
             const userData = {
                 id: (response.user?.id || response.user?._id || "").toString(),
                 name: `${response.user?.firstName || ""} ${response.user?.lastName || ""}`,
@@ -77,19 +77,19 @@ export function AuthProvider({ children }) {
                 firstName: response.user?.firstName,
                 lastName: response.user?.lastName,
             };
-            logger.log("🔍 Parsed User Data:", userData);
+            logger.log(" Parsed User Data:", userData);
             if (response.token) {
                 setToken(response.token);
             }
             setUser(userData);
-            logger.log("✅ User state updated:", userData);
-            logger.log("✅ Token saved:", !!response.token);
-            logger.log("✅ User role:", userData.role);
+            logger.log(" User state updated:", userData);
+            logger.log(" Token saved:", !!response.token);
+            logger.log(" User role:", userData.role);
             return userData;
         }
         catch (error) {
             console.error("=".repeat(50));
-            console.error("❌ LOGIN ERROR - Full Details");
+            console.error(" LOGIN ERROR - Full Details");
             console.error("=".repeat(50));
             const errorDetails = {
                 message: error?.message || "Unknown error",
@@ -113,7 +113,7 @@ export function AuthProvider({ children }) {
             }
             console.error("Full Error Object:", error);
             console.error("=".repeat(50));
-            logger.error("❌ Login Error:", error);
+            logger.error(" Login Error:", error);
             console.error("Login Error Details:", errorDetails);
             throw new Error(error?.message || "Login failed");
         }
