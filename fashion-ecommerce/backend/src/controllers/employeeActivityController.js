@@ -59,7 +59,7 @@ const getAllEmployeeActivities = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error fetching employee activities:', error);
+        console.error(' Error fetching employee activities:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -79,7 +79,7 @@ const logEmployeeActivity = async (employeeId, action, description, targetType, 
         });
     }
     catch (error) {
-        console.error('❌ Error logging employee activity:', error);
+        console.error(' Error logging employee activity:', error);
     }
 };
 exports.logEmployeeActivity = logEmployeeActivity;

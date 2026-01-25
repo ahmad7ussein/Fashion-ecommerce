@@ -9,14 +9,14 @@ const createTransporter = () => {
     const smtpUser = process.env.SMTP_USER || process.env.GMAIL_USER;
     const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD;
     if (!smtpUser || !smtpPass) {
-        console.warn('⚠️ Email credentials not found. Email sending will be disabled.');
-        console.warn('⚠️ Please add to .env.local (root) or backend/.env.local:');
+        console.warn(' Email credentials not found. Email sending will be disabled.');
+        console.warn(' Please add to .env.local (root) or backend/.env.local:');
         console.warn('   SMTP_USER=your-email@gmail.com');
         console.warn('   SMTP_PASS=your-app-password');
         console.warn('   (Or use GMAIL_USER and GMAIL_APP_PASSWORD for legacy support)');
         return null;
     }
-    console.log('✅ Email credentials found. Email service ready.');
+    console.log(' Email credentials found. Email service ready.');
     if (process.env.SMTP_HOST && process.env.SMTP_PORT) {
         return nodemailer_1.default.createTransport({
             host: process.env.SMTP_HOST,
@@ -40,7 +40,7 @@ const sendPasswordResetEmail = async (email, resetToken, userName) => {
     try {
         const transporter = createTransporter();
         if (!transporter) {
-            console.error('❌ Email transporter not available. Gmail credentials missing.');
+            console.error(' Email transporter not available. Gmail credentials missing.');
             return false;
         }
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -95,7 +95,7 @@ const sendPasswordResetEmail = async (email, resetToken, userName) => {
             
             <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 30px 0; border-radius: 5px;">
               <p style="color: #92400e; font-size: 14px; margin: 0;">
-                <strong>⚠️ تحذير / Warning:</strong><br>
+                <strong> تحذير / Warning:</strong><br>
                 هذا الرابط صالح لمدة 10 دقائق فقط.<br>
                 This link is valid for 10 minutes only.
               </p>
@@ -130,7 +130,7 @@ const sendPasswordResetEmail = async (email, resetToken, userName) => {
         
         ${resetUrl}
         
-        ⚠️ هذا الرابط صالح لمدة 10 دقائق فقط.
+         هذا الرابط صالح لمدة 10 دقائق فقط.
         This link is valid for 10 minutes only.
         
         إذا لم تطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذا البريد.
@@ -141,12 +141,12 @@ const sendPasswordResetEmail = async (email, resetToken, userName) => {
       `,
         };
         const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Password reset email sent:', info.messageId);
+        console.log(' Password reset email sent:', info.messageId);
         return true;
     }
     catch (error) {
-        console.error('❌ Error sending password reset email:', error);
-        console.error('❌ Error details:', {
+        console.error(' Error sending password reset email:', error);
+        console.error(' Error details:', {
             message: error.message,
             code: error.code,
             command: error.command,

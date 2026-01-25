@@ -148,11 +148,15 @@ export default function EmployeeDashboard() {
         };
     };
     const resolvePreviewBaseImage = (item, studioProduct, side) => {
+        const metadataBase = item?.designMetadata?.studio?.data;
+        const explicitBase = side === "back"
+            ? item?.baseBackUrl || metadataBase?.baseBackUrl
+            : item?.baseFrontUrl || metadataBase?.baseFrontUrl;
         const viewMockups = studioProduct?.viewMockups || {};
         if (side === "back") {
-            return viewMockups.back || studioProduct?.baseMockupUrl || item?.image || "";
+            return explicitBase || viewMockups.back || studioProduct?.baseMockupUrl || item?.image || "";
         }
-        return viewMockups.front || studioProduct?.baseMockupUrl || item?.image || "";
+        return explicitBase || viewMockups.front || studioProduct?.baseMockupUrl || item?.image || "";
     };
     const openDesignPreview = (item) => {
         setDesignPreviewItem(item);
@@ -378,16 +382,16 @@ export default function EmployeeDashboard() {
     const loadOrders = async () => {
         try {
             setLoading(true);
-            console.log("🔄 Employee: Loading orders...");
+            console.log(" Employee: Loading orders...");
             const ordersData = await ordersApi.getAllOrders({ limit: 100 });
-            console.log("✅ Employee: Orders loaded:", {
+            console.log(" Employee: Orders loaded:", {
                 count: Array.isArray(ordersData) ? ordersData.length : 0,
                 orders: ordersData,
             });
             setOrders(Array.isArray(ordersData) ? ordersData : []);
         }
         catch (error) {
-            console.error("❌ Employee: Error loading orders:", error);
+            console.error(" Employee: Error loading orders:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load orders",
@@ -404,7 +408,7 @@ export default function EmployeeDashboard() {
             setUsers(usersData.data || []);
         }
         catch (error) {
-            console.error("❌ Employee: Error loading users:", error);
+            console.error(" Employee: Error loading users:", error);
         }
     };
     const loadProducts = async () => {
@@ -449,7 +453,7 @@ export default function EmployeeDashboard() {
             }
         }
         catch (error) {
-            console.error("❌ Employee: Error loading products:", error);
+            console.error(" Employee: Error loading products:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to load products",
@@ -1007,7 +1011,7 @@ export default function EmployeeDashboard() {
         <div className="mt-auto space-y-2 px-4 pb-6">
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="flex-1 text-base" aria-label="Toggle theme">
-              <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
+              <span aria-hidden="true">{theme === "dark" ? "" : ""}</span>
             </Button>
             <Button variant="outline" size="icon" onClick={() => setLanguage(language === "ar" ? "en" : "ar")} className="flex-1">
               <Languages className="h-4 w-4"/>
@@ -2315,7 +2319,7 @@ export default function EmployeeDashboard() {
                     {language === "ar" ? "تفاصيل الطلب" : "Order Details"} - {selectedOrder.orderNumber}
                   </CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setShowOrderDetails(false)}>
-                  ✕
+                  
                 </Button>
               </div>
             </CardHeader>

@@ -37,6 +37,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import html2canvas from "html2canvas";
 import { studioProductsApi } from "@/lib/api/studioProducts";
 import { designsApi } from "@/lib/api/designs";
+import { syncLocalDesignsToAccount } from "@/lib/localDesignSync";
 
 const products = [
   {
@@ -124,6 +125,46 @@ const isColorValue = (value) =>
 const isValidObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ""));
 
 const normalizeColorKey = (value) => String(value || "").trim().toLowerCase();
+
+const uploadDataUrl = async (dataUrl, label) => {
+  if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) {
+    return dataUrl;
+  }
+  try {
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    const file = new File([blob], `${label}-${Date.now()}.png`, {
+      type: blob.type || "image/png",
+    });
+    const uploadResult = await designsApi.uploadAsset(file);
+    if (uploadResult?.url) {
+      return uploadResult.url;
+    }
+  } catch {
+    /* ignore upload errors */
+  }
+  return dataUrl;
+};
+
+const normalizeDesignBySide = async (designBySide) => {
+  if (!designBySide || typeof designBySide !== "object") {
+    return designBySide;
+  }
+  const entries = Object.entries(designBySide);
+  const uploadedEntries = await Promise.all(
+    entries.map(async ([sideKey, sideData]) => {
+      if (!sideData || typeof sideData !== "object") {
+        return [sideKey, sideData];
+      }
+      const uploadedImage = await uploadDataUrl(
+        sideData.uploadedImage,
+        `studio-${sideKey}`
+      );
+      return [sideKey, { ...sideData, uploadedImage }];
+    })
+  );
+  return Object.fromEntries(uploadedEntries);
+};
 
 const resolveImageUrl = (value) => {
   if (!value) return "";
@@ -292,6 +333,7 @@ export default function DesignStudioPage() {
   const searchParams = useSearchParams();
   const previewRef = useRef(null);
   const skipSideSyncRef = useRef(false);
+  const isPositionSwitchRef = useRef(false);
   const localDesignsKey = useMemo(() => getLocalDesignsKey(user), [user]);
   const localFavoritesKey = useMemo(() => getLocalFavoritesKey(user), [user]);
 
@@ -330,6 +372,28 @@ export default function DesignStudioPage() {
   const [isSavingDesign, setIsSavingDesign] = useState(false);
   const [loadingDesignId, setLoadingDesignId] = useState("");
   const [loadingLocalDesignId, setLoadingLocalDesignId] = useState("");
+  const [currentDesignId, setCurrentDesignId] = useState("");
+  const [savedBaseImages, setSavedBaseImages] = useState({ front: "", back: "" });
+
+  const handlePositionChange = (nextPosition) => {
+    if (!nextPosition || nextPosition === selectedPosition) return;
+    isPositionSwitchRef.current = true;
+    setDesignBySide((prev) => ({
+      ...prev,
+      [selectedPosition]: {
+        ...(prev[selectedPosition] || createEmptySideState()),
+        textValue,
+        textFontSize,
+        textAlign,
+        textColor,
+        textFontFamily,
+        uploadedImage,
+        imagePosition,
+        imageSize,
+      },
+    }));
+    setSelectedPosition(nextPosition);
+  };
 
   const mergedStudioProducts = useMemo(() => {
     if (!studioProducts.length) return [];
@@ -417,8 +481,10 @@ export default function DesignStudioPage() {
     [productColor, activeProduct]
   );
   const activeProductImage = useMemo(
-    () => resolveProductImage(activeProduct, selectedPosition, activeColorKey),
-    [activeProduct, selectedPosition, activeColorKey]
+    () =>
+      savedBaseImages?.[selectedPosition] ||
+      resolveProductImage(activeProduct, selectedPosition, activeColorKey),
+    [activeProduct, selectedPosition, activeColorKey, savedBaseImages]
   );
   const productColorOptions = useMemo(() => {
     if (!activeProduct) return undefined;
@@ -435,8 +501,10 @@ export default function DesignStudioPage() {
     return merged.length ? merged : undefined;
   }, [activeProduct]);
   const productPreviewImage = useMemo(
-    () => resolveProductImage(activeProduct, "front", activeColorKey),
-    [activeProduct, activeColorKey]
+    () =>
+      savedBaseImages?.front ||
+      resolveProductImage(activeProduct, "front", activeColorKey),
+    [activeProduct, activeColorKey, savedBaseImages]
   );
 
   useEffect(() => {
@@ -524,15 +592,39 @@ export default function DesignStudioPage() {
   }, [localFavoritesKey]);
 
   useEffect(() => {
-    const designId = searchParams?.get("design");
-    if (!designId || designId === loadingDesignId) return;
+    if (!user) return;
+    let isMounted = true;
+    const runSync = async () => {
+      const result = await syncLocalDesignsToAccount(user);
+      if (!isMounted || !result.synced) return;
+      try {
+        const raw = localStorage.getItem(localDesignsKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        setSavedDesigns(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        setSavedDesigns([]);
+      }
+    };
+    runSync();
+    return () => {
+      isMounted = false;
+    };
+  }, [user, localDesignsKey]);
+
+  useEffect(() => {
+    const designId = searchParams?.get("design") || searchParams?.get("designId");
+    console.log("[Studio] effect fired", {
+      query: searchParams?.toString?.() || "",
+      designId,
+    });
+    if (!designId) return;
     let isMounted = true;
     const loadRemoteDesign = async () => {
       setLoadingDesignId(designId);
       try {
         const design = await designsApi.getDesign(designId);
         if (!isMounted) return;
-        const studioData = design?.designMetadata?.studio?.data || null;
+        const studioData = extractStudioData(design);
         if (!studioData) {
           toast({
             title: "Unable to load design",
@@ -541,12 +633,18 @@ export default function DesignStudioPage() {
           });
           return;
         }
-        loadDesign({ name: design.name, data: studioData });
+        console.log("[Studio] fetched design", {
+          id: design?._id || design?.id,
+          hasStudio: Boolean(design?.designMetadata),
+        });
+        setCurrentDesignId(design?._id || design?.id || "");
+        loadDesign(design);
       } catch (error) {
         if (!isMounted) return;
+        console.error("[Studio] fetch failed", error);
         toast({
           title: "Unable to load design",
-          description: error?.message || "Please try again.",
+          description: error?.message || String(error) || "Please try again.",
           variant: "destructive",
         });
       }
@@ -555,7 +653,16 @@ export default function DesignStudioPage() {
     return () => {
       isMounted = false;
     };
-  }, [searchParams, toast, loadingDesignId]);
+  }, [searchParams, toast]);
+
+  useEffect(() => {
+    const designId = searchParams?.get("design");
+    const localDesignId = searchParams?.get("localDesign");
+    if (!designId && !localDesignId) {
+      setCurrentDesignId("");
+      setSavedBaseImages({ front: "", back: "" });
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const localDesignId = searchParams?.get("localDesign");
@@ -568,6 +675,7 @@ export default function DesignStudioPage() {
         ? parsed.find((design) => String(design.id) === String(localDesignId))
         : null;
       if (match) {
+        setCurrentDesignId("");
         loadDesign(match);
       } else {
         toast({
@@ -669,11 +777,14 @@ export default function DesignStudioPage() {
     setUploadedImage(sideData.uploadedImage || null);
     setImagePosition(sideData.imagePosition || { x: 50, y: 50 });
     setImageSize(sideData.imageSize || 120);
+    isPositionSwitchRef.current = false;
   }, [selectedPosition, designBySide]);
 
   useEffect(() => {
-    if (skipSideSyncRef.current) {
-      skipSideSyncRef.current = false;
+    if (skipSideSyncRef.current || isPositionSwitchRef.current) {
+      if (skipSideSyncRef.current) {
+        skipSideSyncRef.current = false;
+      }
       return;
     }
     setDesignBySide((prev) => ({
@@ -704,10 +815,12 @@ export default function DesignStudioPage() {
 
   const persistSavedDesigns = (next) => {
     setSavedDesigns(next);
-    try {
-      localStorage.setItem(localDesignsKey, JSON.stringify(next));
-    } catch {
-      /* ignore */
+    if (!user) {
+      try {
+        localStorage.setItem(localDesignsKey, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -770,25 +883,106 @@ export default function DesignStudioPage() {
     document.addEventListener("mouseup", handleMouseUp);
   };
 
+  const awaitImagesLoaded = async (container) => {
+    if (!container) return;
+    const images = Array.from(container.querySelectorAll("img"));
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete && img.naturalWidth > 0) {
+          return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+          const onLoad = () => {
+            img.removeEventListener("load", onLoad);
+            img.removeEventListener("error", onLoad);
+            resolve();
+          };
+          img.addEventListener("load", onLoad);
+          img.addEventListener("error", onLoad);
+        });
+      })
+    );
+  };
+
+  const prepareImagesForCapture = async (container) => {
+    if (!container || typeof window === "undefined") {
+      return { cleanup: () => {} };
+    }
+    const origin = window.location.origin;
+    const images = Array.from(container.querySelectorAll("img"));
+    const replacements = [];
+    for (const img of images) {
+      const src = img.currentSrc || img.src || "";
+      if (!src || src.startsWith("data:") || src.startsWith("blob:")) {
+        continue;
+      }
+      if (src.startsWith(origin)) {
+        continue;
+      }
+      if (!src.startsWith("http")) {
+        continue;
+      }
+      try {
+        const response = await fetch(src);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        replacements.push({ img, original: src, objectUrl });
+        img.src = objectUrl;
+      } catch {
+        /* ignore fetch failures */
+      }
+    }
+    return {
+      cleanup: () => {
+        replacements.forEach(({ img, original, objectUrl }) => {
+          img.src = original;
+          URL.revokeObjectURL(objectUrl);
+        });
+      },
+    };
+  };
+
   const capturePreview = async () => {
     if (!previewRef.current) return null;
     const borderElement = previewRef.current.querySelector(".design-area-border");
     if (borderElement) {
       borderElement.style.display = "none";
     }
+    const { cleanup } = await prepareImagesForCapture(previewRef.current);
     try {
+      await awaitImagesLoaded(previewRef.current);
       const canvas = await html2canvas(previewRef.current, {
         backgroundColor: null,
         scale: 2,
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
       });
       return canvas.toDataURL("image/png");
     } finally {
+      cleanup();
       if (borderElement) {
         borderElement.style.display = "";
       }
     }
+  };
+
+  const waitForPreviewPaint = () => new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+
+  const capturePreviewForSide = async (side) => {
+    if (!side) return null;
+    if (side === selectedPosition) {
+      await waitForPreviewPaint();
+      return capturePreview();
+    }
+    const previous = selectedPosition;
+    handlePositionChange(side);
+    await waitForPreviewPaint();
+    const result = await capturePreview();
+    handlePositionChange(previous);
+    await waitForPreviewPaint();
+    return result;
   };
 
   const handleAddToCart = async () => {
@@ -808,8 +1002,30 @@ export default function DesignStudioPage() {
         console.warn("Failed to capture design preview, using product image.", error);
       }
       const fallbackImage = previewImage || activeProductImage;
-      const designPayload = buildDesignPayload(fallbackImage, {
-        designBySide,
+      const hasAuthToken =
+        typeof window !== "undefined" && Boolean(localStorage.getItem("auth_token"));
+      const latestDesignBySide = {
+        ...designBySide,
+        [selectedPosition]: {
+          ...(designBySide[selectedPosition] || createEmptySideState()),
+          textValue,
+          textFontSize,
+          textAlign,
+          textColor,
+          textFontFamily,
+          uploadedImage,
+          imagePosition,
+          imageSize,
+        },
+      };
+      let storedThumbnail = fallbackImage;
+      let normalizedBySide = latestDesignBySide;
+      if (hasAuthToken) {
+        storedThumbnail = await uploadDataUrl(fallbackImage, "studio-thumb");
+        normalizedBySide = await normalizeDesignBySide(latestDesignBySide);
+      }
+      const designPayload = buildDesignPayload(storedThumbnail, {
+        designBySide: normalizedBySide,
       });
       const designMetadata = {
         studio: {
@@ -818,26 +1034,53 @@ export default function DesignStudioPage() {
         },
       };
       const baseProductId = activeProduct?._id || activeProduct?.id;
-      const baseProduct = {
-        type: activeProduct?.type || activeProduct?.name || "Product",
-        color: activeColorKey || productColor,
-        size: productSize,
-      };
-      const hasAuthToken =
-        typeof window !== "undefined" && Boolean(localStorage.getItem("auth_token"));
-      let designId = null;
-      if (hasAuthToken && isValidObjectId(baseProductId)) {
-        try {
-          const created = await designsApi.createDesign({
+      if (process.env.NODE_ENV === "development") {
+        const payloadSize = JSON.stringify(designMetadata).length;
+        console.log("[Studio] Save payload", {
+          baseProductId,
+          hasAuthToken,
+          hasDesignBySide: Boolean(designPayload.data?.designBySide),
+          payloadSize,
+        });
+      }
+        const colorKeyForSave = activeColorKey || productColor;
+        const baseProduct = {
+          type: activeProduct?.type || activeProduct?.name || "Product",
+          color: colorKeyForSave,
+          size: productSize,
+        };
+        const baseFrontUrl = resolveProductImage(activeProduct, "front", colorKeyForSave);
+        const baseBackUrl = resolveProductImage(activeProduct, "back", colorKeyForSave);
+        let designId = currentDesignId || null;
+        if (hasAuthToken && isValidObjectId(baseProductId)) {
+          const payload = {
             name: designPayload.name,
             baseProductId,
             baseProduct,
-            thumbnail: fallbackImage,
+            thumbnail: storedThumbnail,
+            productId: designPayload.data?.productId || "",
+            variantId: designPayload.data?.variantId || "",
+            colorKey: designPayload.data?.colorKey || "",
+            colorName: designPayload.data?.colorName || "",
+            baseFrontUrl,
+            baseBackUrl,
             elements: [],
             views: [],
             designMetadata,
-          });
-          designId = created?._id || created?.id || null;
+          };
+        try {
+          if (designId) {
+            await designsApi.updateDesign(designId, payload);
+          } else {
+            const created = await designsApi.createDesign(payload);
+            designId = created?._id || created?.id || null;
+            if (designId) {
+              setCurrentDesignId(designId);
+            }
+          }
+          if (process.env.NODE_ENV === "development") {
+            console.log("[Studio] Save response", { designId });
+          }
         } catch (error) {
           console.warn("Failed to create design, adding to cart without design id.", error);
         }
@@ -857,7 +1100,7 @@ export default function DesignStudioPage() {
         price: activeProduct.price,
         quantity: productQuantity,
         size: productSize,
-        color: productColor,
+        color: activeColorKey || productColor,
         image: fallbackImage,
         isCustom: true,
         notes: orderNotes,
@@ -893,7 +1136,13 @@ export default function DesignStudioPage() {
     isFavorite: false,
     data: {
       selectedProduct,
-      productColor,
+      productId: activeProduct?._id || activeProduct?.id || "",
+      variantId: activeColorKey || productColor,
+      colorKey: activeColorKey || productColor,
+      colorName: activeColorKey || productColor,
+      baseFrontUrl: resolveProductImage(activeProduct, "front", activeColorKey || productColor),
+      baseBackUrl: resolveProductImage(activeProduct, "back", activeColorKey || productColor),
+      productColor: activeColorKey || productColor,
       productSize,
       selectedPosition,
       textValue,
@@ -910,21 +1159,22 @@ export default function DesignStudioPage() {
     },
   });
 
-  const saveDesign = async () => {
-    setIsSavingDesign(true);
-    let thumbnail = null;
+    const saveDesign = async () => {
+      setIsSavingDesign(true);
+      let thumbnail = null;
+      let previewFront = null;
+      let previewBack = null;
     let toastDescription = "";
     let savedToAccount = false;
+    let shouldNotify = true;
     try {
-      try {
-        thumbnail = await capturePreview();
-      } catch (error) {
-        console.warn("Failed to capture design preview, saving without thumbnail.", error);
-        toastDescription = "Saved without preview image.";
-      }
-
-      const hasAuthToken =
-        typeof window !== "undefined" && Boolean(localStorage.getItem("auth_token"));
+      const isSideEmpty = (side) => {
+        if (!side) return true;
+        const hasText = typeof side.textValue === "string" && side.textValue.trim().length > 0;
+        const hasImage = typeof side.uploadedImage === "string" && side.uploadedImage.trim().length > 0;
+        const hasElements = Array.isArray(side.elements) && side.elements.length > 0;
+        return !hasText && !hasImage && !hasElements;
+      };
       const latestDesignBySide = {
         ...designBySide,
         [selectedPosition]: {
@@ -939,93 +1189,153 @@ export default function DesignStudioPage() {
           imageSize,
         },
       };
+      const frontEmpty = isSideEmpty(latestDesignBySide.front);
+      const backEmpty = isSideEmpty(latestDesignBySide.back);
+      if (frontEmpty && backEmpty) {
+        toast({
+          title: "Design is empty",
+          description: "Add text or an image before saving.",
+          variant: "destructive",
+        });
+        shouldNotify = false;
+        return;
+      }
+      try {
+        previewFront = await capturePreviewForSide("front");
+        previewBack = await capturePreviewForSide("back");
+        thumbnail = previewFront || previewBack;
+      } catch (error) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("[Preview] capture failed, saving without previews", error?.message || error);
+        }
+      }
+
+      const hasAuthToken =
+        typeof window !== "undefined" && Boolean(localStorage.getItem("auth_token"));
       let finalDesignBySide = { ...latestDesignBySide };
       if (hasAuthToken) {
-        const entries = Object.entries(latestDesignBySide);
-        const uploadedEntries = await Promise.all(
-          entries.map(async ([sideKey, sideData]) => {
-            if (!sideData?.uploadedImage || !sideData.uploadedImage.startsWith("data:")) {
-              return [sideKey, sideData];
-            }
-            try {
-              const response = await fetch(sideData.uploadedImage);
-              const blob = await response.blob();
-              const file = new File([blob], `studio-upload-${sideKey}-${Date.now()}.png`, {
-                type: blob.type || "image/png",
-              });
-              const uploadResult = await designsApi.uploadAsset(file);
-              if (uploadResult?.url) {
-                return [sideKey, { ...sideData, uploadedImage: uploadResult.url }];
-              }
-            } catch (error) {
-              console.warn("Failed to upload design image, using local data.", error);
-            }
-            return [sideKey, sideData];
-          })
-        );
-        finalDesignBySide = Object.fromEntries(uploadedEntries);
+        finalDesignBySide = await normalizeDesignBySide(latestDesignBySide);
       }
 
       const currentSideData =
         finalDesignBySide[selectedPosition] || createEmptySideState();
-      const payload = buildDesignPayload(thumbnail, {
-        textValue: currentSideData.textValue,
-        textFontSize: currentSideData.textFontSize,
-        textAlign: currentSideData.textAlign,
-        textColor: currentSideData.textColor,
-        textFontFamily: currentSideData.textFontFamily,
-        uploadedImage: currentSideData.uploadedImage,
-        imagePosition: currentSideData.imagePosition,
-        imageSize: currentSideData.imageSize,
-        designBySide: finalDesignBySide,
-      });
-      const next = [payload, ...savedDesigns].slice(0, 12);
-      persistSavedDesigns(next);
+        const payload = buildDesignPayload(thumbnail, {
+          textValue: currentSideData.textValue,
+          textFontSize: currentSideData.textFontSize,
+          textAlign: currentSideData.textAlign,
+          textColor: currentSideData.textColor,
+          textFontFamily: currentSideData.textFontFamily,
+          uploadedImage: currentSideData.uploadedImage,
+          imagePosition: currentSideData.imagePosition,
+          imageSize: currentSideData.imageSize,
+          designBySide: finalDesignBySide,
+        });
+        const colorKeyForSave = activeColorKey || productColor;
+        const baseFrontUrl = resolveProductImage(activeProduct, "front", colorKeyForSave);
+        const baseBackUrl = resolveProductImage(activeProduct, "back", colorKeyForSave);
 
-      const baseProductId = activeProduct?._id || activeProduct?.id;
-      if (!hasAuthToken) {
-        toastDescription = "Saved locally. Sign in to sync with your account.";
+        const baseProductId = activeProduct?._id || activeProduct?.id;
+        if (!hasAuthToken) {
+        toastDescription = "Please sign in to save your design to your account.";
+        toast({
+          title: "Sign in required",
+          description: toastDescription,
+          variant: "destructive",
+        });
+        shouldNotify = false;
+        router.push("/login");
+        return;
       } else if (isValidObjectId(baseProductId)) {
         try {
-          await designsApi.createDesign({
-            name: payload.name,
-            baseProductId,
-            baseProduct: {
-              type: activeProduct?.type || activeProduct?.name || "Product",
-              color: activeColorKey || productColor,
-              size: productSize,
-            },
-            thumbnail,
-            elements: [],
-            views: [],
-          designMetadata: {
-            studio: {
-              data: payload.data,
-              version: 1,
+          const storedThumbnail = thumbnail ? await uploadDataUrl(thumbnail, "studio-thumb") : "";
+          const previewFrontUrl = previewFront ? await uploadDataUrl(previewFront, "studio-front") : "";
+          const previewBackUrl = previewBack ? await uploadDataUrl(previewBack, "studio-back") : "";
+            const designPayload = {
+              name: payload.name,
+              baseProductId,
+              productId: payload.data?.productId || "",
+              variantId: payload.data?.variantId || "",
+              colorKey: payload.data?.colorKey || "",
+              colorName: payload.data?.colorName || "",
+              baseFrontUrl,
+              baseBackUrl,
+              baseProduct: {
+                type: activeProduct?.type || activeProduct?.name || "Product",
+                color: colorKeyForSave,
+                size: productSize,
               },
-            },
-          });
+              thumbnail: storedThumbnail,
+              previewFrontUrl,
+              previewBackUrl,
+              elements: [],
+              views: [],
+              designMetadata: {
+                studio: {
+                  data: payload.data,
+                  version: 1,
+                },
+              },
+            };
+            if (process.env.NODE_ENV === "development") {
+              const payloadSize = JSON.stringify(designPayload.designMetadata).length;
+              console.log("[Studio] Save design", {
+                currentDesignId,
+                baseProductId,
+                variantId: payload.data?.variantId || "",
+                baseFrontUrl,
+                baseBackUrl,
+                previewFrontUrl,
+                previewBackUrl,
+                payloadSize,
+              });
+            }
+          if (currentDesignId) {
+            await designsApi.updateDesign(currentDesignId, designPayload);
+          } else {
+            const created = await designsApi.createDesign(designPayload);
+            const newId = created?._id || created?.id || "";
+            if (newId) {
+              setCurrentDesignId(newId);
+            }
+          }
+          if (process.env.NODE_ENV === "development") {
+            console.log("[Studio] Save design response", {
+              designId: currentDesignId || "created",
+            });
+          }
           savedToAccount = true;
+          router.refresh();
         } catch (error) {
-          toastDescription =
-            error?.message || "Saved locally. Sign in to sync with your account.";
+          toastDescription = error?.message || "Failed to save design. Please try again.";
         }
       } else {
-        toastDescription =
-          "Saved locally. This product isn't synced to your account yet.";
+        toastDescription = "This product isn't synced to your account yet.";
       }
     } finally {
-      toast({
-        title: savedToAccount ? "Design saved to My Designs" : "Design saved",
-        ...(toastDescription ? { description: toastDescription } : {}),
-      });
+      if (shouldNotify) {
+        toast({
+          title: savedToAccount ? "Design saved to My Designs" : "Design not saved",
+          ...(toastDescription ? { description: toastDescription } : {}),
+        });
+      }
       setIsSavingDesign(false);
     }
   };
 
+  const extractStudioData = (design) => {
+    if (!design) return null;
+    return (
+      design?.designMetadata?.studio?.data ||
+      design?.designMetadata?.data ||
+      design?.designMetadata ||
+      design?.data ||
+      null
+    );
+  };
+
   const loadDesign = (design) => {
-    if (!design?.data) return;
-    const data = design.data;
+    const data = extractStudioData(design);
+    if (!data) return;
     const normalizedBySide = data.designBySide
       ? {
           front: { ...createEmptySideState(), ...(data.designBySide.front || {}) },
@@ -1045,8 +1355,12 @@ export default function DesignStudioPage() {
           },
           back: createEmptySideState(),
         };
-    setSelectedProduct(data.selectedProduct || availableProducts[0]?.id || products[0].id);
-    setProductColor(data.productColor || "#ffffff");
+    setSelectedProduct(data.productId || data.selectedProduct || availableProducts[0]?.id || products[0].id);
+      setProductColor(data.colorKey || data.productColor || "#ffffff");
+      setSavedBaseImages({
+        front: data.baseFrontUrl || design?.baseFrontUrl || "",
+        back: data.baseBackUrl || design?.baseBackUrl || "",
+      });
     setProductSize(data.productSize || "M");
     const nextPosition = data.selectedPosition || "front";
     setDesignBySide(normalizedBySide);
@@ -1166,7 +1480,7 @@ export default function DesignStudioPage() {
             <div className="flex flex-col items-center gap-3">
               <PositionSelector
                 selectedPosition={selectedPosition}
-                onPositionChange={setSelectedPosition}
+                onPositionChange={handlePositionChange}
               />
               <Button
                 type="button"
@@ -1354,6 +1668,7 @@ export default function DesignStudioPage() {
                                   src={uploadedImage}
                                   alt="Uploaded design"
                                   className="w-full h-full object-contain"
+                                  crossOrigin="anonymous"
                                   draggable={false}
                                 />
                                 <div className="absolute -left-7 top-1/2 -translate-y-1/2 flex flex-col gap-1">

@@ -12,10 +12,10 @@ dotenv_1.default.config();
 const connectDB = async () => {
     try {
         await mongoose_1.default.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/stylecraft');
-        console.log('✅ MongoDB Connected');
+        console.log(' MongoDB Connected');
     }
     catch (error) {
-        console.error('❌ MongoDB Connection Error:', error);
+        console.error(' MongoDB Connection Error:', error);
         process.exit(1);
     }
 };
@@ -46,10 +46,10 @@ const seedUsers = async () => {
             },
         ];
         await User_1.default.create(users);
-        console.log('✅ Users seeded successfully');
+        console.log(' Users seeded successfully');
     }
     catch (error) {
-        console.error('❌ Error seeding users:', error);
+        console.error(' Error seeding users:', error);
     }
 };
 const seedProducts = async () => {
@@ -162,20 +162,20 @@ const seedProducts = async () => {
             },
         ];
         await Product_1.default.create(products);
-        console.log('✅ Products seeded successfully');
+        console.log(' Products seeded successfully');
     }
     catch (error) {
-        console.error('❌ Error seeding products:', error);
+        console.error(' Error seeding products:', error);
     }
 };
 const seedReviews = async () => {
     try {
         const customers = await User_1.default.find({ role: 'customer' }).limit(10);
         if (customers.length === 0) {
-            console.log('⚠️  No customers found. Skipping reviews seeding.');
+            console.log('  No customers found. Skipping reviews seeding.');
             return;
         }
-        console.log(`📝 Found ${customers.length} customers. Creating reviews...`);
+        console.log(` Found ${customers.length} customers. Creating reviews...`);
         const reviewsData = [
             {
                 user: customers[0]._id,
@@ -254,28 +254,28 @@ const seedReviews = async () => {
             };
         });
         const createdReviews = await Review_1.default.insertMany(reviewsToCreate);
-        console.log(`✅ Created ${createdReviews.length} approved reviews`);
-        console.log('\n📊 Reviews Summary:');
+        console.log(` Created ${createdReviews.length} approved reviews`);
+        console.log('\n Reviews Summary:');
         console.log(`   Total: ${createdReviews.length}`);
         console.log(`   5 Stars: ${createdReviews.filter(r => r.rating === 5).length}`);
         console.log(`   4 Stars: ${createdReviews.filter(r => r.rating === 4).length}`);
         console.log(`   Status: All approved`);
     }
     catch (error) {
-        console.error('❌ Error seeding reviews:', error);
+        console.error(' Error seeding reviews:', error);
     }
 };
 const seedDatabase = async () => {
     await connectDB();
-    console.log('🌱 Starting database seeding...');
+    console.log(' Starting database seeding...');
     console.log('');
     await seedUsers();
     await seedProducts();
     await seedReviews();
     console.log('');
-    console.log('✅ Database seeding completed!');
+    console.log(' Database seeding completed!');
     console.log('');
-    console.log('📝 Test Credentials:');
+    console.log(' Test Credentials:');
     console.log('   Admin: admin@stylecraft.com / Admin@123');
     console.log('   Employee: employee@stylecraft.com / Employee@123');
     console.log('   Customer: john@example.com / Customer@123');

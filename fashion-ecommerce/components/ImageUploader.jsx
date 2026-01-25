@@ -54,6 +54,9 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
     const [originalImageSrc, setOriginalImageSrc] = useState(null);
     const [processedImageSrc, setProcessedImageSrc] = useState(null);
     const handleClick = () => {
+        if (inputRef.current) {
+            inputRef.current.value = "";
+        }
         inputRef.current?.click();
     };
     const handleChange = (event) => {
@@ -66,6 +69,9 @@ export const ImageUploader = ({ onImageUpload, uploadedImage, imageSize = 80, on
         setOriginalImageSrc(url);
         setProcessedImageSrc(null);
         setEditorOpen(true);
+        if (inputRef.current) {
+            inputRef.current.value = "";
+        }
     };
     const onCropComplete = useCallback((_croppedArea, croppedAreaPixels) => {
         setCropPixels(croppedAreaPixels);

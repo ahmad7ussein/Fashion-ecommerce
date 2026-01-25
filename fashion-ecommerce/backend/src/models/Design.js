@@ -102,6 +102,10 @@ const designSchema = new mongoose_1.Schema({
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'StudioProduct',
     },
+    productId: { type: String },
+    variantId: { type: String },
+    colorKey: { type: String },
+    colorName: { type: String },
     elements: [
         {
             id: { type: String, required: true },
@@ -124,6 +128,10 @@ const designSchema = new mongoose_1.Schema({
     ],
     views: { type: [designViewSchema], default: [] },
     thumbnail: String,
+    previewFrontUrl: String,
+    previewBackUrl: String,
+    baseFrontUrl: String,
+    baseBackUrl: String,
     designImageURL: String,
     designMetadata: mongoose_1.Schema.Types.Mixed,
     userDescription: { type: String, trim: true },

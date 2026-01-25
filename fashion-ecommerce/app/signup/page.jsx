@@ -77,7 +77,7 @@ export default function SignupPage() {
                 password: formData.password,
             });
             toast({
-                title: "Account created! ✨",
+                title: "Account created! ",
                 description: `Welcome, ${formData.firstName}! Your account has been created successfully.`,
             });
             setTimeout(() => {
@@ -149,7 +149,7 @@ export default function SignupPage() {
                 localStorage.setItem('auth_token', data.data.token);
             }
             toast({
-                title: "تم إنشاء الحساب بنجاح! ✨",
+                title: "تم إنشاء الحساب بنجاح! ",
                 description: `مرحباً ${data.data.user.firstName}!`,
             });
             const role = String(data.data.user.role || "").toLowerCase().trim();
@@ -161,7 +161,7 @@ export default function SignupPage() {
             router.replace(redirectUrl);
         }
         catch (error) {
-            console.error("❌ Google login error:", error);
+            console.error(" Google login error:", error);
             toast({
                 title: "فشل التسجيل",
                 description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
@@ -188,7 +188,7 @@ export default function SignupPage() {
             await exchangeGoogleToken(idToken);
         }
         catch (error) {
-            console.error("❌ Google native login error:", error);
+            console.error(" Google native login error:", error);
             toast({
                 title: "فشل التسجيل",
                 description: error.message || "حدث خطأ أثناء التسجيل باستخدام Google",
@@ -216,20 +216,20 @@ export default function SignupPage() {
                 variant: "destructive",
                 duration: 8000,
             });
-            console.error("❌ Google Client ID missing or invalid:", googleClientId);
+            console.error(" Google Client ID missing or invalid:", googleClientId);
             return;
         }
         if (typeof window !== 'undefined') {
             const currentOrigin = window.location.origin;
             const fullUrl = window.location.href;
             console.log("=".repeat(60));
-            console.log("🔍 Google Sign-In Debug Info:");
+            console.log(" Google Sign-In Debug Info:");
             console.log("=".repeat(60));
-            console.log("📍 Current Origin:", currentOrigin);
-            console.log("🌐 Full URL:", fullUrl);
-            console.log("🔑 Google Client ID:", googleClientId);
+            console.log(" Current Origin:", currentOrigin);
+            console.log(" Full URL:", fullUrl);
+            console.log(" Google Client ID:", googleClientId);
             console.log("=".repeat(60));
-            console.log("⚠️ IMPORTANT: Add this EXACT origin to Google Cloud Console:");
+            console.log(" IMPORTANT: Add this EXACT origin to Google Cloud Console:");
             console.log(`   ${currentOrigin}`);
             console.log("=".repeat(60));
             toast({
@@ -290,7 +290,7 @@ export default function SignupPage() {
             }
         }
         catch (error) {
-            console.error("❌ Google login initialization error:", error);
+            console.error(" Google login initialization error:", error);
             toast({
                 title: "خطأ في التهيئة",
                 description: error.message || "حدث خطأ أثناء تهيئة التسجيل باستخدام Google. تأكد من إعداد Google Client ID.",

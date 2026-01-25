@@ -12,12 +12,12 @@ cloudinary_1.v2.config({
 });
 if (process.env.NODE_ENV === 'development') {
     console.log('');
-    console.log('☁️  Cloudinary Configuration:');
-    console.log('☁️  ========================================');
-    console.log(`  ${cloudName ? '✅' : '❌'} CLOUDINARY_CLOUD_NAME: ${cloudName || 'Not set'}`);
-    console.log(`  ${apiKey ? '✅' : '❌'} CLOUDINARY_API_KEY: ${apiKey ? 'Set' : 'Not set'}`);
-    console.log(`  ${apiSecret ? '✅' : '❌'} CLOUDINARY_API_SECRET: ${apiSecret ? 'Set' : 'Not set'}`);
-    console.log('☁️  ========================================');
+    console.log('  Cloudinary Configuration:');
+    console.log('  ========================================');
+    console.log(`  ${cloudName ? '' : ''} CLOUDINARY_CLOUD_NAME: ${cloudName || 'Not set'}`);
+    console.log(`  ${apiKey ? '' : ''} CLOUDINARY_API_KEY: ${apiKey ? 'Set' : 'Not set'}`);
+    console.log(`  ${apiSecret ? '' : ''} CLOUDINARY_API_SECRET: ${apiSecret ? 'Set' : 'Not set'}`);
+    console.log('  ========================================');
     console.log('');
 }
 const uploadToCloudinary = async (file, folder = 'stylecraft/products') => {

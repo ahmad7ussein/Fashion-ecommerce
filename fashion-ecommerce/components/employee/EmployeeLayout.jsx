@@ -57,7 +57,7 @@ export function EmployeeLayout({ children, sidebar, title = "Employee Dashboard"
                   aria-label="Toggle theme"
                   onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 >
-                  <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
+                  <span aria-hidden="true">{theme === "dark" ? "" : ""}</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -7,7 +7,7 @@ export const authApi = {
         const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
         try {
             const loginUrl = getApiUrl("/auth/login");
-            logger.log("🔍 Attempting login to:", loginUrl);
+            logger.log(" Attempting login to:", loginUrl);
             const response = await fetch(loginUrl, {
                 method: "POST",
                 headers: {
@@ -83,27 +83,27 @@ export const authApi = {
                 throw new Error(errorMessage);
             }
             const data = await response.json();
-            logger.log("🔍 authApi.login raw response:", JSON.stringify(data, null, 2));
+            logger.log(" authApi.login raw response:", JSON.stringify(data, null, 2));
             if (data.success && data.data && data.data.user && data.data.token) {
-                logger.log("✅ Response structure correct: {success, data: {user, token}}");
+                logger.log(" Response structure correct: {success, data: {user, token}}");
                 return {
                     user: data.data.user,
                     token: data.data.token,
                 };
             }
             if (data.user && data.token) {
-                logger.log("✅ Response already has user and token");
+                logger.log(" Response already has user and token");
                 return {
                     user: data.user,
                     token: data.token,
                 };
             }
-            logger.error("❌ Unexpected response structure:", data);
+            logger.error(" Unexpected response structure:", data);
             throw new Error("Invalid response structure from login API");
         }
         catch (error) {
             if (error instanceof TypeError && error.message === "Failed to fetch") {
-                logger.error("❌ Network Error - Backend may be offline");
+                logger.error(" Network Error - Backend may be offline");
                 logger.error("API URL:", getApiUrl("/auth/login"));
                 logger.error("Error:", error);
                 throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
@@ -111,7 +111,7 @@ export const authApi = {
             if (error instanceof Error) {
                 throw error;
             }
-            logger.error("❌ Unexpected error during login:", error);
+            logger.error(" Unexpected error during login:", error);
             throw new Error(error?.message || "An unexpected error occurred during login");
         }
     },
@@ -129,7 +129,7 @@ export const authApi = {
         const { API_BASE_URL } = await import("@/lib/api");
         try {
             const googleUrl = getApiUrl("/auth/google");
-            logger.log("🔍 Attempting Google auth to:", googleUrl);
+            logger.log(" Attempting Google auth to:", googleUrl);
             const response = await fetch(googleUrl, {
                 method: "POST",
                 headers: {
@@ -144,7 +144,7 @@ export const authApi = {
                 throw new Error(errorData.message || "Google authentication failed");
             }
             const data = await response.json();
-            logger.log("✅ Google auth successful");
+            logger.log(" Google auth successful");
             if (data.success && data.data && data.data.user && data.data.token) {
                 return {
                     user: data.data.user,
@@ -154,7 +154,7 @@ export const authApi = {
             throw new Error("Invalid response structure from Google auth API");
         }
         catch (error) {
-            logger.error("❌ Google auth error:", error);
+            logger.error(" Google auth error:", error);
             if (error instanceof TypeError && error.message === "Failed to fetch") {
                 throw new Error(`Cannot connect to the server. Please make sure the backend is running on ${API_BASE_URL().replace("/api", "")}`);
             }

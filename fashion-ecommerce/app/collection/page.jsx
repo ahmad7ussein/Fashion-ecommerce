@@ -339,7 +339,7 @@ export default function CollectionPage() {
         <motion.section initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-12 sm:mb-16">
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
-              {language === "ar" ? "👔 مجموعة الرجال" : "👔 Men's Collection"}
+              {language === "ar" ? " مجموعة الرجال" : " Men's Collection"}
             </h2>
             <Button asChild variant="outline" className="rounded-full">
               <Link href="/products?gender=Men">
@@ -356,7 +356,7 @@ export default function CollectionPage() {
         <motion.section initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-12 sm:mb-16">
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
-              {language === "ar" ? "👗 مجموعة النساء" : "👗 Women's Collection"}
+              {language === "ar" ? " مجموعة النساء" : " Women's Collection"}
             </h2>
             <Button asChild variant="outline" className="rounded-full">
               <Link href="/products?gender=Women">
@@ -373,7 +373,7 @@ export default function CollectionPage() {
         <motion.section initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mb-12 sm:mb-16">
           <div className="flex items-center justify-between mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
-              {language === "ar" ? "👶 مجموعة الأطفال" : "👶 Kids Collection"}
+              {language === "ar" ? " مجموعة الأطفال" : " Kids Collection"}
             </h2>
             <Button asChild variant="outline" className="rounded-full">
               <Link href="/products?gender=Kids">

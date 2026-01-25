@@ -57,22 +57,22 @@ export default function LoginPage() {
             return;
         if (isLoading)
             return;
-        logger.log("🔍 Login page - Auth check:", { isLoading, user: user?.email, role: user?.role });
+        logger.log(" Login page - Auth check:", { isLoading, user: user?.email, role: user?.role });
         if (user) {
             hasRedirected.current = true;
-            logger.log("👤 User already logged in:", user);
-            logger.log("👤 User role:", user.role);
+            logger.log(" User already logged in:", user);
+            logger.log(" User role:", user.role);
             const role = String(user.role || "").toLowerCase().trim();
             if (role === "admin") {
-                logger.log("🔄 Already logged in as admin, redirecting to /admin");
+                logger.log(" Already logged in as admin, redirecting to /admin");
                 router.replace("/admin");
             }
             else if (role === "employee") {
-                logger.log("🔄 Already logged in as employee, redirecting to /employee");
+                logger.log(" Already logged in as employee, redirecting to /employee");
                 router.replace("/employee");
             }
             else {
-                logger.log("🔄 Already logged in as customer, redirecting to /");
+                logger.log(" Already logged in as customer, redirecting to /");
                 router.replace("/");
             }
         }
@@ -276,23 +276,23 @@ export default function LoginPage() {
     }, [handleGoogleCredentialResponse]);
     const onLoginSubmit = async (e) => {
         e.preventDefault();
-        logger.log("🔵 Form submitted! onLoginSubmit called");
-        logger.log("📋 Form data:", { identifier: signInData.identifier, hasPassword: !!signInData.password });
+        logger.log(" Form submitted! onLoginSubmit called");
+        logger.log(" Form data:", { identifier: signInData.identifier, hasPassword: !!signInData.password });
         if (!validateSignIn()) {
-            logger.error("❌ Validation failed!");
-            logger.error("❌ Errors:", errors);
+            logger.error(" Validation failed!");
+            logger.error(" Errors:", errors);
             return;
         }
-        logger.log("✅ Validation passed, proceeding with login...");
+        logger.log(" Validation passed, proceeding with login...");
         try {
-            logger.log("🚀 Starting login process...");
-            logger.log("📧 Email/Identifier:", signInData.identifier);
+            logger.log(" Starting login process...");
+            logger.log(" Email/Identifier:", signInData.identifier);
             const loggedInUser = await login(signInData.identifier, signInData.password);
-            logger.log("✅ Login successful, full user data:", JSON.stringify(loggedInUser, null, 2));
-            logger.log("✅ User role:", loggedInUser?.role);
-            logger.log("✅ User role type:", typeof loggedInUser?.role);
+            logger.log(" Login successful, full user data:", JSON.stringify(loggedInUser, null, 2));
+            logger.log(" User role:", loggedInUser?.role);
+            logger.log(" User role type:", typeof loggedInUser?.role);
             if (!loggedInUser) {
-                logger.error("❌ No user data returned from login!");
+                logger.error(" No user data returned from login!");
                 toast({
                     title: "Login Error",
                     description: "No user data received",
@@ -301,7 +301,7 @@ export default function LoginPage() {
                 return;
             }
             if (!loggedInUser.role) {
-                logger.error("❌ No role in user data!", loggedInUser);
+                logger.error(" No role in user data!", loggedInUser);
                 toast({
                     title: "Login Error",
                     description: "User role not found",
@@ -310,15 +310,15 @@ export default function LoginPage() {
                 return;
             }
             const userRole = String(loggedInUser.role || "").toLowerCase().trim();
-            logger.log("🔍 Final role check:", userRole);
-            logger.log("🔍 Role comparison:", {
+            logger.log(" Final role check:", userRole);
+            logger.log(" Role comparison:", {
                 userRole,
                 originalRole: loggedInUser.role,
                 isAdmin: userRole === "admin",
                 isEmployee: userRole === "employee",
             });
             toast({
-                title: "Welcome back! 🎉",
+                title: "Welcome back! ",
                 description: "You have successfully logged in.",
             });
             const redirectUrl = userRole === "admin"
@@ -326,14 +326,14 @@ export default function LoginPage() {
                 : userRole === "employee"
                     ? "/employee"
                     : "/";
-            logger.log("🔄 REDIRECTING TO", redirectUrl, "NOW!");
-            logger.log("📍 Current location:", window.location.href);
-            logger.log("📍 User role confirmed:", userRole);
+            logger.log(" REDIRECTING TO", redirectUrl, "NOW!");
+            logger.log(" Current location:", window.location.href);
+            logger.log(" User role confirmed:", userRole);
             router.replace(redirectUrl);
             return;
         }
         catch (error) {
-            logger.error("❌ Login error caught:", error);
+            logger.error(" Login error caught:", error);
             let errorMessage = error?.message || "Invalid email or password";
             let errorTitle = "Login failed";
             let errorDetails = "";
@@ -344,7 +344,7 @@ export default function LoginPage() {
                 errorMessage.includes("fetch failed") ||
                 errorMessage.includes("ERR_CONNECTION_REFUSED") ||
                 errorMessage.includes("ERR_NETWORK")) {
-                errorTitle = "🔌 Connection Error";
+                errorTitle = " Connection Error";
                 errorMessage = "Cannot connect to the server";
                 errorDetails = `The backend server is not running or not accessible. Please:\n• Make sure the backend server is running on ${API_BASE_URL().replace("/api", "")}\n• Check if the server is started correctly\n• Verify your internet connection`;
             }
@@ -394,25 +394,25 @@ export default function LoginPage() {
     };
     const onRegisterSubmit = async (e) => {
         e.preventDefault();
-        logger.log("🔵 Form submitted!");
-        logger.log("📝 Sign Up Data:", signUpData);
+        logger.log(" Form submitted!");
+        logger.log(" Sign Up Data:", signUpData);
         if (!validateSignUp()) {
-            logger.error("❌ Validation failed!");
-            logger.error("🚫 Errors:", errors);
+            logger.error(" Validation failed!");
+            logger.error(" Errors:", errors);
             return;
         }
-        logger.log("✅ Validation passed!");
+        logger.log(" Validation passed!");
         try {
-            logger.log("🚀 Calling register API...");
+            logger.log(" Calling register API...");
             await register({
                 firstName: signUpData.firstName,
                 lastName: signUpData.lastName,
                 email: signUpData.email,
                 password: signUpData.password,
             });
-            logger.log("✅ Registration successful!");
+            logger.log(" Registration successful!");
             toast({
-                title: "Account created! ✨",
+                title: "Account created! ",
                 description: `Welcome, ${signUpData.firstName}! Your account has been created successfully.`,
             });
             setTimeout(() => {
@@ -420,7 +420,7 @@ export default function LoginPage() {
             }, 1000);
         }
         catch (error) {
-            logger.error("❌ Registration error:", error);
+            logger.error(" Registration error:", error);
             let errorMessage = "Registration failed. Please try again.";
             if (error?.message) {
                 if (typeof error.message === 'string' && error.message.startsWith('{')) {
@@ -462,7 +462,7 @@ export default function LoginPage() {
                 errorMessage.includes("fetch failed") ||
                 errorMessage.includes("ERR_CONNECTION_REFUSED") ||
                 errorMessage.includes("ERR_NETWORK")) {
-                errorTitle = "🔌 Connection Error";
+                errorTitle = " Connection Error";
                 errorMessage = "Cannot connect to the server";
                 errorDetails = (<div className="space-y-1">
             <p>The backend server is not running or not accessible.</p>

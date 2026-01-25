@@ -24,9 +24,9 @@ router.get('/', async (req, res) => {
     try {
         const authReq = req;
         const userId = authReq.user?._id;
-        console.log('🛒 GET /cart - userId:', userId ? userId.toString() : 'guest');
+        console.log(' GET /cart - userId:', userId ? userId.toString() : 'guest');
         if (!isValidUserId(userId)) {
-            console.log('🛒 No user session - returning null cart');
+            console.log(' No user session - returning null cart');
             return res.status(200).json({
                 success: true,
                 data: null,
@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
             strictPopulate: false,
         });
         if (!cart) {
-            console.log('🛒 Creating new cart for user:', userId);
+            console.log(' Creating new cart for user:', userId);
             if (!isValidUserId(userId)) {
                 return res.status(400).json({
                     success: false,
@@ -113,7 +113,7 @@ router.get('/', async (req, res) => {
             createdAt: cart.createdAt,
             updatedAt: cart.updatedAt,
         };
-        console.log('🛒 Cart retrieved successfully:', {
+        console.log(' Cart retrieved successfully:', {
             cartId: cartData._id,
             itemsCount: cartData.items.length,
             subtotal: cartData.subtotal,
@@ -124,8 +124,8 @@ router.get('/', async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error fetching cart:', error);
-        console.error('❌ Error stack:', error.stack);
+        console.error(' Error fetching cart:', error);
+        console.error(' Error stack:', error.stack);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch cart',

@@ -49,21 +49,21 @@ exports.env = {
 };
 if (process.env.NODE_ENV === 'development') {
     console.log('');
-    console.log('📋 Environment Configuration:');
-    console.log('📋 ========================================');
-    console.log(`  ✅ NODE_ENV: ${exports.env.nodeEnv}`);
-    console.log(`  ✅ PORT: ${exports.env.port}`);
-    console.log(`  ✅ FRONTEND_URL: ${exports.env.frontendUrl}`);
-    console.log(`  ${exports.env.mongodbUri ? '✅' : '❌'} MONGODB_URI: ${exports.env.mongodbUri ? 'Set' : 'Missing'}`);
+    console.log(' Environment Configuration:');
+    console.log(' ========================================');
+    console.log(`   NODE_ENV: ${exports.env.nodeEnv}`);
+    console.log(`   PORT: ${exports.env.port}`);
+    console.log(`   FRONTEND_URL: ${exports.env.frontendUrl}`);
+    console.log(`  ${exports.env.mongodbUri ? '' : ''} MONGODB_URI: ${exports.env.mongodbUri ? 'Set' : 'Missing'}`);
     if (exports.env.mongodbUri) {
         const isAtlas = exports.env.mongodbUri.includes('mongodb+srv://') || exports.env.mongodbUri.includes('mongodb.net');
         const uriPreview = exports.env.mongodbUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@').substring(0, 60) + '...';
         console.log(`     Type: ${isAtlas ? 'MongoDB Atlas (Cloud)' : 'Local MongoDB'}`);
         console.log(`     Preview: ${uriPreview}`);
     }
-    console.log(`  ${exports.env.jwtSecret ? '✅' : '❌'} JWT_SECRET: ${exports.env.jwtSecret ? 'Set' : 'Missing'}`);
-    console.log(`  ✅ JWT_EXPIRE: ${exports.env.jwtExpire}`);
-    console.log('📋 ========================================');
+    console.log(`  ${exports.env.jwtSecret ? '' : ''} JWT_SECRET: ${exports.env.jwtSecret ? 'Set' : 'Missing'}`);
+    console.log(`   JWT_EXPIRE: ${exports.env.jwtExpire}`);
+    console.log(' ========================================');
     console.log('');
 }
 exports.default = exports.env;

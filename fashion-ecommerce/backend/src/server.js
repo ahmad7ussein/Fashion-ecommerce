@@ -161,16 +161,16 @@ app.use('/api', (req, res, next) => {
 });
 mongoose_1.default.connection.on('error', (err) => {
     if (err.message?.includes('timeout')) {
-        console.warn('⚠️  MongoDB connection timeout:', err.message);
+        console.warn('  MongoDB connection timeout:', err.message);
     }
     else {
-        console.error('❌ MongoDB Error:', err);
+        console.error(' MongoDB Error:', err);
     }
 });
 mongoose_1.default.connection.on('disconnected', () => {
     const isIntentional = mongoose_1.default.connection._intentionalDisconnect;
     if (!isIntentional) {
-        console.warn('⚠️  MongoDB disconnected. Mongoose will attempt to reconnect automatically.');
+        console.warn('  MongoDB disconnected. Mongoose will attempt to reconnect automatically.');
     }
 });
 app.use('/api/auth', authRoutes_1.default);
@@ -197,7 +197,7 @@ app.use('/api/payments', paymentRoutes_1.default);
 app.use('/api/diagnostics', diagnosticRoutes_1.default);
 app.use((req, res) => {
     if (process.env.NODE_ENV === 'development') {
-        console.warn('⚠️  Route not found:', {
+        console.warn('  Route not found:', {
             method: req.method,
             path: req.path,
             url: req.url,
@@ -220,11 +220,11 @@ const startServer = async () => {
         }
         try {
             const dbName = mongoose_1.default.connection.name;
-            console.log(`✅ Database connection verified: ${dbName}`);
-            console.log(`✅ Connection state: ${mongoose_1.default.connection.readyState === 1 ? 'Connected' : 'Not Connected'}`);
+            console.log(` Database connection verified: ${dbName}`);
+            console.log(` Connection state: ${mongoose_1.default.connection.readyState === 1 ? 'Connected' : 'Not Connected'}`);
         }
         catch (verifyError) {
-            console.warn('⚠️  Database verification warning:', verifyError.message);
+            console.warn('  Database verification warning:', verifyError.message);
         }
         const server = http_1.default.createServer(app);
         let isShuttingDown = false;
@@ -249,7 +249,7 @@ const startServer = async () => {
                 process.exit(0);
             });
             setTimeout(() => {
-                console.warn('⚠️  Forced shutdown after timeout');
+                console.warn('  Forced shutdown after timeout');
                 process.exit(1);
             }, 10000);
         };
@@ -270,26 +270,26 @@ const startServer = async () => {
         server.on('error', async (err) => {
             if (mongoose_1.default.connection.readyState === 1) {
                 console.log('');
-                console.log('🔄 Closing database connection...');
+                console.log(' Closing database connection...');
                 try {
                     mongoose_1.default.connection._intentionalDisconnect = true;
                     await mongoose_1.default.connection.close(false);
-                    console.log('✅ Database connection closed');
+                    console.log(' Database connection closed');
                 }
                 catch (closeError) {
-                    console.warn('⚠️  Error closing database connection:', closeError.message);
+                    console.warn('  Error closing database connection:', closeError.message);
                 }
             }
             if (err.code === 'EADDRINUSE') {
                 console.error('');
-                console.error('❌ ========================================');
-                console.error(`❌ Port ${env_1.default.port} is already in use!`);
-                console.error('❌ ========================================');
+                console.error(' ========================================');
+                console.error(` Port ${env_1.default.port} is already in use!`);
+                console.error(' ========================================');
                 console.error('');
-                console.error('⚠️  Note: Database connection was successful, but server cannot start');
-                console.error('⚠️  Another process is already using port', env_1.default.port);
+                console.error('  Note: Database connection was successful, but server cannot start');
+                console.error('  Another process is already using port', env_1.default.port);
                 console.error('');
-                console.error('💡 Solutions:');
+                console.error(' Solutions:');
                 console.error('');
                 console.error('   Option 1: Stop the process using port', env_1.default.port);
                 console.error('');
@@ -308,17 +308,17 @@ const startServer = async () => {
                 console.error('   Option 3: Use a different terminal/process');
                 console.error('     Make sure you closed any previous server instances');
                 console.error('');
-                console.error('❌ ========================================');
+                console.error(' ========================================');
                 console.error('');
                 process.exit(1);
             }
             else {
-                console.error('❌ Server error:', err);
+                console.error(' Server error:', err);
                 process.exit(1);
             }
         });
         process.on('unhandledRejection', (err) => {
-            console.error('❌ Unhandled Rejection:', err.message);
+            console.error(' Unhandled Rejection:', err.message);
             server.close(() => process.exit(1));
         });
         process.on('SIGINT', () => handleShutdown('SIGINT'));
@@ -327,42 +327,42 @@ const startServer = async () => {
     catch (error) {
         if (mongoose_1.default.connection.readyState === 1) {
             console.log('');
-            console.log('🔄 Closing database connection...');
+            console.log(' Closing database connection...');
             try {
                 mongoose_1.default.connection._intentionalDisconnect = true;
                 await mongoose_1.default.connection.close(false);
-                console.log('✅ Database connection closed');
+                console.log(' Database connection closed');
             }
             catch (closeError) {
-                console.warn('⚠️  Error closing database connection:', closeError.message);
+                console.warn('  Error closing database connection:', closeError.message);
             }
         }
         console.error('');
-        console.error('❌ ========================================');
-        console.error('❌ Failed to start server');
-        console.error('❌ ========================================');
+        console.error(' ========================================');
+        console.error(' Failed to start server');
+        console.error(' ========================================');
         console.error('');
-        console.error('❌ Reason:', error.message);
+        console.error(' Reason:', error.message);
         console.error('');
         if (error.message.includes('MongoDB') || error.message.includes('database') || error.message.includes('connection')) {
-            console.error('🔍 Issue: Database connection failed');
+            console.error(' Issue: Database connection failed');
             console.error('');
-            console.error('💡 Make sure:');
-            console.error('   1. ✅ MongoDB Atlas is running');
-            console.error('   2. ✅ MONGODB_URI is correct in .env file');
-            console.error('   3. ✅ Your IP is whitelisted in Network Access');
-            console.error('   4. ✅ Internet connection is working');
+            console.error(' Make sure:');
+            console.error('   1.  MongoDB Atlas is running');
+            console.error('   2.  MONGODB_URI is correct in .env file');
+            console.error('   3.  Your IP is whitelisted in Network Access');
+            console.error('   4.  Internet connection is working');
             console.error('');
-            console.error('📖 Check MONGODB_SETUP.md for detailed instructions');
+            console.error(' Check MONGODB_SETUP.md for detailed instructions');
         }
         else {
-            console.error('💡 Make sure:');
+            console.error(' Make sure:');
             console.error('   1. MongoDB is running');
             console.error('   2. MONGODB_URI is correct in your .env file');
             console.error('   3. Your network connection is stable');
         }
         console.error('');
-        console.error('❌ ========================================');
+        console.error(' ========================================');
         console.error('');
         process.exit(1);
     }

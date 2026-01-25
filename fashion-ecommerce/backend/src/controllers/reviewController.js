@@ -40,7 +40,7 @@ const createReview = async (req, res) => {
             comment,
             status: 'pending',
         });
-        console.log('✅ Review created:', {
+        console.log(' Review created:', {
             reviewId: review._id,
             userId: req.user?._id,
             status: review.status,
@@ -52,7 +52,7 @@ const createReview = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error creating review:', error);
+        console.error(' Error creating review:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -85,7 +85,7 @@ const getApprovedReviews = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error fetching reviews:', error);
+        console.error(' Error fetching reviews:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -107,7 +107,7 @@ const getMyReviews = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error fetching user reviews:', error);
+        console.error(' Error fetching user reviews:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -145,7 +145,7 @@ const getAllReviews = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error fetching all reviews:', error);
+        console.error(' Error fetching all reviews:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -176,7 +176,7 @@ const updateReviewStatus = async (req, res) => {
                 message: 'Review not found',
             });
         }
-        console.log('✅ Review status updated:', {
+        console.log(' Review status updated:', {
             reviewId: review._id,
             status: review.status,
         });
@@ -187,7 +187,7 @@ const updateReviewStatus = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error updating review status:', error);
+        console.error(' Error updating review status:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
@@ -225,7 +225,7 @@ const deleteReview = async (req, res) => {
         });
     }
     catch (error) {
-        console.error('❌ Error deleting review:', error);
+        console.error(' Error deleting review:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Server error',
