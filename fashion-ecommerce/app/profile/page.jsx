@@ -16,6 +16,7 @@ import { sanitizeExternalUrl } from "@/lib/api";
 import { authApi } from "@/lib/api/auth";
 import { ordersApi } from "@/lib/api/orders";
 import { designsApi } from "@/lib/api/designs";
+import { accountDeletionsApi } from "@/lib/api/accountDeletions";
 import Image from "next/image";
 import logger from "@/lib/logger";
 import { syncLocalDesignsToAccount } from "@/lib/localDesignSync";
@@ -28,6 +29,8 @@ export default function ProfilePage() {
     const [designs, setDesigns] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
     const [loadingDesigns, setLoadingDesigns] = useState(false);
+    const [accountDeletionRequest, setAccountDeletionRequest] = useState(null);
+    const [accountDeletionLoading, setAccountDeletionLoading] = useState(false);
     const [userData, setUserData] = useState({
         firstName: user?.firstName || user?.name?.split(" ")[0] || "",
         lastName: user?.lastName || user?.name?.split(" ")[1] || "",
@@ -96,6 +99,24 @@ export default function ProfilePage() {
             };
         }
     }, [user]);
+    React.useEffect(() => {
+        if (!user)
+            return;
+        let isMounted = true;
+        accountDeletionsApi
+            .getMyRequest()
+            .then((data) => {
+            if (isMounted) {
+                setAccountDeletionRequest(data);
+            }
+        })
+            .catch((error) => {
+            logger.error("Failed to load account deletion request:", error);
+        });
+        return () => {
+            isMounted = false;
+        };
+    }, [user]);
     const [shippingAddress, setShippingAddress] = useState({
         street: "123 Main St",
         city: "New York",
@@ -138,6 +159,33 @@ export default function ProfilePage() {
     const handleLogout = () => {
         logout();
         router.push("/");
+    };
+    const handleAccountDeletionRequest = async () => {
+        if (accountDeletionLoading || accountDeletionRequest?.status === "pending") {
+            return;
+        }
+        if (!confirm("Are you sure you want to request account deletion? This will be reviewed by an admin.")) {
+            return;
+        }
+        setAccountDeletionLoading(true);
+        try {
+            const request = await accountDeletionsApi.requestDeletion();
+            setAccountDeletionRequest(request);
+            toast({
+                title: "Request sent",
+                description: "Your account deletion request has been sent to admin review.",
+            });
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to submit account deletion request",
+                variant: "destructive",
+            });
+        }
+        finally {
+            setAccountDeletionLoading(false);
+        }
     };
     const getDesignLink = (design) => `/studio?design=${design._id}`;
     return (<div className="min-h-[100svh] bg-gradient-to-b from-white via-rose-50/30 to-white pt-20 sm:pt-24">
@@ -487,9 +535,21 @@ export default function ProfilePage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-gray-600 mb-4">
-                      Once you delete your account, there is no going back. Please be certain.
+                      Requesting deletion sends your account to admin review. Once approved, there is no going back.
                     </p>
-                    <Button variant="destructive" className="bg-red-500 hover:bg-red-600 rounded-full">Delete Account</Button>
+                    {accountDeletionRequest?.status === "pending" && (<p className="text-sm text-amber-600 mb-4">
+                        Your account deletion request is pending admin review.
+                      </p>)}
+                    {accountDeletionRequest?.status === "rejected" && (<p className="text-sm text-red-600 mb-4">
+                        Your deletion request was rejected. Please contact support if needed.
+                      </p>)}
+                    <Button variant="destructive" onClick={handleAccountDeletionRequest} disabled={accountDeletionLoading || accountDeletionRequest?.status === "pending"} className={`bg-red-500 hover:bg-red-600 rounded-full ${accountDeletionLoading || accountDeletionRequest?.status === "pending" ? "opacity-60 cursor-not-allowed" : ""}`}>
+                      {accountDeletionLoading
+            ? "Submitting..."
+            : accountDeletionRequest?.status === "pending"
+                ? "Deletion Requested"
+                : "Delete Account"}
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
