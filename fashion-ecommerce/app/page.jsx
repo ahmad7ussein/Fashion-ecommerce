@@ -695,24 +695,6 @@ export default function HomePage() {
       </section>
 
       
-      <section className="bg-rose-50 border-y border-rose-100">
-        <div className="container mx-auto px-4 sm:px-6 md:px-12 lg:px-24">
-          <div className="flex flex-col gap-4 py-6 sm:py-8 md:py-10 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-rose-600">Coming Soon</p>
-              <h3 className="text-2xl sm:text-3xl font-semibold text-gray-900">
-                Partnerships are almost here.
-              </h3>
-              <p className="mt-2 text-gray-600">
-                We are preparing the partner program now. Stay tuned for the launch.
-              </p>
-            </div>
-            <Button size="lg" className="bg-rose-200 text-rose-600 cursor-not-allowed" disabled>
-              Coming Soon
-            </Button>
-          </div>
-        </div>
-      </section>
 
       
       {isLoadingFeatured ? (<section className="py-32 bg-gradient-to-b from-white to-rose-50/50">

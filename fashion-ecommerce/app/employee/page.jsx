@@ -1011,7 +1011,7 @@ export default function EmployeeDashboard() {
         <div className="mt-auto space-y-2 px-4 pb-6">
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="flex-1 text-base" aria-label="Toggle theme">
-              <span aria-hidden="true">{theme === "dark" ? "" : ""}</span>
+              <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
             </Button>
             <Button variant="outline" size="icon" onClick={() => setLanguage(language === "ar" ? "en" : "ar")} className="flex-1">
               <Languages className="h-4 w-4"/>

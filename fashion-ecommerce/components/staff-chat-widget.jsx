@@ -15,14 +15,10 @@ export function StaffChatWidget({ mode }) {
   }
 
   const resolvedMode = mode || user.role;
-  const isPartnerMode = resolvedMode === "partner";
   if (resolvedMode === "admin" && user.role !== "admin") {
     return null;
   }
   if (resolvedMode === "employee" && user.role !== "employee") {
-    return null;
-  }
-  if (isPartnerMode && user.role === "admin") {
     return null;
   }
 

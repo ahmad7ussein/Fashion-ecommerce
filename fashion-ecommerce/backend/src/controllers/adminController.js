@@ -13,13 +13,9 @@ const Cart_1 = __importDefault(require("../models/Cart"));
 const Favorite_1 = __importDefault(require("../models/Favorite"));
 const Notification_1 = __importDefault(require("../models/Notification"));
 const Review_1 = __importDefault(require("../models/Review"));
-const RoleAssignment_1 = __importDefault(require("../models/RoleAssignment"));
 const UserPreferences_1 = __importDefault(require("../models/UserPreferences"));
 const EmployeeActivity_1 = __importDefault(require("../models/EmployeeActivity"));
 const StaffChatMessage_1 = __importDefault(require("../models/StaffChatMessage"));
-const Supplier_1 = __importDefault(require("../models/Supplier"));
-const SupplierProduct_1 = __importDefault(require("../models/SupplierProduct"));
-const PartnerProduct_1 = __importDefault(require("../models/PartnerProduct"));
 const ContactMessage_1 = __importDefault(require("../models/ContactMessage"));
 const employeeActivityController_1 = require("./employeeActivityController");
 const getDashboardStats = async (req, res) => {
@@ -246,18 +242,14 @@ const deleteUser = async (req, res) => {
             Favorite_1.default.deleteMany({ user: userId }),
             Notification_1.default.deleteMany({ user: userId }),
             Review_1.default.deleteMany({ user: userId }),
-            RoleAssignment_1.default.deleteMany({ user: userId }),
             UserPreferences_1.default.deleteMany({ user: userId }),
             EmployeeActivity_1.default.deleteMany({ employee: userId }),
             StaffChatMessage_1.default.deleteMany({
                 $or: [{ admin: userId }, { employee: userId }, { sender: userId }],
             }),
-            Supplier_1.default.deleteMany({ createdBy: userId }),
         ]);
         await Promise.all([
             ContactMessage_1.default.updateMany({ repliedBy: userId }, { $unset: { repliedBy: "" } }),
-            PartnerProduct_1.default.updateMany({ reviewedBy: userId }, { $unset: { reviewedBy: "", reviewedAt: "" } }),
-            SupplierProduct_1.default.updateMany({ reviewedBy: userId }, { $unset: { reviewedBy: "", reviewedAt: "" } }),
             Order_1.default.updateMany({ user: userId }, {
                 $set: {
                     "shippingAddress.firstName": "Deleted",

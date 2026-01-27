@@ -187,7 +187,7 @@ export function Header() {
 
             
             <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="relative group hover:scale-110 transition-all duration-300 text-gray-900 hover:text-rose-600 text-base" title={theme === "dark" ? (language === "ar" ? "الوضع الفاتح" : "Light Mode") : (language === "ar" ? "الوضع الداكن" : "Dark Mode")}>
-              <span aria-hidden="true">{theme === "dark" ? "" : ""}</span>
+              <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
               <span className="sr-only">Toggle Theme</span>
             </Button>
 

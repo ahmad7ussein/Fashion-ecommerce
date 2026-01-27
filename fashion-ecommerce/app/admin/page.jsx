@@ -103,6 +103,7 @@ const exportToExcel = (data, reportType, language) => {
 function AdminDashboardContent() {
     const [activeTab, setActiveTab] = useState("overview");
     const [stats, setStats] = useState(null);
+    const [salesReport, setSalesReport] = useState({ salesByDay: [], summary: { total: 0, count: 0 } });
     const [orders, setOrders] = useState([]);
     const [users, setUsers] = useState([]);
     const [reviews, setReviews] = useState([]);
@@ -940,12 +941,13 @@ function AdminDashboardContent() {
                 variant: "destructive",
             });
         }
-    };
+    };// this is computed value -in the three level -
+    //1- remove the duplication 
     const filteredProducts = useMemo(() => {
         const uniqueProducts = products.filter((product, index, self) => {
             const id = product._id?.toString() || product.id?.toString();
-            return id && index === self.findIndex(p => (p._id?.toString() || p.id?.toString()) === id);
-        });
+            return id && index === self.findIndex(p => (p._id?.toString() || p.id?.toString()) === id);// check all product this is a first show ?
+        });// 2- search - filter-  in the query 
         if (!productSearchQuery.trim())
             return uniqueProducts;
         const query = productSearchQuery.toLowerCase();
@@ -954,7 +956,7 @@ function AdminDashboardContent() {
             const category = product.category?.toLowerCase() || "";
             const description = product.description?.toLowerCase() || "";
             return name.includes(query) || category.includes(query) || description.includes(query);
-        });
+        });// her filtering (male/female/kids)
     }, [products, productSearchQuery, language]);
     const normalizeGender = (value) => value?.toLowerCase().trim() || "";
     const groupedProducts = useMemo(() => {
@@ -998,7 +1000,7 @@ function AdminDashboardContent() {
             sections.push({ key: "other", label: language === "ar" ? "غير محدد" : "Unassigned", items: groupedProducts.other });
         }
         return sections;
-    }, [groupedProducts, language]);
+    }, [groupedProducts, language]);//parallel loding 
     const loadDashboardData = async () => {
         try {
             if (!user || user.role !== 'admin') {
@@ -1019,10 +1021,11 @@ function AdminDashboardContent() {
             }
             setLoading(true);
             console.log("Loading dashboard data...");
-            const [statsData, ordersData, usersData] = await Promise.all([
+            const [statsData, ordersData, usersData, salesData] = await Promise.all([
                 adminApi.getDashboardStats(),
                 ordersApi.getAllOrders({ limit: 50 }),
                 adminApi.getAllUsers({ role: 'all', limit: 100 }),
+                adminApi.getSalesReport().catch(() => ({ salesByDay: [], summary: { total: 0, count: 0 } })),
             ]);
             console.log("Dashboard data loaded:", {
                 stats: statsData,
@@ -1033,6 +1036,7 @@ function AdminDashboardContent() {
             setStats(statsData);
             setOrders(Array.isArray(ordersData) ? ordersData : []);
             setUsers(usersData.data || []);
+            setSalesReport(salesData);
         }
         catch (error) {
             console.error("Error loading dashboard data:", error);
@@ -1312,11 +1316,36 @@ function AdminDashboardContent() {
             });
         }
     };
+    const salesByDay = Array.isArray(salesReport?.salesByDay) ? salesReport.salesByDay : [];
+    const sumSalesByRange = (startDate, endDate) => {
+        if (!startDate || !endDate)
+            return 0;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        return salesByDay.reduce((total, day) => {
+            if (!day?._id)
+                return total;
+            const dayDate = new Date(`${day._id}T00:00:00`);
+            if (dayDate >= start && dayDate <= end) {
+                return total + (Number(day.totalSales) || 0);
+            }
+            return total;
+        }, 0);
+    };
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
     const revenueChartData = stats ? [
-        { name: language === "ar" ? "اليوم" : "Today", revenue: stats.overview.totalRevenue * 0.1 },
-        { name: language === "ar" ? "هذا الأسبوع" : "This Week", revenue: stats.overview.totalRevenue * 0.3 },
-        { name: language === "ar" ? "هذا الشهر" : "This Month", revenue: stats.overview.totalRevenue * 0.6 },
-        { name: language === "ar" ? "هذا العام" : "This Year", revenue: stats.overview.totalRevenue },
+        { name: language === "ar" ? "اليوم" : "Today", revenue: sumSalesByRange(startOfToday, now) },
+        { name: language === "ar" ? "هذا الأسبوع" : "This Week", revenue: sumSalesByRange(startOfWeek, now) },
+        { name: language === "ar" ? "هذا الشهر" : "This Month", revenue: sumSalesByRange(startOfMonth, now) },
+        { name: language === "ar" ? "هذا العام" : "This Year", revenue: sumSalesByRange(startOfYear, now) },
     ] : [];
     const ordersChartData = stats ? [
         { name: language === "ar" ? "قيد الانتظار" : "Pending", value: stats.ordersByStatus.pending },

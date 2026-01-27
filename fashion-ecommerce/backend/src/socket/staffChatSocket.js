@@ -2,9 +2,7 @@
 const jwt = require("jsonwebtoken");
 const StaffChatMessage = require("../models/StaffChatMessage");
 const UserModule = require("../models/User");
-const RoleAssignmentModule = require("../models/RoleAssignment");
 const User = UserModule.default || UserModule;
-const RoleAssignment = RoleAssignmentModule.default || RoleAssignmentModule;
 const envModule = require("../config/env");
 const env = envModule.default || envModule.env || envModule;
 
@@ -17,14 +15,7 @@ const resolveChatRole = async (user) => {
   if (user.role === "admin" || user.role === "employee") {
     return user.role;
   }
-  const assignment = await RoleAssignment.findOne({
-    user: user._id,
-    role: { $in: ["partner"] },
-    status: "active",
-  })
-    .select("role")
-    .lean();
-  return assignment?.role || null;
+  return null;
 };
 
 const resolveCounterpart = async (userId) => {
@@ -38,14 +29,7 @@ const resolveCounterpart = async (userId) => {
   if (user.role === "employee") {
     return user._id;
   }
-  const assignment = await RoleAssignment.findOne({
-    user: user._id,
-    role: { $in: ["partner"] },
-    status: "active",
-  })
-    .select("_id")
-    .lean();
-  return assignment ? user._id : null;
+  return null;
 };
 
 const resolveParticipants = async (socketUser, payload, chatRole) => {
