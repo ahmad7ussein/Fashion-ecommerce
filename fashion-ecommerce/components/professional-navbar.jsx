@@ -205,7 +205,7 @@ export function ProfessionalNavbar() {
               
               <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.4 }}>
                 <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="h-9 w-9 rounded-lg hover:bg-accent transition-colors text-base" aria-label="Toggle theme">
-                  <span aria-hidden="true">{theme === "dark" ? "" : ""}</span>
+                  <span aria-hidden="true">{theme === "dark" ? "🌙" : "☀️"}</span>
                 </Button>
               </motion.div>
 

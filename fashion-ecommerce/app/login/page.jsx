@@ -195,7 +195,7 @@ export default function LoginPage() {
         await exchangeGoogleToken(response?.credential);
     }, [exchangeGoogleToken]);
     const handleNativeGoogleLogin = useCallback(async () => {
-        try {
+        try {//googlee auth for app use capasitor 
             const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
             const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
             if (clientId) {
@@ -203,7 +203,7 @@ export default function LoginPage() {
             }
             const result = await GoogleAuth.signIn();
             const idToken = result?.authentication?.idToken || result?.idToken;
-            await exchangeGoogleToken(idToken);
+            await exchangeGoogleToken(idToken);// post  auth/google- get api url 
         }
         catch (error) {
             logger.error("Google native login error:", error);
@@ -523,6 +523,7 @@ export default function LoginPage() {
             });
         }
     };
+    // this section ui format
     return (<div className="min-h-[100svh] bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-md">
         
@@ -560,7 +561,7 @@ export default function LoginPage() {
                       <Label htmlFor="firstName">First Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10"/>
-                        <Input id="firstName" type="text" className="pl-9" placeholder="John" autoComplete="given-name" value={signUpData.firstName} onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}/>
+                        <Input id="firstName" type="text" className="pl-9" placeholder="Ahmed" autoComplete="given-name" value={signUpData.firstName} onChange={(e) => setSignUpData({ ...signUpData, firstName: e.target.value })}/>
                       </div>
                       {errors.firstName && <p className="text-sm text-destructive">{errors.firstName}</p>}
                     </div>
@@ -568,7 +569,7 @@ export default function LoginPage() {
                       <Label htmlFor="lastName">Last Name</Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10"/>
-                        <Input id="lastName" type="text" className="pl-9" placeholder="Doe" autoComplete="family-name" value={signUpData.lastName} onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}/>
+                        <Input id="lastName" type="text" className="pl-9" placeholder="Hussein" autoComplete="family-name" value={signUpData.lastName} onChange={(e) => setSignUpData({ ...signUpData, lastName: e.target.value })}/>
                       </div>
                       {errors.lastName && <p className="text-sm text-destructive">{errors.lastName}</p>}
                     </div>

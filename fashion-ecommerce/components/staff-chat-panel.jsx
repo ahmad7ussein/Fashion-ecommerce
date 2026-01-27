@@ -59,9 +59,7 @@ export function StaffChatPanel({ mode, compact = false, showThreads = true }) {
 
   const resolvedMode = mode || user?.role;
   const isAdminMode = resolvedMode === "admin";
-  const isCounterpartMode =
-    resolvedMode === "employee" ||
-    resolvedMode === "partner";
+  const isCounterpartMode = resolvedMode === "employee";
 
   useEffect(() => {
     modeRef.current = { isAdminMode, isCounterpartMode };

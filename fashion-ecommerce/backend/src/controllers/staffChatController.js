@@ -1,9 +1,7 @@
 "use strict";
 const StaffChatMessage = require("../models/StaffChatMessage");
 const UserModule = require("../models/User");
-const RoleAssignmentModule = require("../models/RoleAssignment");
 const User = UserModule.default || UserModule;
-const RoleAssignment = RoleAssignmentModule.default || RoleAssignmentModule;
 
 const summarizeUser = (user, roleOverride) => ({
   _id: user._id,
@@ -20,14 +18,7 @@ const resolveChatRole = async (user) => {
   if (user.role === "admin" || user.role === "employee") {
     return user.role;
   }
-  const assignment = await RoleAssignment.findOne({
-    user: user._id,
-    role: { $in: ["partner"] },
-    status: "active",
-  })
-    .select("role")
-    .lean();
-  return assignment?.role || null;
+  return null;
 };
 
 const resolveCounterpart = async (userId) => {
@@ -41,17 +32,7 @@ const resolveCounterpart = async (userId) => {
   if (user.role === "employee") {
     return { user, role: "employee" };
   }
-  const assignment = await RoleAssignment.findOne({
-    user: user._id,
-    role: { $in: ["partner"] },
-    status: "active",
-  })
-    .select("role")
-    .lean();
-  if (!assignment) {
-    return null;
-  }
-  return { user, role: assignment.role };
+  return null;
 };
 
 const getThreads = async (req, res) => {
@@ -66,31 +47,9 @@ const getThreads = async (req, res) => {
     const isAdmin = chatRole === "admin";
     let counterparts = [];
     if (isAdmin) {
-      const employees = await User.find({ role: "employee" })
+      counterparts = await User.find({ role: "employee" })
         .select("firstName lastName email role")
         .lean();
-      const assignments = await RoleAssignment.find({
-        role: { $in: ["partner"] },
-        status: "active",
-      })
-        .populate("user", "firstName lastName email role")
-        .lean();
-      const assignmentUsers = assignments
-        .map((assignment) => {
-          if (!assignment.user) {
-            return null;
-          }
-          return {
-            ...assignment.user,
-            role: assignment.role,
-          };
-        })
-        .filter(Boolean);
-      const counterpartMap = new Map();
-      [...employees, ...assignmentUsers].forEach((item) => {
-        counterpartMap.set(item._id.toString(), item);
-      });
-      counterparts = Array.from(counterpartMap.values());
     } else {
       counterparts = await User.find({ role: "admin" })
         .select("firstName lastName email role")
