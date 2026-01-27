@@ -21,6 +21,7 @@ import { adminApi } from "@/lib/api/admin";
 import { ordersApi } from "@/lib/api/orders";
 import { userPreferencesApi } from "@/lib/api/userPreferences";
 import { reviewsApi } from "@/lib/api/reviews";
+import { accountDeletionsApi } from "@/lib/api/accountDeletions";
 import { getContactMessages, updateContactMessage, deleteContactMessage } from "@/lib/api/contact";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "next-themes";
@@ -109,6 +110,10 @@ function AdminDashboardContent() {
     const [reviews, setReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [reviewStatusFilter, setReviewStatusFilter] = useState("pending");
+    const [accountDeletionRequests, setAccountDeletionRequests] = useState([]);
+    const [accountDeletionLoading, setAccountDeletionLoading] = useState(false);
+    const [accountDeletionStatusFilter, setAccountDeletionStatusFilter] = useState("pending");
+    const [pendingAccountDeletionCount, setPendingAccountDeletionCount] = useState(0);
     const [contactMessages, setContactMessages] = useState([]);
     const [messagesLoading, setMessagesLoading] = useState(false);
     const [messageStatusFilter, setMessageStatusFilter] = useState("all");
@@ -404,6 +409,7 @@ function AdminDashboardContent() {
         if (user && user.role === 'admin') {
             loadDashboardData();
             loadUserPreferences();
+            refreshPendingAccountDeletionCount();
         }
     }, [user]);
     const loadUserPreferences = async () => {
@@ -485,6 +491,11 @@ function AdminDashboardContent() {
             loadReviews();
         }
     }, [activeTab, reviewStatusFilter, user]);
+    useEffect(() => {
+        if (activeTab === "accountDeletions" && user) {
+            loadAccountDeletionRequests();
+        }
+    }, [activeTab, accountDeletionStatusFilter, user]);
     const loadContactMessages = async () => {
         try {
             setMessagesLoading(true);
@@ -1268,6 +1279,43 @@ function AdminDashboardContent() {
             setReviewsLoading(false);
         }
     };
+    const refreshPendingAccountDeletionCount = async () => {
+        try {
+            const response = await accountDeletionsApi.getAllRequests({
+                status: "pending",
+                limit: 1,
+                page: 1,
+            });
+            setPendingAccountDeletionCount(response.total || 0);
+        }
+        catch (error) {
+            console.error("Error loading pending account deletion count:", error);
+        }
+    };
+    const loadAccountDeletionRequests = async () => {
+        setAccountDeletionLoading(true);
+        try {
+            const response = await accountDeletionsApi.getAllRequests({
+                status: accountDeletionStatusFilter === "all" ? undefined : accountDeletionStatusFilter,
+                limit: 50,
+            });
+            setAccountDeletionRequests(response.data || []);
+            if (accountDeletionStatusFilter === "pending") {
+                setPendingAccountDeletionCount(response.total || (response.data || []).length);
+            }
+        }
+        catch (error) {
+            console.error("Error loading account deletion requests:", error);
+            toast({
+                title: "Error",
+                description: error.message || "Failed to load account deletion requests",
+                variant: "destructive",
+            });
+        }
+        finally {
+            setAccountDeletionLoading(false);
+        }
+    };
     const handleReviewStatusUpdate = async (reviewId, status) => {
         try {
             await reviewsApi.updateReviewStatus(reviewId, status);
@@ -1281,6 +1329,24 @@ function AdminDashboardContent() {
             toast({
                 title: "Error",
                 description: error.message || "Failed to update review status",
+                variant: "destructive",
+            });
+        }
+    };
+    const handleAccountDeletionStatusUpdate = async (requestId, status) => {
+        try {
+            await accountDeletionsApi.updateStatus(requestId, status);
+            toast({
+                title: "Success",
+                description: `Account deletion request ${status === "approved" ? "approved" : "rejected"} successfully`,
+            });
+            await loadAccountDeletionRequests();
+            await refreshPendingAccountDeletionCount();
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update account deletion request",
                 variant: "destructive",
             });
         }
@@ -1370,7 +1436,7 @@ function AdminDashboardContent() {
     const previewArea = resolvePreviewArea(previewProduct, designPreviewSide);
     const previewBaseImage = resolvePreviewBaseImage(designPreviewItem, previewProduct, designPreviewSide);
     return (<>
-      <AdminLayout activeTab={activeTab} pendingReviewsCount={reviews.filter((r) => r.status === "pending").length}>
+      <AdminLayout activeTab={activeTab} pendingReviewsCount={reviews.filter((r) => r.status === "pending").length} pendingAccountDeletionCount={pendingAccountDeletionCount}>
         <div className="animate-in fade-in duration-500">
         {loading ? (<div className="flex items-center justify-center min-h-[60vh]">
             <AppLoader label="Loading dashboard..." size="lg"/>
@@ -2869,6 +2935,94 @@ function AdminDashboardContent() {
                               <Button size="sm" variant="destructive" onClick={() => handleReviewStatusUpdate(review._id, "rejected")}>
                                 <XCircle className="h-4 w-4 mr-2"/>
                                 {language === "ar" ? "رفض" : "Reject"}
+                              </Button>
+                            </div>)}
+                        </div>
+                      </CardContent>
+                    </Card>);
+                    })}
+              </div>)}
+          </div>)}
+
+        
+        {activeTab === "accountDeletions" && (<div className="space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">{language === "ar" ? "Account Deletions" : "Account Deletions"}</h1>
+                <p className="text-muted-foreground">
+                  {language === "ar" ? "Review account deletion requests from customers" : "Review account deletion requests from customers"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Select value={accountDeletionStatusFilter} onValueChange={setAccountDeletionStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{language === "ar" ? "All" : "All"}</SelectItem>
+                    <SelectItem value="pending">{language === "ar" ? "Pending" : "Pending"}</SelectItem>
+                    <SelectItem value="approved">{language === "ar" ? "Approved" : "Approved"}</SelectItem>
+                    <SelectItem value="rejected">{language === "ar" ? "Rejected" : "Rejected"}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={loadAccountDeletionRequests} variant="outline" size="icon">
+                  <Eye className="h-4 w-4"/>
+                </Button>
+              </div>
+            </div>
+
+            {accountDeletionLoading ? (<div className="py-12">
+                <AppLoader label={language === "ar" ? "Loading requests..." : "Loading requests..."} />
+              </div>) : accountDeletionRequests.length === 0 ? (<Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    {language === "ar" ? "No account deletion requests" : "No account deletion requests"}
+                  </p>
+                </CardContent>
+              </Card>) : (<div className="space-y-4">
+                {accountDeletionRequests.map((request) => {
+                        const userName = request.user
+                            ? `${request.user.firstName} ${request.user.lastName}`
+                            : "Unknown User";
+                        const userEmail = request.user?.email || "—";
+                        return (<Card key={request._id} className="overflow-hidden">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <Badge variant={request.status === "approved"
+                                ? "default"
+                                : request.status === "rejected"
+                                    ? "destructive"
+                                    : "secondary"}>
+                                {request.status === "approved"
+                                ? language === "ar" ? "Approved" : "Approved"
+                                : request.status === "rejected"
+                                    ? language === "ar" ? "Rejected" : "Rejected"
+                                    : language === "ar" ? "Pending" : "Pending"}
+                              </Badge>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-1">{userName}</h3>
+                            <p className="text-sm text-muted-foreground">{userEmail}</p>
+                            {request.reason && (<p className="text-sm text-muted-foreground mt-3">
+                                {language === "ar" ? "Reason:" : "Reason:"} {request.reason}
+                              </p>)}
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-3">
+                              <span>{new Date(request.createdAt).toLocaleDateString()}</span>
+                              {request.reviewedAt && (<>
+                                  <span>•</span>
+                                  <span>{new Date(request.reviewedAt).toLocaleDateString()}</span>
+                                </>)}
+                            </div>
+                          </div>
+                          {request.status === "pending" && (<div className="flex flex-col gap-2">
+                              <Button size="sm" onClick={() => handleAccountDeletionStatusUpdate(request._id, "approved")} className="bg-green-600 hover:bg-green-700">
+                                <CheckCircle className="h-4 w-4 mr-2"/>
+                                {language === "ar" ? "Approve" : "Approve"}
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => handleAccountDeletionStatusUpdate(request._id, "rejected")}>
+                                <XCircle className="h-4 w-4 mr-2"/>
+                                {language === "ar" ? "Reject" : "Reject"}
                               </Button>
                             </div>)}
                         </div>

@@ -32,6 +32,7 @@ const featureControlRoutes_1 = __importDefault(require("./routes/featureControlR
 const staffChatRoutes_1 = __importDefault(require("./routes/staffChatRoutes"));
 const paymentRoutes_1 = __importDefault(require("./routes/paymentRoutes"));
 const diagnosticRoutes_1 = __importDefault(require("./routes/diagnosticRoutes"));
+const accountDeletionRoutes_1 = __importDefault(require("./routes/accountDeletionRoutes"));
 const staffChatSocket_1 = __importDefault(require("./socket/staffChatSocket"));
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
@@ -183,6 +184,7 @@ app.use('/api/feature-controls', featureControlRoutes_1.default);
 app.use('/api/staff-chat', staffChatRoutes_1.default);
 app.use('/api/payments', paymentRoutes_1.default);
 app.use('/api/diagnostics', diagnosticRoutes_1.default);
+app.use('/api/account-deletions', accountDeletionRoutes_1.default);
 app.use((req, res) => {
     if (process.env.NODE_ENV === 'development') {
         console.warn('  Route not found:', {

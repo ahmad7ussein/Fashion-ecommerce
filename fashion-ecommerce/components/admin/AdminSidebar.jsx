@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, Package, ShoppingCart, Users, UserCog, Palette as PaletteIcon, Star, Truck, Shapes, Camera, SlidersHorizontal, BadgeCheck, MessageSquare, TrendingUp, } from "lucide-react";
+import { ChevronDown, Package, ShoppingCart, Users, UserCog, Palette as PaletteIcon, Star, Truck, Shapes, Camera, SlidersHorizontal, BadgeCheck, MessageSquare, TrendingUp, UserX, } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 import { useLanguage } from "@/lib/language";
@@ -28,6 +28,7 @@ const navigationSections = [
             { type: "tab", key: "orders", icon: ShoppingCart, labelKey: "orders" },
             { type: "tab", key: "tracking", icon: Truck, label: { en: "Order Tracking", ar: "تتبع الطلبات" } },
             { type: "tab", key: "customers", icon: Users, labelKey: "customers" },
+            { type: "tab", key: "accountDeletions", icon: UserX, label: { en: "Account Deletions", ar: "Account Deletions" } },
             { type: "tab", key: "reviews", icon: Star, label: { en: "Reviews", ar: "OU,O›OñOO­" } },
         ],
     },
@@ -76,7 +77,7 @@ const getActiveSectionId = (sections, pathname, isAdminRoot, currentTab) => {
     const activeSection = sections.find((section) => section.items.some((item) => isActiveItem(item, pathname, isAdminRoot, currentTab)));
     return activeSection?.id ?? null;
 };
-export function AdminSidebar({ activeTab, pendingReviewsCount }) {
+export function AdminSidebar({ activeTab, pendingReviewsCount, pendingAccountDeletionCount }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const { user } = useAuth();
@@ -145,6 +146,9 @@ export function AdminSidebar({ activeTab, pendingReviewsCount }) {
                     <span className="font-medium text-sm lg:text-base truncate">{label}</span>
                     {item.type === "tab" && item.key === "reviews" && (pendingReviewsCount || 0) > 0 && (<Badge className="ml-auto bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                         {pendingReviewsCount}
+                      </Badge>)}
+                    {item.type === "tab" && item.key === "accountDeletions" && (pendingAccountDeletionCount || 0) > 0 && (<Badge className="ml-auto bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                        {pendingAccountDeletionCount}
                       </Badge>)}
                   </Link>);
             })}

@@ -7,7 +7,7 @@ import { AdminTopbar } from "@/components/admin/AdminTopbar";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
-export function AdminLayout({ children, activeTab, pendingReviewsCount = 0 }) {
+export function AdminLayout({ children, activeTab, pendingReviewsCount = 0, pendingAccountDeletionCount = 0 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
@@ -15,7 +15,7 @@ export function AdminLayout({ children, activeTab, pendingReviewsCount = 0 }) {
       <div className="lg:flex lg:min-h-screen">
         <aside className="hidden lg:flex lg:fixed lg:inset-y-0 lg:w-64 lg:shrink-0 lg:border-r lg:border-border/50 lg:bg-gradient-to-b lg:from-background lg:via-background lg:to-muted/30">
           <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading navigation...</div>}>
-            <AdminSidebar activeTab={activeTab} pendingReviewsCount={pendingReviewsCount} />
+            <AdminSidebar activeTab={activeTab} pendingReviewsCount={pendingReviewsCount} pendingAccountDeletionCount={pendingAccountDeletionCount} />
           </Suspense>
         </aside>
 
@@ -50,7 +50,7 @@ export function AdminLayout({ children, activeTab, pendingReviewsCount = 0 }) {
           </DrawerHeader>
           <div className="h-[calc(100vh-4rem)] overflow-y-auto">
             <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading navigation...</div>}>
-              <AdminSidebar activeTab={activeTab} pendingReviewsCount={pendingReviewsCount} />
+              <AdminSidebar activeTab={activeTab} pendingReviewsCount={pendingReviewsCount} pendingAccountDeletionCount={pendingAccountDeletionCount} />
             </Suspense>
           </div>
         </DrawerContent>

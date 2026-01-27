@@ -34,6 +34,7 @@ import { StaffChatWidget } from "@/components/staff-chat-widget";
 import { EmployeeLayout } from "@/components/employee/EmployeeLayout";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, } from "@/components/ui/dropdown-menu";
 import { getNotifications, markAllAsRead } from "@/lib/api/notifications";
+import { getContactMessages, getContactMessage, updateContactMessage } from "@/lib/api/contact";
 import { staffChatApi } from "@/lib/api/staffChat";
 const getStatusColor = (status) => {
     switch (status) {
@@ -212,6 +213,12 @@ export default function EmployeeDashboard() {
     const [notifications, setNotifications] = useState([]);
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [unreadMessages, setUnreadMessages] = useState(0);
+    const [contactMessages, setContactMessages] = useState([]);
+    const [messagesLoading, setMessagesLoading] = useState(false);
+    const [messageStatusFilter, setMessageStatusFilter] = useState("all");
+    const [selectedMessage, setSelectedMessage] = useState(null);
+    const [showMessageDetails, setShowMessageDetails] = useState(false);
+    const [newContactMessagesCount, setNewContactMessagesCount] = useState(0);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const { user, logout, isLoading: authLoading } = useAuth();
     const { theme, setTheme } = useTheme();
@@ -246,17 +253,29 @@ export default function EmployeeDashboard() {
         catch {
         }
     }, [user]);
+    const refreshContactMessageCounts = useCallback(async () => {
+        if (!user)
+            return;
+        try {
+            const response = await getContactMessages({ status: "all", limit: 1 });
+            setNewContactMessagesCount(response?.statusCounts?.new || 0);
+        }
+        catch {
+        }
+    }, [user]);
     useEffect(() => {
         if (!user)
             return;
         loadNotifications();
         loadUnreadMessages();
+        refreshContactMessageCounts();
         const interval = setInterval(() => {
             loadNotifications();
             loadUnreadMessages();
+            refreshContactMessageCounts();
         }, 30000);
         return () => clearInterval(interval);
-    }, [user, loadNotifications, loadUnreadMessages]);
+    }, [user, loadNotifications, loadUnreadMessages, refreshContactMessageCounts]);
     useEffect(() => {
         if (notificationsOpen) {
             loadNotifications();
@@ -334,6 +353,57 @@ export default function EmployeeDashboard() {
             loadStudioProducts();
         }
     }, [activeTab]);
+    useEffect(() => {
+        if (activeTab === "messages" && user) {
+            loadContactMessages();
+        }
+    }, [activeTab, messageStatusFilter, user]);
+    const loadContactMessages = async () => {
+        try {
+            setMessagesLoading(true);
+            const response = await getContactMessages({
+                status: messageStatusFilter === "all" ? undefined : messageStatusFilter,
+                limit: 50,
+            });
+            setContactMessages(response.data || []);
+            setNewContactMessagesCount(response?.statusCounts?.new || 0);
+        }
+        catch (error) {
+            toast({
+                title: language === "ar" ? "خطأ" : "Error",
+                description: error.message || (language === "ar" ? "فشل تحميل الرسائل" : "Failed to load messages"),
+                variant: "destructive",
+            });
+        }
+        finally {
+            setMessagesLoading(false);
+        }
+    };
+    const openMessageDetails = async (message) => {
+        try {
+            const data = await getContactMessage(message._id);
+            setSelectedMessage(data);
+            setShowMessageDetails(true);
+            loadContactMessages();
+        }
+        catch {
+            setSelectedMessage(message);
+            setShowMessageDetails(true);
+        }
+    };
+    const updateMessageStatus = async (messageId, status) => {
+        try {
+            await updateContactMessage(messageId, { status });
+            loadContactMessages();
+        }
+        catch (error) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to update message",
+                variant: "destructive",
+            });
+        }
+    };
     const loadUserPreferences = async () => {
         try {
             const preferences = await userPreferencesApi.getPreferences();
@@ -1000,6 +1070,14 @@ export default function EmployeeDashboard() {
           <button onClick={() => setActiveTab("customers")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "customers" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
             <Users className="h-5 w-5"/>
             <span className="font-medium">{t("customers", language)}</span>
+          </button>
+
+          <button onClick={() => setActiveTab("messages")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "messages" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
+            <MessageSquare className="h-5 w-5"/>
+            <span className="font-medium">{language === "ar" ? "رسائل التواصل" : "Contact Messages"}</span>
+            {newContactMessagesCount > 0 && (<Badge variant="destructive" className="ml-auto">
+                {newContactMessagesCount > 99 ? "99+" : newContactMessagesCount}
+              </Badge>)}
           </button>
 
           <button onClick={() => setActiveTab("chat")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === "chat" ? "bg-blue-800 text-white border border-blue-900" : "hover:bg-muted"}`}>
@@ -1706,6 +1784,115 @@ export default function EmployeeDashboard() {
                       </div>)}
               </CardContent>
             </Card>
+          </div>)}
+
+        {activeTab === "messages" && (<div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">{language === "ar" ? "رسائل التواصل" : "Contact Messages"}</h1>
+                <p className="text-muted-foreground">
+                  {language === "ar" ? "إدارة رسائل العملاء" : "Manage customer contact messages"}
+                </p>
+              </div>
+              <Button onClick={loadContactMessages} variant="outline">
+                {language === "ar" ? "تحديث" : "Refresh"}
+              </Button>
+            </div>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant={messageStatusFilter === "all" ? "default" : "outline"} size="sm" onClick={() => setMessageStatusFilter("all")}>
+                    {language === "ar" ? "الكل" : "All"}
+                  </Button>
+                  <Button variant={messageStatusFilter === "new" ? "default" : "outline"} size="sm" onClick={() => setMessageStatusFilter("new")}>
+                    {language === "ar" ? "جديدة" : "New"}
+                    {newContactMessagesCount > 0 && (<Badge className="ml-2 bg-red-500 text-white">
+                        {newContactMessagesCount > 99 ? "99+" : newContactMessagesCount}
+                      </Badge>)}
+                  </Button>
+                  <Button variant={messageStatusFilter === "read" ? "default" : "outline"} size="sm" onClick={() => setMessageStatusFilter("read")}>
+                    {language === "ar" ? "مقروءة" : "Read"}
+                  </Button>
+                  <Button variant={messageStatusFilter === "replied" ? "default" : "outline"} size="sm" onClick={() => setMessageStatusFilter("replied")}>
+                    {language === "ar" ? "تم الرد" : "Replied"}
+                  </Button>
+                  <Button variant={messageStatusFilter === "archived" ? "default" : "outline"} size="sm" onClick={() => setMessageStatusFilter("archived")}>
+                    {language === "ar" ? "مؤرشفة" : "Archived"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                {messagesLoading ? (<div className="py-8">
+                    <AppLoader label={language === "ar" ? "تحميل الرسائل..." : "Loading messages..."} />
+                  </div>) : contactMessages.length > 0 ? (<div className="space-y-4">
+                    {contactMessages.map((message) => (<Card key={message._id} className={`cursor-pointer transition-all hover:shadow-md ${message.status === "new" ? "border-2 border-primary" : ""}`} onClick={() => openMessageDetails(message)}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Badge variant={message.status === "new"
+                            ? "default"
+                            : message.status === "replied"
+                                ? "secondary"
+                                : "outline"}>
+                                  {message.status === "new"
+                            ? language === "ar" ? "جديدة" : "New"
+                            : message.status === "replied"
+                                ? language === "ar" ? "تم الرد" : "Replied"
+                                : message.status === "read"
+                                    ? language === "ar" ? "مقروءة" : "Read"
+                                    : language === "ar" ? "مؤرشفة" : "Archived"}
+                                </Badge>
+                                <h3 className="font-semibold text-lg">{message.subject}</h3>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
+                                <span>{message.email}</span>
+                                <span>•</span>
+                                <span>{message.name}</span>
+                                <span>•</span>
+                                <span>{new Date(message.createdAt || "").toLocaleDateString()}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {message.message}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>))}
+                  </div>) : (<div className="py-8 text-center text-muted-foreground">
+                    {language === "ar" ? "لا توجد رسائل" : "No messages found"}
+                  </div>)}
+              </CardContent>
+            </Card>
+
+            <Dialog open={showMessageDetails} onOpenChange={setShowMessageDetails}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{selectedMessage?.subject || (language === "ar" ? "تفاصيل الرسالة" : "Message Details")}</DialogTitle>
+                  <DialogDescription>
+                    {selectedMessage?.email} • {selectedMessage?.name}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="text-sm text-muted-foreground">
+                    {selectedMessage?.createdAt ? new Date(selectedMessage.createdAt).toLocaleString() : ""}
+                  </div>
+                  <div className="whitespace-pre-wrap text-sm">{selectedMessage?.message}</div>
+                </div>
+                <DialogFooter className="gap-2">
+                  {selectedMessage?.status !== "archived" && (<Button variant="outline" onClick={() => updateMessageStatus(selectedMessage._id, "archived")}>
+                      {language === "ar" ? "أرشفة" : "Archive"}
+                    </Button>)}
+                  {selectedMessage?.status === "new" && (<Button onClick={() => updateMessageStatus(selectedMessage._id, "read")}>
+                      {language === "ar" ? "وضع كمقروء" : "Mark as read"}
+                    </Button>)}
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>)}
 
         {activeTab === "chat" && (<div className="space-y-6">
